@@ -1,0 +1,16 @@
+# Không đưa vào build context: công cụ portable, thư viện cài sẵn, bản build, mật khẩu máy local
+.git
+tools/
+**/node_modules/
+**/target/
+ui/.next/
+ui/out/
+ui/next-env.d.ts
+ui/tsconfig.tsbuildinfo
+config/*.local.properties
+.env
+experiments/
+report/
+docs/
+*.log
+loadsim-result.csv

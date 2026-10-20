@@ -10,3 +10,4 @@ ui/tsconfig.tsbuildinfo
 experiments/results/logs/
 report/source/node_modules/
 config/*.local.properties
+.env

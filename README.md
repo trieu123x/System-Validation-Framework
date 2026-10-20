@@ -62,6 +62,7 @@ Bài tập lớn môn Lập trình mạng, Chủ đề 3 (ứng dụng mạng Cl
 | `ui/` | Next.js: `/admin` (công ty), `/branch` (chi nhánh) |
 | `db/` | `schema.sql`, `dieu_chuyen.sql`, `seed.sql`, `seed_loadsim.sql`, `seed_demo.sql` |
 | `config/`, `scripts/`, `docs/` | Cấu hình, script chạy, tài liệu và sơ đồ (`docs/img`) |
+| `Dockerfile`, `docker-compose.yml`, `docker/` | Chạy cả hệ thống bằng Docker (mục 4) |
 | `experiments/` | Số liệu (`results/`), biểu đồ (`charts/`), script vẽ biểu đồ |
 | `report/` | Báo cáo `.docx` |
 
@@ -101,6 +102,60 @@ scripts\run-client.bat http.port=8082   :: chi nhánh thứ 2 trên cùng máy
 ```
 
 Tài khoản mẫu: `CN01`, `CN02`, `CN03`, mật khẩu `123456`. Ô "Server" để `auto` thì client tự tìm server bằng UDP broadcast; nếu mạng chặn broadcast thì nhập IP, ví dụ `192.168.1.10`.
+
+### Chạy bằng Docker
+
+Không cần cài JDK, Maven, Node hay PostgreSQL; chỉ cần Docker Desktop (hoặc Docker Engine + Compose v2).
+
+```bat
+:: (tuỳ chọn) đổi mật khẩu CSDL, mật khẩu admin, cổng: copy .env.example thành .env rồi sửa
+docker compose up --build -d
+```
+
+| Dịch vụ | Địa chỉ trên máy host | Ghi chú |
+|---|---|---|
+| `db` (PostgreSQL 17) | `127.0.0.1:5433` | Lần đầu tạo volume `pgdata` thì nạp `schema.sql`, `seed.sql`, `seed_loadsim.sql` và dữ liệu demo (`SEED_DEMO=1`) |
+| `server` | TCP `5000`, http://localhost:8080/admin/ | Đăng nhập `admin` / `admin123`; trang công ty chỉ mở trên `127.0.0.1` |
+| `cn01`, `cn02` | http://localhost:8081/branch/, http://localhost:8082/branch/ | Đăng nhập `CN01` / `123456`, `CN02` / `123456`; đã trỏ sẵn tới `server:5000` |
+| `loadsim` (profile `tools`) | — | `docker compose run --rm loadsim clients=100 duration=60` |
+
+- Một image `phanphoi` dùng cho cả ba vai: build giao diện Next.js, build 4 module Maven, rồi đóng vào JRE 17. Lệnh `server`, `client`, `loadsim` chọn tiến trình; tham số `key=value` phía sau ghi đè cấu hình như khi chạy `.bat`, ví dụ `docker compose run --rm cn01 client http.port=8083`.
+- Mật khẩu CSDL đi qua biến môi trường `DB_PASSWORD`; `docker/entrypoint.sh` ghi nó vào `config/server.local.properties` bên trong container, không nằm trong image.
+- Chi nhánh chạy ngoài Docker (máy khác trong LAN) nối vào `server=<ip máy chạy Docker>:5000`. UDP discovery không đi qua mạng NAT của Docker Desktop nên phải ghi rõ địa chỉ.
+- Cổng 5000/8080/8081/8082 trùng với lúc chạy bằng `.bat`: tắt bản đang chạy, hoặc đổi `SERVER_TCP_PORT`, `ADMIN_HTTP_PORT`, `CN01_HTTP_PORT`, `CN02_HTTP_PORT` trong `.env`.
+- Nạp lại dữ liệu từ đầu: `docker compose down -v` (xoá volume `pgdata`) rồi `docker compose up -d`.
+
+### Log demo: 1000 chi nhánh cùng xin hàng
+
+`scripts\sim-log.bat` (chỉ cần Node.js) in log theo 4 phần: CSDL ban đầu → 1000 chi nhánh kết nối và gửi `LOW_STOCK`, kèm tình trạng mạng (RTT, mất gói, truyền lại, hàng đợi accept, KB/s) → server xử lý (pool DB, khóa dòng `kho_tong`, Gửi hàng / Báo hết hàng, `DELIVERED`/`OUT_OF_STOCK`) → CSDL sau xử lý, kèm 7 kiểm tra (kho tổng = đã xuất + còn lại, không còn YC treo, không mất/trùng tin, `nhat_ky` đủ dòng...).
+
+Script có hai chế độ:
+
+| | Giả lập (mặc định) | Chạy thật (`--real`) |
+|---|---|---|
+| Cần gì | Node.js | `server.jar` đã build, PostgreSQL có `seed_loadsim.sql` (SIM001..SIM1000), `psql`, `config\server.local.properties` có mật khẩu CSDL |
+| Mạng | Mô phỏng LAN/WAN/4G, mất gói, backlog đầy, ECONNRESET | Socket TCP thật tới server; đo connect, LOGIN, SALE, LOW_STOCK → cảnh báo SSE |
+| Server, admin | Mô phỏng pool 20 kết nối DB và bot admin | Server thật; bot admin đăng nhập `admin`/`admin123`, nghe SSE, gọi `/api/requests/{id}/ship` (kho không đủ thì `/shortage`), như E6 |
+| CSDL | Bảng trong bộ nhớ, in giống psql | Truy vấn `psql` thật trước và sau |
+| Dữ liệu thật | Không đụng tới | Chỉ đụng tới CN ảo và kho tổng của 1 mặt hàng (mặc định SP05); xong thì tự dọn |
+
+```bat
+:: Giả lập, không cần server/CSDL (chạy khoảng 35 s)
+scripts\sim-log.bat
+scripts\sim-log.bat --speed=2 --log=demo.log   :: nhanh gấp đôi, ghi thêm file log không màu
+scripts\sim-log.bat --speed=0 --verbose        :: in ngay, in mọi sự kiện thay vì lấy mẫu
+
+:: Chạy thật: script tự bật server.jar (max.clients=1100) ở cổng 5100/8180, chạy xong thì tắt
+scripts\sim-log.bat --real --start-server
+
+:: Chạy thật với server đang chạy sẵn (phải bật với max.clients đủ lớn, mặc định chỉ 100)
+scripts\run-server.bat max.clients=2000
+scripts\sim-log.bat --real --port=5000 --admin-port=8080
+```
+
+Tham số khác: `--clients=N` (giả lập tối đa 9999, chạy thật tối đa 1000), `--seed=` (đổi kịch bản giả lập), `--no-color`, `--host=`, `--product=SP05`, `--ship=10`, `--psql=<đường dẫn psql.exe>` (mặc định tìm trong `C:\Program Files\PostgreSQL\*\bin`), `--admin-user=`, `--admin-password=`, `--branch-password=`, `--keep`. Xem đầy đủ bằng `scripts\sim-log.bat --help`.
+
+Ở chế độ chạy thật, script gọi `/api/experiment/prepare-live` để đặt tồn của các CN ảo là 12, ngưỡng 10, và kho tổng bằng 80% nhu cầu (để luôn có nhánh Báo hết hàng). Bot admin giữ cảnh báo tới khi đủ 1000 yêu cầu rồi mới xử lý, để phần 2 và phần 3 tách riêng. Xong (kể cả khi bấm Ctrl+C) script gọi `/api/experiment/finish-live` để trả kho về như cũ, và xoá các dòng `nhat_ky`, `ban_hang` do lượt chạy sinh ra. Thêm `--keep` để giữ lại dữ liệu cho xem trên trang công ty.
 
 ### Cấu hình
 
