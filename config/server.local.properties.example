@@ -1,0 +1,3 @@
+# Copy thanh server.local.properties roi dien mat khau PostgreSQL cua may ban.
+# File .local.properties nam trong .gitignore, khong dua len git.
+db.password=

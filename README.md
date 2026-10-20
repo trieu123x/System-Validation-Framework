@@ -1,0 +1,343 @@
+# Hệ thống phân phối hàng hóa với cảnh báo thiếu hàng tự động
+
+Bài tập lớn môn Lập trình mạng, Chủ đề 3 (ứng dụng mạng Client/Server).
+
+## 1. Mô tả
+
+**Bài toán.** Một công ty có kho tổng và 10–20 chi nhánh. Chi nhánh bán hàng hằng ngày. Khi tồn kho xuống dưới ngưỡng, chi nhánh cần được cấp hàng nhanh và đúng số lượng. Nếu làm thủ công qua điện thoại hoặc email thì báo chậm, dễ trùng yêu cầu, và kho tổng có thể bị xuất vượt khi nhiều chi nhánh cùng xin một mặt hàng.
+
+**Mục tiêu.**
+- Chi nhánh tự báo thiếu hàng qua mạng.
+- Công ty nhận cảnh báo theo thời gian thực rồi **gửi hàng ngay** hoặc **báo không đủ hàng** (hoặc gửi đề xuất để chi nhánh xác nhận); server trừ kho tổng trong một transaction.
+- Đơn hàng đi qua các trạng thái *Đã gửi* → chi nhánh bấm *Đã nhận hàng* → *Đã nhận*; cả hai phía thấy thay đổi ngay (TCP push + SSE).
+- Đúng dữ liệu khi nhiều chi nhánh thao tác đồng thời.
+- Không mất yêu cầu khi mất mạng, và tự nối lại khi server khởi động lại.
+
+**Server (công ty).**
+- Nhận nhiều kết nối TCP đồng thời. Xác thực, quản lý phiên, heartbeat.
+- Xử lý bán hàng, cảnh báo, đề xuất, xác nhận, xuất kho.
+- Đẩy (push) tin tới chi nhánh. Giữ tin cho chi nhánh offline và gửi lại khi nó đăng nhập.
+- Điều phối điều chuyển hàng giữa các chi nhánh.
+- Ghi nhật ký mọi tin.
+- Trả lời UDP discovery để chi nhánh tự tìm server.
+
+**Client (chi nhánh).**
+- Giữ một kết nối TCP duy nhất, có luồng Listener riêng.
+- Ghi nhận bán hàng; tự gửi LOW_STOCK khi tồn dưới ngưỡng.
+- Trả lời đề xuất cấp và yêu cầu điều chuyển; xem lịch sử nhập.
+- Theo dõi trạng thái kết nối, tự nối lại và đăng nhập lại.
+
+Đặc tả chi tiết (SRS): 25 yêu cầu chức năng, 10 yêu cầu phi chức năng, 12 ca kiểm thử. Thiết kế thực nghiệm nằm ở [docs/EXPERIMENTS.md](docs/EXPERIMENTS.md).
+
+## 2. Kiến trúc
+
+```
+ Máy công ty                                           Máy chi nhánh (mỗi máy 1 tiến trình)
+┌─────────────────────────────────────┐  TCP :5000   ┌─────────────────────────────────┐
+│ server.jar                          │◄────────────►│ client.jar                      │
+│  NioServer: 1 luồng Selector        │  giao thức   │  ServerLink: socket + Listener  │
+│    (hoặc BioServer: luồng/kết nối)  │  dòng văn bản│  BranchAgent: logic chi nhánh,  │
+│  ClientHandler: phiên, heartbeat    │              │    heartbeat, tự nối lại        │
+│  worker pool 16 luồng → services:   │◄─ UDP :5001 ─│  Discovery: DISCOVER/HERE       │
+│    Auth, Stock, Request, Transfer,  │   broadcast  │  HTTP :8081 (chỉ localhost)     │
+│    Outbox (hàng đợi + gửi lại)      │              │        ▲ fetch + SSE            │
+│  MessageLog: ghi nhat_ky theo lô    │              │  trình duyệt: /branch (Next.js) │
+│  HikariCP ─ JDBC ─► PostgreSQL      │              └─────────────────────────────────┘
+│  HTTP :8080 (chỉ localhost) ◄─ trình duyệt /admin (Next.js)
+└─────────────────────────────────────┘
+```
+
+- **Phần lõi là giao tiếp mạng.** Chi nhánh và server chỉ nói chuyện qua TCP bằng giao thức tự thiết kế (`common/.../Protocol.java`). Không dùng HTTP, RMI hay thư viện messaging cho phần này.
+- **Giao diện** viết bằng Next.js, build ra file tĩnh. `server.jar` và `client.jar` tự phục vụ các file này kèm một HTTP API chỉ mở trên localhost, để trình duyệt trên cùng máy điều khiển tiến trình Java. Mọi I/O mạng nằm trong Java, ngoài luồng giao diện.
+- **Chỉ server truy cập CSDL.**
+
+| Thư mục | Nội dung |
+|---|---|
+| `common/` | `Protocol` (encode/decode, escape, danh sách), `Command`, `ErrorCode`, `LineReader`/`LineSplitter` (giới hạn 4096 byte, cho BIO/NIO), `ReconnectPolicy`, tiện ích HTTP/SSE; unit test |
+| `server/net/` | `NioServer`, `BioServer`, `Transport`, `ClientHandler`, `SessionRegistry`, `DiscoveryResponder` |
+| `server/service/` | `AuthService`, `StockService`, `RequestService` (vòng đời YC, ACCEPT), `TransferService`, `Outbox` |
+| `server/` | `ServerMain`, `ServerSettings` (cờ cải tiến/baseline), `AdminApi`, `ExperimentApi`, `MessageLog` |
+| `client/` | `ServerLink`, `BranchAgent`, `Discovery`, `ClientMain` |
+| `loadsim/` | `LoadSimulator` (TC-11), `Experiments` (E1–E5), `SimClient`, `ServerProcess` |
+| `ui/` | Next.js: `/admin` (công ty), `/branch` (chi nhánh) |
+| `db/` | `schema.sql`, `dieu_chuyen.sql`, `seed.sql`, `seed_loadsim.sql`, `seed_demo.sql` |
+| `config/`, `scripts/`, `docs/` | Cấu hình, script chạy, tài liệu và sơ đồ (`docs/img`) |
+| `experiments/` | Số liệu (`results/`), biểu đồ (`charts/`), script vẽ biểu đồ |
+| `report/` | Báo cáo `.docx` |
+
+## 3. Công nghệ và thư viện
+
+| Thành phần | Công nghệ |
+|---|---|
+| Mạng | Java 17: `java.net.Socket`/`ServerSocket` (BIO), `java.nio.channels.Selector` (NIO), `DatagramSocket` (UDP broadcast) |
+| Đồng thời | Thread pool, worker pool + hàng đợi tuần tự theo kết nối, `ConcurrentHashMap`, transaction CSDL |
+| CSDL | PostgreSQL, JDBC |
+| Thư viện Java ngoài | PostgreSQL JDBC 42.7.4, HikariCP 5.1.0 (pool kết nối), Gson 2.11.0 (JSON cho API cục bộ), SLF4J NOP 1.7.36, JUnit 5.11.3 (test) |
+| Giao diện | Next.js 15.5, React 19.1, TypeScript 5.9 (build tĩnh, không chạy Node khi vận hành) |
+| Build | Maven 3.9 (đóng gói fat jar bằng maven-shade-plugin), npm |
+
+## 4. Cài đặt và chạy
+
+**Yêu cầu:** JDK 17, Maven 3.9, Node.js 18 trở lên, PostgreSQL 14 trở lên. Các script sẽ dùng JDK và Maven trong `tools/` nếu có (bản portable, không nộp kèm).
+
+```bat
+:: 1. Tạo CSDL phan_phoi_hang và nạp dữ liệu mẫu + 1000 chi nhánh ảo cho thực nghiệm
+scripts\setup-db.bat
+:: (tuỳ chọn) dữ liệu demo lớn: 15 chi nhánh, 30 mặt hàng, ~60 ngày lịch sử. XOÁ giao dịch hiện có
+scripts\seed-demo.bat
+
+:: 2. Đặt mật khẩu PostgreSQL: copy config\server.local.properties.example thành config\server.local.properties rồi điền db.password
+::    (file *.local.properties nằm trong .gitignore, không đưa lên git)
+
+:: 3. Build giao diện + 4 module Java
+scripts\build.bat
+
+:: 4. Máy công ty
+scripts\run-server.bat                  :: mở http://127.0.0.1:8080/admin/ (đăng nhập admin / admin123)
+
+:: 5. Mỗi máy chi nhánh (cần client\target\client.jar, ui\out, config)
+scripts\run-client.bat                  :: mở http://127.0.0.1:8081/branch/
+scripts\run-client.bat http.port=8082   :: chi nhánh thứ 2 trên cùng máy
+```
+
+Tài khoản mẫu: `CN01`, `CN02`, `CN03`, mật khẩu `123456`. Ô "Server" để `auto` thì client tự tìm server bằng UDP broadcast; nếu mạng chặn broadcast thì nhập IP, ví dụ `192.168.1.10`.
+
+### Cấu hình
+
+Cấu hình đọc từ file `.properties`, rồi file `*.local.properties` cùng tên nếu có (giá trị riêng của máy như mật khẩu CSDL, không đưa lên git). Có thể ghi đè bằng tham số dạng `key=value` khi chạy, ví dụ `run-server.bat io.mode=bio`.
+
+| Khóa (`config/server.properties`) | Mặc định | Ý nghĩa |
+|---|---|---|
+| `tcp.port`, `discovery.port` | 5000, 5001 | Cổng TCP và cổng UDP discovery |
+| `max.clients` | 100 | Vượt giới hạn thì kết nối mới nhận `ERROR\|E03` rồi bị đóng |
+| `heartbeat.idle.seconds`, `heartbeat.pong.timeout.seconds` | 30, 10 | Im lặng 30 s → PING; không có PONG sau 10 s → đóng kết nối |
+| `io.mode` | `nio` | `nio` (Selector) hoặc `bio` (mỗi kết nối một luồng) |
+| `nio.workers`, `nio.write.through` | 16, `true` | Số worker NIO; `true` = worker ghi thẳng vào socket khi kết nối không còn tin chờ, `false` = mọi tin đi qua luồng Selector (baseline, E7) |
+| `write.mode` | `queued` | Chỉ dùng với BIO: `queued` (hàng đợi gửi) hoặc `direct` (baseline) |
+| `send.queue.limit` | 2000 | Số tin chờ gửi tối đa của một kết nối; vượt thì cắt client chậm |
+| `accept.strategy` | `conditional` | `conditional`, `check_then_act` hoặc `synchronized` (E1) |
+| `delivery` | `queue_resync` | `queue_resync`, `queue` hoặc `none` (E2) |
+| `db.url`, `db.user`, `db.password`, `db.pool.size` | | Kết nối PostgreSQL |
+| `admin.http.port`, `experiment.api` | 8080, true | API admin và API thực nghiệm (chỉ localhost) |
+| `admin.user`, `admin.salt`, `admin.password.hash` | `admin`, `pp-admin-2026`, rỗng | Tài khoản trang công ty; hash = hex SHA-256(salt + mật khẩu), để rỗng = mật khẩu mặc định `admin123` |
+
+| Khóa (`config/client.properties`) | Mặc định | Ý nghĩa |
+|---|---|---|
+| `server` | `auto` | `auto` = UDP discovery; hoặc `ip` / `ip:port` |
+| `reconnect.strategy`, `reconnect.cap.ms` | `jitter`, 5000 | `jitter` (đề xuất), `fixed` (baseline) hoặc `backoff` (E5) |
+| `http.port` | 8081 | Cổng giao diện chi nhánh |
+
+### Cơ sở dữ liệu
+
+10 bảng theo SRS mục 6, cộng bảng `dieu_chuyen` và cột `chi_nhanh.gia_lap` (đánh dấu chi nhánh ảo). Các ràng buộc quan trọng:
+- `kho_tong.so_luong >= 0`: kho tổng không âm.
+- Chỉ mục UNIQUE riêng `uq_yeu_cau_dang_mo`: mỗi cặp (chi nhánh, sản phẩm) chỉ có một yêu cầu chưa đóng.
+- `phieu_xuat.ma_yc` UNIQUE: một yêu cầu chỉ được xuất kho một lần.
+
+Mật khẩu lưu dạng `hex(SHA-256(salt + matKhau))`.
+
+## 5. Giao tiếp mạng
+
+### Kết nối
+
+1. Client gửi UDP `DISCOVER` tới cổng 5001 bằng broadcast; server trả `HERE|ip|5000`.
+2. Client mở **một** kết nối TCP và gửi `LOGIN|maCN|matKhau`.
+3. Sau `LOGIN_OK`, kết nối được giữ mở và dùng chung cho request của client lẫn push của server.
+4. Đóng kết nối có ba cách:
+   - Client gửi `LOGOUT`.
+   - Heartbeat: im lặng 30 s thì server gửi PING; không có PONG sau 10 s thì server đóng.
+   - Server cắt client đọc quá chậm.
+
+Mất kết nối thì client tự nối lại (mỗi lần chờ tối đa 5 s) và tự đăng nhập lại.
+
+### Định dạng tin
+
+UTF-8, mỗi tin một dòng tối đa 4096 byte, dạng `LENH|thamSo1|thamSo2`. Tham số dùng escape `\\` `\p` `\n`. Danh sách có bản ghi ngăn bởi `;`, trường ngăn bởi `,`, và trong trường dùng escape `\c` `\s`.
+
+| Lệnh | Chiều | Tham số |
+|---|---|---|
+| `LOGIN` / `LOGIN_OK` / `LOGIN_FAIL` | CN→S / S→CN | maCN, matKhau / tên CN / lý do |
+| `INVENTORY_GET` / `INVENTORY` | CN→S / S→CN | — / danh sách maHang,tenHang,soLuong,nguong |
+| `SALE` / `SALE_OK` | CN→S / S→CN | maHang, soLuong / maHang, soLuongCon |
+| `SET_THRESHOLD` | CN→S | maHang, nguong (server trả `INVENTORY`) |
+| `LOW_STOCK` | CN→S | maHang, soLuongCon, nguong |
+| `OFFER` | S→CN | maYC, maHang, soLuongDeXuat |
+| `ACCEPT` / `REJECT` / `RECEIVED` | CN→S | maYC, soLuong / maYC / maYC |
+| `DELIVERED` / `OUT_OF_STOCK` | S→CN | maYC, maHang, soLuong / maYC, soLuongCoThe, maHang |
+| `HISTORY_GET` / `HISTORY` | CN→S / S→CN | từ ngày, đến ngày / danh sách maYC,maHang,tenHang,soLuong,thoiGian,nguon |
+| `TRANSFER_REQ` / `TRANSFER_DONE` | S→CN | maDC, maHang, soLuong, tenCnNhan / maDC, maHang, soLuongCon |
+| `TRANSFER_ACCEPT` / `TRANSFER_REJECT` | CN→S | maDC |
+| `BROADCAST` | S→CN | noiDung |
+| `ERROR` | S→CN | E01 định dạng, E02 chưa đăng nhập, E03 sai trạng thái/server đầy, E04 không tìm thấy, E05 số lượng sai |
+| `PING` / `PONG`, `LOGOUT` | hai chiều, CN→S | — |
+| UDP `DISCOVER` / `HERE` | CN→S / S→CN | — / ip, cổngTCP |
+
+Luồng cấp hàng có hai cách, cùng kết thúc bằng `RECEIVED`:
+
+- **Gửi thẳng (mặc định trên trang Tổng quan):** `LOW_STOCK` → admin bấm *Gửi hàng* → server trừ kho tổng, YC thành *Đã gửi* và đẩy `DELIVERED` → chi nhánh bấm *Đã nhận hàng* (`RECEIVED`) → YC thành *Đã nhận*. Admin bấm *Báo hết hàng* thì server đẩy `OUT_OF_STOCK`; chi nhánh nhận số còn lại (`ACCEPT`), từ chối (`REJECT`) hoặc chờ điều chuyển.
+- **Đề xuất rồi xác nhận:** `LOW_STOCK` → `OFFER` → `ACCEPT` → `DELIVERED` → `RECEIVED`. Nếu lúc ACCEPT kho tổng thiếu, server trả `OUT_OF_STOCK`.
+
+Khi có `OUT_OF_STOCK`, server tìm chi nhánh khác có hàng dư và gửi `TRANSFER_REQ`. `OUT_OF_STOCK` mang `maHang` để chi nhánh hiển thị được YC chưa từng nhận `OFFER`.
+
+### Đồng thời
+
+- **Server NIO:** một luồng Selector làm mọi accept/đọc/ghi. Dòng tin được đẩy sang worker pool, mỗi kết nối có một hàng đợi tuần tự riêng. Nhờ vậy tin của cùng một chi nhánh luôn xử lý đúng thứ tự, còn các chi nhánh khác nhau chạy song song.
+- **Ghi:** bên gọi chỉ xếp tin vào hàng đợi của kết nối, nên một client chậm không chặn được ai.
+- **Kho tổng:** trừ bằng `UPDATE ... WHERE so_luong >= ?` trong transaction, và khóa dòng YC bằng `SELECT ... FOR UPDATE`. Hai transaction điều chuyển và cấp hàng khóa theo cùng thứ tự (YC trước, điều chuyển sau) để tránh deadlock.
+- **Nhật ký:** ghi vào `nhat_ky` bất đồng bộ theo lô, nên ClientHandler không phải chờ CSDL.
+
+### Xử lý lỗi
+
+| Tình huống | Cách xử lý |
+|---|---|
+| Dòng rác, sai số tham số, escape sai, dòng > 4096 byte | `ERROR\|E01`, kết nối vẫn tiếp tục |
+| Lệnh trước khi đăng nhập | `ERROR\|E02` |
+| Sai trạng thái (ACCEPT YC đã đóng...), sai chiều lệnh | `ERROR\|E03` / `E01` |
+| Mã CN khác trong tham số | Bị bỏ qua: mã CN luôn lấy từ phiên, YC của CN khác trả `E04` |
+| ACCEPT gửi lặp | Trả lại `DELIVERED` cũ, không trừ kho lần hai |
+| Client mất kết nối / treo | Heartbeat đóng phiên; tin push vào hàng đợi; gửi lại trạng thái khi đăng nhập |
+| Đăng nhập trùng khi server chưa biết phiên cũ đã chết | `LOGIN_FAIL` + server PING phiên cũ, đóng nó sau 5 s |
+| Server mất / khởi động lại | Client báo trạng thái, tự nối lại theo `ReconnectPolicy` |
+| Quá số kết nối | `ERROR\|E03\|Server da du N ket noi` rồi đóng |
+| Lỗi CSDL | Rollback transaction, trả `ERROR\|E03` |
+
+## 6. Kiểm thử
+
+- **Unit test** (`mvn -pl common test`): 65 test cho giao thức (escape, ghép/tách từng lệnh, danh sách, dòng quá dài, tách dòng NIO qua ranh giới gói tin và ký tự UTF-8) và cho chính sách nối lại.
+- **Kiểm thử tích hợp** theo SRS mục 8: chạy bằng script gửi lệnh TCP thật, trên cả `io.mode=nio` lẫn `io.mode=bio`.
+
+| Ca | Kết quả đã kiểm |
+|---|---|
+| TC-01 đăng nhập đúng/sai/trùng | `LOGIN_OK`, `LOGIN_FAIL` kèm lý do, `LOGIN_FAIL` vì trùng mã |
+| TC-02 bán dưới ngưỡng rồi bán tiếp | 1 LOW_STOCK, 1 YC |
+| TC-03 luồng đủ 5 tin | Kho tổng giảm, kho CN tăng đúng số chốt, YC ở HOAN_TAT |
+| TC-04 REJECT | YC ở TU_CHOI, không kho nào đổi |
+| TC-05 kho 10, hai CN cùng ACCEPT 8 | 1 DELIVERED, 1 `OUT_OF_STOCK\|..\|2`, kho tổng = 2 |
+| TC-06 OFFER khi CN offline | CN nhận OFFER ngay sau LOGIN_OK |
+| TC-07 tắt server 20 s | Client tự nối lại (đo được 3,5 s) |
+| TC-08 client không trả PONG | PING ở giây 31, đóng ở giây 41 |
+| TC-09 netcat gửi rác | `ERROR\|E01`, `ERROR\|E02`, server vẫn chạy |
+| TC-10 broadcast có `\|` và xuống dòng | Hiển thị nguyên văn |
+| TC-11 20 client | Xem E4 và `scripts\run-loadsim.bat clients=20 duration=600` |
+| TC-12 ACCEPT hai lần | Kho tổng trừ một lần, một phiếu xuất |
+
+Tab **Đối soát** trên trang admin kiểm tra NFR-03; tab **Giám sát giao thức** hiện luồng tin realtime và tra cứu `nhat_ky`.
+
+## 7. Kết quả thực nghiệm
+
+Toàn bộ số liệu dưới đây là kết quả đo thật, chạy ngày 20/10/2026 trên một máy: Windows 11, 16 luồng CPU, 15 GB RAM, Java 17.0.20, PostgreSQL trên localhost. Client ảo và server cùng máy, nói chuyện qua loopback.
+
+- Kết quả đầy đủ: [experiments/results/RESULTS.md](experiments/results/RESULTS.md); CSV gốc nằm cùng thư mục.
+- Biểu đồ: `experiments/charts/`.
+- Cách đo: [docs/EXPERIMENTS.md](docs/EXPERIMENTS.md).
+- Chạy lại: `scripts\run-experiments.bat run=all`.
+
+**E1 – 50 chi nhánh cùng ACCEPT 8, kho tổng 200 (đủ cho 25), 5 lần lặp**
+
+| Chiến lược | DELIVERED | Tổng xuất | Bán vượt kho | Vi phạm bất biến | Thời gian xong cả loạt |
+|---|---:|---:|---:|---:|---:|
+| `check_then_act` (baseline) | 50 | 400 | **200** | 5/5 | 78 ms |
+| `synchronized` (baseline) | 25 | 200 | 0 | 0/5 | 109 ms |
+| `conditional` (đề xuất) | 25 | 200 | 0 | 0/5 | **31 ms** |
+
+**E2 – OFFER khi chi nhánh liên tục mất kết nối (30 CN, 60 s)**
+
+| Chế độ | OFFER gửi | Nhận được | Tỉ lệ mất |
+|---|---:|---:|---:|
+| `none` | 321 | 207 | 35,5 % |
+| `queue` (theo SRS) | 399 | 319 | 20,1 % |
+| `queue_resync` (đề xuất) | 541 | 541 | **0 %** |
+
+**E3 – 1 chi nhánh treo, 300 broadcast tới 20 chi nhánh bình thường**
+
+| Server | Broadcast hoàn tất | Tin tới CN bình thường | CN treo bị cắt |
+|---|---:|---:|---|
+| BIO ghi trực tiếp (baseline) | 26/300 (treo 5 s rồi dừng) | 540/6000 | không |
+| BIO + hàng đợi gửi | 300/300 | 6000/6000 | có |
+| NIO + hàng đợi gửi | 300/300 | 6000/6000 | có |
+
+**E4 – BIO và NIO, mỗi client 1 SALE/giây, 30 s**
+
+| Số client | Luồng server BIO | Luồng server NIO | p95 BIO | p95 NIO | Mất tin |
+|---:|---:|---:|---:|---:|---:|
+| 50 | 117 | 33 | 1,82 ms | 2,21 ms | 0 |
+| 200 | 416 | 33 | 1,62 ms | 1,73 ms | 0 |
+| 500 | 1017 | **32** | 1,26 ms | 1,34 ms | 0 |
+
+**E6 – Luồng cấp hàng trọn vẹn: 50 đến 1000 chi nhánh cùng báo thiếu, 5 vòng mỗi chi nhánh (21/10/2026)**
+
+Bot admin nghe SSE và bấm *Gửi hàng*/*Báo hết hàng* qua API có đăng nhập; kho tổng chỉ đủ 80 % số lần gửi.
+
+| Số CN | Cảnh báo | Gửi hàng / báo hết | Mất tin | Trùng | Lỗi | Mất kết nối | Bán vượt kho | Trọn vòng TB / p95 | Luồng server |
+|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| 50 | 250/250 | 200 / 50 | 0 | 0 | 0 | 0 | 0 | 147 / 256 ms | 40 |
+| 100 | 500/500 | 400 / 100 | 0 | 0 | 0 | 0 | 0 | 250 / 329 ms | 41 |
+| 100 × 20 vòng | 2000/2000 | 1600 / 400 | 0 | 0 | 0 | 0 | 0 | 175 / 280 ms | 41 |
+| 500 | 2500/2500 | 2000 / 500 | 0 | 0 | 0 | 0 | 0 | 882 / 1 485 ms | 41 |
+| 500 × 20 vòng | 10000/10000 | 8000 / 2000 | 0 | 0 | 0 | 0 | 0 | 627 / 1 024 ms | 65 |
+| 1000 | 5000/5000 | 4000 / 1000 | 0 | 0 | 0 | 0 | 0 | 1 411 / 2 298 ms | 41 |
+| 1000 × 20 vòng | 20000/20000 | 16000 / 4000 | 0 | 0 | 0 | 0 | 0 | 1 210 / 1 869 ms | 41 |
+
+Chi tiết từng chặng (SALE, LOW_STOCK → admin, admin bấm → chi nhánh nhận, đã nhận → admin): [RESULTS-e6.md](experiments/results/RESULTS-e6.md), [RESULTS-e6-500.md](experiments/results/RESULTS-e6-500.md), [RESULTS-e6-500x20.md](experiments/results/RESULTS-e6-500x20.md), [RESULTS-e6-1000.md](experiments/results/RESULTS-e6-1000.md), [RESULTS-e6-1000x20.md](experiments/results/RESULTS-e6-1000x20.md). Chạy lại: `scripts\run-experiments.bat run=e6 e6.clients=50,100,500,1000` (cần nạp lại `db/seed_loadsim.sql` để có SIM001..SIM1000).
+
+**E7 – Tầng mạng thuần: mỗi chi nhánh 10 PING/giây trong 20 s (server trả PONG không chạm CSDL)**
+
+| Số CN | Tin gửi | Mất | Thông lượng | RTT TB | p95 | p99 | Max | Mất kết nối | Luồng server |
+|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| 100 | 19 990 | 0 | 995 tin/s | 0,27 ms | 0,44 ms | 0,59 ms | 5,6 ms | 0 | 33 |
+| 500 | 99 845 | 0 | 4 968 tin/s | 0,37 ms | 0,69 ms | 0,91 ms | 3,4 ms | 0 | 33 |
+| 1000, NIO ghi thẳng (đề xuất) | 199 058 | 0 | 9 905 tin/s | 0,66 ms | 1,49 ms | 3,00 ms | 27,9 ms | 0 | 33 |
+| 1000, NIO qua Selector (baseline) | 199 247 | 0 | 9 914 tin/s | 5,30 ms | 8,50 ms | 9,80 ms | 35,1 ms | 0 | 33 |
+| 1000, BIO | 199 292 | 0 | 9 915 tin/s | 0,36 ms | 0,90 ms | 2,19 ms | 26,9 ms | 0 | 2 017 |
+
+Hai hàng 100 và 500 đo với bản trước khi sửa đường ghi NIO. Chi tiết: [RESULTS-e7.md](experiments/results/RESULTS-e7.md), [RESULTS-e7-1000.md](experiments/results/RESULTS-e7-1000.md). Chạy lại: `scripts\run-experiments.bat run=e7 e7.clients=1000` (thêm `e7.server=nio.write.through=false` hoặc `e7.server=io.mode=bio` để so sánh).
+
+**E5 – 300 chi nhánh nối lại khi server khởi động lại, 5 lần**
+
+| Chính sách | Nối lại TB | p95 | Lần thử / client | Đỉnh lần thử / 100 ms |
+|---|---:|---:|---:|---:|
+| `fixed` 5 s (baseline SRS) | 3 224 ms | 4 854 ms | 2,40 | 300 |
+| `backoff` + full jitter | 1 669 ms | 3 884 ms | 6,76 | 92 |
+| `jitter` lệch pha (đề xuất) | 1 922 ms | 3 995 ms | 3,31 | **16,4** |
+
+**Đọc kết quả.**
+- **E1:** `check_then_act` cho cả 50 chi nhánh nhận hàng từ kho chỉ có 200 (lost update). `synchronized` đúng nhưng chậm hơn `conditional` khoảng 3,5 lần, vì mọi ACCEPT phải xếp hàng qua một khóa Java.
+- **E2:** `queue` chỉ cứu được trường hợp server biết chi nhánh đã offline. Trường hợp "rút dây", server tưởng đã gửi thành công nên tin vẫn mất. `queue_resync` gửi lại theo trạng thái lưu trong CSDL nên không mất tin nào.
+- **E3:** khi ghi trực tiếp, chỉ một client không đọc socket là đủ để làm treo luồng broadcast và chặn mọi chi nhánh khác.
+- **E4:** ở tải này độ trễ do CSDL quyết định nên BIO và NIO ngang nhau. Khác biệt nằm ở số luồng: BIO tăng tuyến tính theo số client (2 luồng mỗi kết nối), còn NIO giữ cố định khoảng 32.
+- **E6:** với 50–100 chi nhánh cùng báo thiếu, tầng mạng không mất, không trùng tin và không rớt kết nối nào; p95 mỗi chặng mạng dưới 55 ms, luồng server giữ khoảng 40 nhờ NIO. Kho tổng không bị xuất vượt dù 100 lệnh gửi hàng tranh nhau. Ở 500 chi nhánh vẫn 0 mất/trùng/rớt và kho đúng; trọn vòng p95 lên khoảng 1–1,5 s vì 2 500 vòng (mỗi vòng khoảng 5 transaction) dồn vào CSDL trong 5 giây. Tăng pool CSDL lên 40 và worker NIO lên 32 không đổi kết quả này, còn chặng thuần mạng (admin bấm → chi nhánh nhận) vẫn p95 khoảng 26–28 ms.
+- **E7:** bỏ CSDL ra thì tầng TCP/NIO trả lời 500 client × 10 tin/giây với p99 dưới 1 ms, không mất tin, server giữ 33 luồng. Giới hạn ở 500 chi nhánh là CSDL, không phải tầng mạng. Ở 1000 chi nhánh (khoảng 10 000 tin/giây) lộ ra hai điểm yếu, đã sửa: (1) mỗi tin gửi đều phải đánh thức luồng Selector, p95 lên 8,5–11 ms; cho worker ghi thẳng khi kết nối không còn tin chờ thì p95 còn 1,49 ms (nhanh 5,7 lần) mà vẫn 33 luồng, trong khi BIO cần 2 017 luồng; (2) bộ ghi `nhat_ky` không theo kịp 20 000 bản ghi/giây và bỏ 20–30 nghìn bản ghi; lô 2 000 dòng với `reWriteBatchedInserts` thì không bỏ bản ghi nào. E3 chạy lại sau khi sửa: client treo vẫn bị cắt, 20 chi nhánh khác nhận đủ 6 000/6 000 tin.
+- **E5:** `jitter` giảm đỉnh tải lúc server vừa lên 18 lần so với `fixed`, thời gian nối lại trung bình giảm 40 %, và số lần thử chỉ bằng một nửa `backoff`.
+
+## 8. Novelty và đóng góp
+
+| # | Đóng góp | Khác gì cách làm thông thường / baseline | Bằng chứng |
+|---|---|---|---|
+| 1 | Trừ kho bằng một câu `UPDATE … WHERE so_luong >= ?` kèm khóa dòng YC, không dùng khóa Java | Cách "đọc rồi ghi" bị lost update; `synchronized` đúng nhưng tuần tự hóa toàn hệ thống và chỉ đúng khi có một server | E1: bán vượt 200 → 0, nhanh hơn `synchronized` 3,5 lần; TC-05, TC-12 |
+| 2 | Giao tin theo trạng thái: hàng đợi offline + gửi lại mọi YC còn mở từ CSDL sau LOGIN_OK, client loại trùng theo mã YC | SRS chỉ xếp hàng khi server biết chi nhánh offline; tin ghi vào socket "chết" thì mất | E2: tỉ lệ mất 35,5 % → 20,1 % (SRS) → 0 %; TC-06 |
+| 3 | Hàng đợi gửi có giới hạn cho từng kết nối, cắt client đọc chậm | Ghi trực tiếp: một client treo chặn broadcast tới mọi client | E3: 540/6000 → 6000/6000 tin |
+| 4 | Server NIO: một Selector + worker pool + hàng đợi tuần tự theo kết nối (giữ thứ tự tin của từng chi nhánh) | Mỗi kết nối 1–2 luồng | E4: 1017 → 32 luồng ở 500 client, độ trễ tương đương, 0 tin mất |
+| 5 | Nối lại kiểu "jitter lệch pha" vẫn giữ giới hạn ≤ 5 s của SRS | Nhịp cố định 5 s làm mọi client dồn cục; exponential backoff thử quá dày khi server tắt lâu | E5: đỉnh 300 → 16,4 lần thử/100 ms, nối lại TB 3,2 s → 1,9 s |
+| 6 | Bộ thực nghiệm tái lập được: mỗi cải tiến có cờ bật lại baseline, một lệnh chạy hết, xuất CSV | Đo tay hoặc chỉ demo | `scripts\run-experiments.bat`, `experiments/results/*.csv` |
+
+Ngoài ra còn các tính năng mở rộng theo SRS 7.2: tự tìm server qua UDP broadcast (A) và điều chuyển hàng giữa chi nhánh qua server làm trung gian (B).
+
+## 9. Hạn chế
+
+- Thực nghiệm chạy client ảo, server và CSDL trên cùng một máy qua loopback. Số liệu tuyệt đối sẽ khác trong LAN thật; điều đáng tin là so sánh tương đối giữa các biến thể.
+- Mật khẩu vẫn đi trên mạng dạng rõ trong `LOGIN`. Chưa có TLS (SRS 7.2-I).
+- Chỉ có một server. Cơ chế `conditional` vẫn đúng khi chạy nhiều server dùng chung CSDL, nhưng phiên, hàng đợi gửi và Selector đều nằm trong một tiến trình.
+- Gửi lại theo trạng thái cho phép nhận trùng (at-least-once). Client tự loại trùng theo mã YC; protocol chưa có số thứ tự/ACK tổng quát cho mọi loại tin.
+- Danh sách quá 4096 byte bị cắt bớt (HISTORY tối đa 200 phiếu), chưa có phân trang.
+- `BROADCAST` gửi cho chi nhánh "rút dây" mà server chưa phát hiện thì vẫn có thể mất, vì broadcast không thuộc trạng thái YC để gửi lại.
+- Trang công ty có đăng nhập (một tài khoản, cookie HttpOnly) nhưng chạy HTTP thường trên localhost; phiên giữ trong bộ nhớ nên server khởi động lại thì phải đăng nhập lại. API `/api/experiment/*` không đòi đăng nhập khi `experiment.api=true`.
+
+## 10. Tài liệu tham khảo
+
+1. Oracle. *Java SE 17 API: java.nio.channels.Selector, java.net.Socket, java.net.DatagramSocket.* https://docs.oracle.com/en/java/javase/17/docs/api/
+2. PostgreSQL Global Development Group. *PostgreSQL Documentation: 13.2 Transaction Isolation; SELECT … FOR UPDATE.* https://www.postgresql.org/docs/current/transaction-iso.html
+3. M. Brooker. *Exponential Backoff And Jitter.* AWS Architecture Blog, 2015. https://aws.amazon.com/blogs/architecture/exponential-backoff-and-jitter/
+4. D. Kegel. *The C10K problem.* http://www.kegel.com/c10k.html
+5. W. R. Stevens, B. Fenner, A. M. Rudoff. *UNIX Network Programming, Vol. 1: The Sockets Networking API*, 3rd ed. Addison-Wesley, 2003.
+6. M. Kleppmann. *Designing Data-Intensive Applications*, ch. 7 (Transactions: lost updates). O'Reilly, 2017.
+7. ISO/IEC/IEEE 29148:2018. *Systems and software engineering — Requirements engineering.*

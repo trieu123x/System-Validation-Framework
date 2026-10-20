@@ -1,0 +1,121 @@
+package phanphoi.client;
+
+import com.google.gson.JsonObject;
+import com.sun.net.httpserver.HttpServer;
+import phanphoi.common.Config;
+import phanphoi.common.Protocol;
+import phanphoi.common.ReconnectPolicy;
+import phanphoi.common.web.Http;
+import phanphoi.common.web.Router;
+import phanphoi.common.web.StaticFiles;
+
+import java.awt.Desktop;
+import java.net.InetSocketAddress;
+import java.net.URI;
+import java.nio.file.Path;
+import java.util.Map;
+import java.util.concurrent.Executors;
+
+/**
+ * Ứng dụng chi nhánh. Giữ kết nối TCP tới server và mở giao diện Next.js /branch trên máy này.
+ * Chạy: java -jar client/target/client.jar [--config=config/client.properties] [http.port=8082 ...]
+ */
+public final class ClientMain {
+
+    public static void main(String[] args) throws Exception {
+        Config cfg = Config.load("config/client.properties", args);
+        String host = cfg.get("http.host", "127.0.0.1");
+        int httpPort = cfg.getInt("http.port", 8081);
+
+        BranchAgent agent = new BranchAgent(
+                cfg.get("server", "auto"),
+                cfg.getInt("server.port", Protocol.DEFAULT_TCP_PORT),
+                cfg.getInt("discovery.port", Protocol.DEFAULT_DISCOVERY_PORT),
+                ReconnectPolicy.parse(cfg.get("reconnect.strategy", "jitter"),
+                        cfg.getInt("reconnect.base.ms", 500), cfg.getInt("reconnect.cap.ms", 5000)));
+        agent.start();
+
+        HttpServer http = HttpServer.create(new InetSocketAddress(host, httpPort), 50);
+        http.setExecutor(Executors.newCachedThreadPool(r -> {
+            Thread t = new Thread(r, "branch-http");
+            t.setDaemon(true);
+            return t;
+        }));
+        http.createContext("/api/", routes(agent));
+        http.createContext("/", new StaticFiles(Path.of(cfg.get("ui.dir", "ui/out"))));
+        http.start();
+
+        String url = "http://" + ("0.0.0.0".equals(host) ? "localhost" : host) + ":" + httpPort + "/branch/";
+        System.out.println("[client] giao dien chi nhanh: " + url);
+        if (cfg.getBool("open.browser", true) && Desktop.isDesktopSupported()
+                && Desktop.getDesktop().isSupported(Desktop.Action.BROWSE)) {
+            try {
+                Desktop.getDesktop().browse(URI.create(url));
+            } catch (Exception ignored) {
+                // tự mở trình duyệt
+            }
+        }
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            agent.logout();
+            http.stop(0);
+        }, "shutdown"));
+    }
+
+    private static Router routes(BranchAgent agent) {
+        Router r = new Router();
+        Map<String, Object> ok = Map.of("ok", true);
+        r.get("/api/role", (ex, p) -> Http.ok(ex, Map.of("role", "branch")));
+        r.get("/api/state", (ex, p) -> Http.ok(ex, agent.snapshot()));
+        r.get("/api/events", (ex, p) -> agent.hub().open(ex,
+                () -> new String[]{"state", Http.GSON.toJson(agent.snapshot())}));
+        r.get("/api/config", (ex, p) -> Http.ok(ex, Map.of("server", agent.serverSetting())));
+        r.post("/api/login", (ex, p) -> {
+            JsonObject b = Http.body(ex);
+            Http.ok(ex, agent.login(Http.str(b, "maCn"), Http.str(b, "matKhau"), Http.str(b, "server")));
+        });
+        r.post("/api/logout", (ex, p) -> {
+            agent.logout();
+            Http.ok(ex, ok);
+        });
+        r.post("/api/inventory/refresh", (ex, p) -> {
+            agent.refreshInventory();
+            Http.ok(ex, ok);
+        });
+        r.post("/api/sale", (ex, p) -> {
+            JsonObject b = Http.body(ex);
+            agent.sale(Http.str(b, "maHang"), Http.integer(b, "soLuong"));
+            Http.ok(ex, ok);
+        });
+        r.post("/api/threshold", (ex, p) -> {
+            JsonObject b = Http.body(ex);
+            agent.setThreshold(Http.str(b, "maHang"), Http.integer(b, "nguong"));
+            Http.ok(ex, ok);
+        });
+        r.post("/api/requests/{id}/accept", (ex, p) -> {
+            agent.accept(Integer.parseInt(p.get(0)), Http.integer(Http.body(ex), "soLuong"));
+            Http.ok(ex, ok);
+        });
+        r.post("/api/requests/{id}/reject", (ex, p) -> {
+            agent.reject(Integer.parseInt(p.get(0)));
+            Http.ok(ex, ok);
+        });
+        r.post("/api/requests/{id}/received", (ex, p) -> {
+            agent.received(Integer.parseInt(p.get(0)));
+            Http.ok(ex, ok);
+        });
+        r.post("/api/transfers/{id}/accept", (ex, p) -> {
+            agent.transferAnswer(Integer.parseInt(p.get(0)), true);
+            Http.ok(ex, ok);
+        });
+        r.post("/api/transfers/{id}/reject", (ex, p) -> {
+            agent.transferAnswer(Integer.parseInt(p.get(0)), false);
+            Http.ok(ex, ok);
+        });
+        r.post("/api/history", (ex, p) -> {
+            JsonObject b = Http.body(ex);
+            agent.history(Http.str(b, "tu"), Http.str(b, "den"));
+            Http.ok(ex, ok);
+        });
+        return r;
+    }
+}

@@ -1,0 +1,6 @@
+{
+  "name": "phanphoi-report",
+  "private": true,
+  "description": "Sinh bao cao .docx: npm install && node build-report.js ../.. ../NhomXX_PhanPhoiHangHoa_Report.docx",
+  "dependencies": { "docx": "9.5.1" }
+}

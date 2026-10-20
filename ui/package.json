@@ -1,0 +1,24 @@
+{
+  "name": "phanphoi-ui",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev -p 3000",
+    "dev:admin": "cross-env API_TARGET=http://127.0.0.1:8080 next dev -p 3000",
+    "dev:branch": "cross-env API_TARGET=http://127.0.0.1:8081 next dev -p 3001",
+    "build": "next build",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "next": "15.5.28",
+    "react": "19.1.10",
+    "react-dom": "19.1.10"
+  },
+  "devDependencies": {
+    "@types/node": "22.20.5",
+    "@types/react": "19.1.17",
+    "@types/react-dom": "19.1.11",
+    "cross-env": "7.0.3",
+    "typescript": "5.9.3"
+  }
+}

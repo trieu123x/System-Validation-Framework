@@ -1,0 +1,4 @@
+server,broadcast_hoan_tat,lan_goi_lau_nhat_ms,tin_toi_cn_binh_thuong,tin_ky_vong,do_tre_p50_ms,do_tre_p95_ms,do_tre_max_ms,cn_treo_bi_cat
+"BIO + ghi trực tiếp (baseline)",26,5016.44,540,6000,3.00,10.00,26.00,false
+"BIO + hàng đợi gửi",300,40.98,6000,6000,1.00,3.00,22.00,true
+"NIO + hàng đợi gửi",300,48.39,6000,6000,1.00,3.00,18.00,true

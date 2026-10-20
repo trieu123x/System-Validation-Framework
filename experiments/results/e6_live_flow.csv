@@ -1,0 +1,3 @@
+so_cn,so_vong,canh_bao,ky_vong,gui_hang,bao_het_hang,nhan_delivered,nhan_out_of_stock,mat_tin,trung,loi,mat_ket_noi,kho_dung,yc_con_mo,sale_tb,sale_p95,sale_max,alert_tb,alert_p95,alert_max,ship_http_tb,ship_http_p95,ship_http_max,push_tb,push_p95,push_max,final_tb,final_p95,final_max,vong_tb,vong_p95,vong_max,luong_dinh,heap_dinh_mb,thoi_gian_s
+50,5,250,250,200,50,200,50,0,0,0,0,true,0,17.19,38.85,51.16,26.83,106.29,137.50,26.33,44.66,105.54,16.28,39.05,75.58,12.71,32.61,68.24,146.82,256.08,297.78,40,18.04,0.90
+100,5,500,500,400,100,400,100,0,0,0,0,true,0,9.20,32.12,40.71,15.71,50.65,79.45,24.04,45.92,282.58,19.11,39.24,344.76,10.08,24.23,66.96,250.38,329.14,606.08,41,76.51,1.41
