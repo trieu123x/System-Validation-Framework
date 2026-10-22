@@ -118,6 +118,27 @@ Chạy: `scripts\run-experiments.bat run=e7` (thêm `e7.clients=100,500 e7.rate=
 
 Lưu ý: mỗi lượt E6/E7 ghi hàng trăm nghìn dòng `nhat_ky` cho các chi nhánh ảo; xoá bằng `DELETE FROM nhat_ky WHERE ma_cn LIKE 'SIM%'` nếu không cần.
 
+## E9 – Server broadcast tới 1000 chi nhánh
+
+**Câu hỏi.** Toàn bộ client ảo chạy trên một máy, cùng một địa chỉ IP (không có proxy hay nhiều máy), nên 1000 client cùng *gửi* lên server chủ yếu đo khả năng của máy chạy client. Chiều ngược lại thì phản ánh đúng server: một nguồn gửi cùng một tin tới mọi chi nhánh (như thông báo FR-22). Khi số chi nhánh online tăng tới 1000, tin có tới đủ không, chậm đi bao nhiêu, và server tốn bao nhiêu luồng?
+
+| Biến thể | Cấu hình | Cách gửi |
+|---|---|---|
+| Baseline | `io.mode=bio`, `write.mode=direct` | Luồng gọi broadcast ghi thẳng vào từng socket |
+| So sánh | `io.mode=bio`, `write.mode=queued` | Mỗi kết nối có hàng đợi và một luồng ghi riêng |
+| Đề xuất | `io.mode=nio` | Worker ghi thẳng khi được, phần còn lại giao Selector |
+
+**Kịch bản.**
+
+- **Mở rộng.** Số chi nhánh online tăng dần 100, 250, 500, 750, 1000, đăng nhập thêm mà không ngắt các chi nhánh cũ. Ở mỗi mức, server gửi 100 broadcast, mỗi tin 256 byte, cách nhau 50 ms. Trước đó gửi 10 broadcast khởi động không tính.
+- **Dồn dập.** Khi đủ 1000 chi nhánh, gửi liên tiếp 100 broadcast không nghỉ với tin 100 byte, 1 KB và 3 KB.
+
+Mỗi tin mang số thứ tự. Thời điểm gửi lấy ngay trước khi gọi `POST /api/experiment/broadcast`, thời điểm nhận lấy ở luồng đọc của chi nhánh ảo. Cả hai cùng nằm trong tiến trình loadsim nên so được với nhau.
+
+**Số đo.** Tin nhận được so với kỳ vọng (số broadcast × số CN online), độ trễ từng tin (p50, p95, p99, max), thời gian tới chi nhánh cuối cùng của mỗi broadcast, thời gian luồng gọi broadcast trên server bị giữ ("vòng gửi"), số luồng JVM đỉnh, số kết nối bị đóng. Phần dồn dập đo thêm thời gian xả hết, thông lượng (tin/s) và MB/s.
+
+Chạy: `scripts\run-experiments.bat run=e9`. Tham số thêm: `e9.clients=100,250,500,750,1000 e9.broadcasts=100 e9.gap=50 e9.payload=256 e9.burst=100 e9.burst.payloads=100,1000,3000 e9.modes=direct,bio,nio`. `e9.hold=120` giữ 1000 chi nhánh online thêm 120 giây sau khi đo, mỗi giây một broadcast, để chụp màn hình trang admin. Vẽ biểu đồ: `powershell -ExecutionPolicy Bypass -File experiments\make-charts.ps1` (ra `experiments/charts/e9_*.png`).
+
 ---
 
 ## Hạn chế của thực nghiệm

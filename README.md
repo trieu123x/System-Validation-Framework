@@ -68,7 +68,7 @@ Bài tập lớn môn Lập trình mạng, Chủ đề 3 (ứng dụng mạng Cl
 | `server/security/` | `SecurityMonitor` (quy tắc, chặn IP, ngắt phiên), `SecurityRules`, `RateCounter` (cửa sổ trượt không khóa), `BanList`, `SecurityEventLog` (ghi `su_kien_bao_mat` theo lô) |
 | `server/` | `ServerMain`, `ServerSettings` (cờ cải tiến/baseline), `AdminApi`, `ExperimentApi`, `MessageLog` |
 | `client/` | `ServerLink`, `BranchAgent`, `Discovery`, `ClientSecurity`, `ClientMain` |
-| `loadsim/` | `LoadSimulator` (TC-11), `Experiments` (E1–E8), `SimClient`, `ServerProcess` |
+| `loadsim/` | `LoadSimulator` (TC-11), `Experiments` (E1–E9), `SimClient`, `ServerProcess` |
 | `ui/` | Next.js: `/admin` (công ty), `/branch` (chi nhánh) |
 | `db/` | `schema.sql`, `dieu_chuyen.sql`, `seed.sql`, `seed_loadsim.sql`, `seed_demo.sql`, `migrate_toboki.sql` (chuyển CSDL cũ) |
 | `config/`, `scripts/`, `docs/` | Cấu hình, script chạy, tài liệu và sơ đồ (`docs/img`) |
@@ -425,6 +425,24 @@ Kẻ tấn công: dò mật khẩu CN01 (20 lần/s), flood `PING` 500 tin/s, c�
 
 Chi tiết từng kẻ tấn công: [RESULTS-e8.md](experiments/results/RESULTS-e8.md), [e8.csv](experiments/results/e8.csv). Chạy lại: `scripts\run-experiments.bat run=e8` (đổi IP kẻ tấn công bằng `e8.attacker.hosts=a,b,c,d`).
 
+**E9 – Server broadcast tới 1000 chi nhánh (23/10/2026)**
+
+Mọi client ảo chạy trên một máy, cùng một IP, nên đo chiều server gửi ra. Số chi nhánh online tăng dần 100 → 1000. Ở mỗi mức, server gửi 100 broadcast × 256 byte, cách nhau 50 ms. Bảng dưới là mức 1000 chi nhánh, tức 100 000 tin mỗi biến thể.
+
+| Server | Tin nhận | Độ trễ p50 / p95 | Tới CN cuối TB | Vòng gửi trên server TB | Luồng server |
+|---|---:|---:|---:|---:|---:|
+| BIO + ghi trực tiếp (baseline) | 100 000 / 100 000 | 20,6 / 37,4 ms | 39,0 ms | 37,9 ms | 1 018 |
+| BIO + hàng đợi gửi | 100 000 / 100 000 | 7,4 / 12,8 ms | 13,5 ms | 12,3 ms | 2 018 |
+| NIO + ghi thẳng (đề xuất) | 100 000 / 100 000 | 20,3 / 36,9 ms | 38,4 ms | 37,5 ms | **33** |
+
+Gửi dồn dập 100 broadcast liên tiếp tới 1000 chi nhánh: không mất tin nào ở cả ba biến thể. Thông lượng với tin 100 byte / 1 KB / 3 KB là 31 / 23 / 15 nghìn tin/s ở NIO và BIO ghi trực tiếp, 92 / 47 / 23 nghìn tin/s ở BIO + hàng đợi (tối đa 70 MB/s).
+
+![E9 độ trễ](experiments/charts/e9_broadcast_latency.png)
+![E9 chi phí server](experiments/charts/e9_broadcast_server.png)
+![E9b dồn dập](experiments/charts/e9_broadcast_burst.png)
+
+Ảnh chụp trang admin trong lúc 1000 chi nhánh ảo đang online và nhận broadcast: [tổng quan](docs/img/e9-admin-tong-quan-1000cn.png) (1000/1015 online, 583 250 tin/phút, 38 luồng JVM), [giám sát](docs/img/e9-admin-giam-sat-1000cn.png) (1 000 phiên TCP), [luồng tin](docs/img/e9-admin-luong-tin-broadcast.png) (cùng một BROADCAST tới SIM977…SIM999 trong 1 ms). Chi tiết: [RESULTS-e9.md](experiments/results/RESULTS-e9.md). Chạy lại: `scripts\run-experiments.bat run=e9` (thêm `e9.hold=120` để giữ 1000 chi nhánh online mà chụp màn hình).
+
 **E7 với giám sát an ninh bật (22/10/2026):** `security.mode=detect` so với `off`, 500 chi nhánh × 10 PING/s: p99 1,16 ms so với 1,13 ms (+0,03 ms); 100 chi nhánh: 0,82 ms so với 0,91 ms. Bộ đếm cửa sổ trượt không khóa, không gọi CSDL trên đường đọc tin.
 
 **Đọc kết quả.**
@@ -436,6 +454,7 @@ Chi tiết từng kẻ tấn công: [RESULTS-e8.md](experiments/results/RESULTS-
 - **E7:** bỏ CSDL ra thì tầng TCP/NIO trả lời 500 client × 10 tin/giây với p99 dưới 1 ms, không mất tin, server giữ 33 luồng. Giới hạn ở 500 chi nhánh là CSDL, không phải tầng mạng. Ở 1000 chi nhánh (khoảng 10 000 tin/giây) lộ ra hai điểm yếu, đã sửa: (1) mỗi tin gửi đều phải đánh thức luồng Selector, p95 lên 8,5–11 ms; cho worker ghi thẳng khi kết nối không còn tin chờ thì p95 còn 1,49 ms (nhanh 5,7 lần) mà vẫn 33 luồng, trong khi BIO cần 2 017 luồng; (2) bộ ghi `nhat_ky` không theo kịp 20 000 bản ghi/giây và bỏ 20–30 nghìn bản ghi; lô 2 000 dòng với `reWriteBatchedInserts` thì không bỏ bản ghi nào. E3 chạy lại sau khi sửa: client treo vẫn bị cắt, 20 chi nhánh khác nhận đủ 6 000/6 000 tin.
 - **E5:** `jitter` giảm đỉnh tải lúc server vừa lên 18 lần so với `fixed`, thời gian nối lại trung bình giảm 40 %, và số lần thử chỉ bằng một nửa `backoff`.
 - **E8:** `block` chặn hoặc ngắt cả 5 kẻ tấn công trong 27 ms–1,3 s, số tin tấn công server phải xử lý giảm 96,6 % (18 928 → 645), không chặn nhầm chi nhánh thật nào, kể cả khi kẻ cào dữ liệu đứng chung IP với chúng (CMD_FLOOD chỉ ngắt phiên đó, không chặn IP còn phiên hợp lệ). Ở cường độ tấn công này server NIO vẫn đủ sức: p95 SALE gần như không đổi khi bị tấn công ở cả ba chế độ. Khác biệt p95 giữa các lượt (1,8–2,7 ms ngay cả trước khi bị tấn công) là dao động giữa các lần khởi động server, không do chế độ giám sát.
+- **E9:** cả ba biến thể giao đủ 100 % tin tới 1000 chi nhánh, không rớt kết nối nào, kể cả khi gửi dồn dập 100 000 tin trong 3–7 giây. Thời gian tới chi nhánh cuối tăng tuyến tính theo số chi nhánh, vì cùng một tin phải ghi vào n socket. Với broadcast, NIO ghi thẳng (`nio.write.through=true`) cho kết quả gần như bằng BIO ghi trực tiếp: luồng gọi broadcast tự gọi `write()` lần lượt cho 1000 socket, mỗi socket khoảng 37 µs trên loopback Windows. BIO + hàng đợi gửi chỉ đưa tin vào hàng đợi, rồi 1000 luồng ghi chạy song song trên 16 nhân, nên nhanh gấp khoảng 3 lần (p95 12,8 ms so với 36,9 ms). Đổi lại, BIO cần 2 018 luồng, còn NIO giữ 33 luồng. Ở mức 1000 chi nhánh, tin vẫn tới chi nhánh cuối trong khoảng 40 ms. Hướng cải tiến: chia vòng ghi broadcast cho các worker NIO để ghi song song mà không tăng số luồng.
 
 ## 8. Novelty và đóng góp
 

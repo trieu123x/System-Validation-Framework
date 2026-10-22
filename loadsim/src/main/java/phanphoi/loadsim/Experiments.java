@@ -36,7 +36,9 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.atomic.AtomicIntegerArray;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicLongArray;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
@@ -78,7 +80,7 @@ public final class Experiments {
         Experiments x = new Experiments(cfg);
         Files.createDirectories(x.outDir);
         String run = cfg.get("run", "all");
-        List<String> which = "all".equals(run) ? List.of("e1", "e2", "e3", "e4", "e5", "e6", "e7", "e8") : List.of(run.split(","));
+        List<String> which = "all".equals(run) ? List.of("e1", "e2", "e3", "e4", "e5", "e6", "e7", "e8", "e9") : List.of(run.split(","));
         x.summary.append("# Kết quả thực nghiệm\n\n").append(x.environment()).append('\n');
         for (String e : which) {
             System.out.println("\n========== " + e.toUpperCase() + " ==========");
@@ -91,6 +93,7 @@ public final class Experiments {
                 case "e6" -> x.e6();
                 case "e7" -> x.e7();
                 case "e8" -> x.e8();
+                case "e9" -> x.e9();
                 default -> System.err.println("Khong co thuc nghiem " + e);
             }
         }
@@ -1620,6 +1623,220 @@ public final class Experiments {
         } finally {
             conns.keySet().forEach(RawConn::close);
         }
+    }
+
+    // =====================================================================================
+    // E9 – Server broadcast tới n chi nhánh cùng lúc (một nguồn gửi, nhiều nơi nhận)
+    // =====================================================================================
+
+    /**
+     * Đếm tin BROADCAST của một lượt E9. Mỗi tin mang số thứ tự; thời điểm gửi lấy ngay trước khi gọi API
+     * broadcast, thời điểm nhận lấy ở luồng đọc của chi nhánh ảo, cả hai cùng JVM loadsim nên so nanoTime được.
+     */
+    private static final class E9Probe {
+        final AtomicLongArray sentAt;
+        final AtomicIntegerArray got;
+        final AtomicLongArray lastAt;
+        final ConcurrentLinkedQueue<Double> lat = new ConcurrentLinkedQueue<>();
+        final AtomicInteger total = new AtomicInteger();
+
+        E9Probe(int k) {
+            sentAt = new AtomicLongArray(k);
+            got = new AtomicIntegerArray(k);
+            lastAt = new AtomicLongArray(k);
+        }
+
+        void onBroadcast(Message m) {
+            long now = System.nanoTime();
+            String p = m.param(0);
+            int semi = p.indexOf(';');
+            int i;
+            try {
+                i = Integer.parseInt(p.substring(0, semi));
+            } catch (RuntimeException e) {
+                return; // tin khởi động hoặc tin của lượt khác
+            }
+            if (i < 0 || i >= got.length()) {
+                return;
+            }
+            got.incrementAndGet(i);
+            lastAt.accumulateAndGet(i, now, Math::max);
+            lat.add((now - sentAt.get(i)) / 1e6);
+            total.incrementAndGet();
+        }
+    }
+
+    /** Kết quả một lượt: tin kỳ vọng/nhận, độ trễ từng tin, thời gian tới CN cuối của từng broadcast, vòng gửi trên server. */
+    private record E9Run(int expected, int received, Stats lat, Stats last, Stats loop, double drainMs) {
+        int lost() {
+            return expected - received;
+        }
+    }
+
+    private void e9() throws Exception {
+        List<Integer> sizes = ints(cfg.get("e9.clients", "100,250,500,750,1000"));
+        int k = cfg.getInt("e9.broadcasts", 100);
+        int gapMs = cfg.getInt("e9.gap", 50);
+        int payload = cfg.getInt("e9.payload", 256);
+        int burstK = cfg.getInt("e9.burst", 100);
+        List<Integer> burstPayloads = ints(cfg.get("e9.burst.payloads", "100,1000,3000"));
+        int hold = cfg.getInt("e9.hold", 0);
+        record Variant(String code, String name, List<String> args) {
+        }
+        List<Variant> all = List.of(
+                new Variant("direct", "BIO + ghi trực tiếp (baseline)", List.of("io.mode=bio", "write.mode=direct")),
+                new Variant("bio", "BIO + hàng đợi gửi", List.of("io.mode=bio", "write.mode=queued")),
+                new Variant("nio", "NIO + ghi thẳng (đề xuất)", List.of("io.mode=nio")));
+        List<String> modes = List.of(cfg.get("e9.modes", "direct,bio,nio").split(","));
+        List<Variant> variants = all.stream().filter(v -> modes.contains(v.code)).toList();
+
+        StringBuilder scale = new StringBuilder();
+        StringBuilder burst = new StringBuilder();
+        List<String> scaleRows = new ArrayList<>();
+        List<String> burstRows = new ArrayList<>();
+        scale.append("## E9 – Server broadcast tới n chi nhánh (").append(k).append(" broadcast × ").append(payload)
+                .append(" byte, cách nhau ").append(gapMs).append(" ms)\n\n")
+                .append("Một nguồn (server) gửi cùng một tin tới mọi chi nhánh đang online. Độ trễ tính từ lúc gọi API ")
+                .append("broadcast tới lúc chi nhánh đọc xong dòng tin; \"tới CN cuối\" là lúc chi nhánh cuối cùng nhận ")
+                .append("được một broadcast; \"vòng gửi\" là thời gian luồng gọi broadcast trên server bị giữ.\n\n")
+                .append("| Server | Số CN | Tin nhận / kỳ vọng | Mất | Độ trễ p50 (ms) | p95 | p99 | Max | Tới CN cuối TB (ms) | Tới CN cuối max | Vòng gửi TB (ms) | Vòng gửi max | Luồng server (đỉnh) | Mất kết nối |\n")
+                .append("|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|\n");
+        int top = sizes.get(sizes.size() - 1);
+        burst.append("### E9b – Broadcast dồn dập: ").append(top).append(" chi nhánh, ").append(burstK)
+                .append(" broadcast gửi liên tiếp không nghỉ\n\n")
+                .append("| Server | Payload (byte) | Tin nhận / kỳ vọng | Mất | Thời gian xả hết (ms) | Thông lượng (tin/s) | MB/s | Độ trễ p95 (ms) | Max | Vòng gửi TB (ms) |\n")
+                .append("|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|\n");
+
+        for (Variant v : variants) {
+            try (ServerProcess srv = startServer("e9-" + v.code, v.args)) {
+                AtomicReference<E9Probe> cur = new AtomicReference<>(new E9Probe(0));
+                List<SimClient> cs = new ArrayList<>();
+                try {
+                    for (int n : sizes) {
+                        List<SimClient> fresh = new ArrayList<>();
+                        for (int i = cs.size() + 1; i <= n; i++) {
+                            SimClient c = new SimClient(sim(i), HOST, PORT, PASSWORD);
+                            c.onPush(m -> {
+                                if (m.command() == Command.BROADCAST) {
+                                    cur.get().onBroadcast(m);
+                                }
+                            });
+                            fresh.add(c);
+                        }
+                        cs.addAll(fresh); // trước loginAll: đăng nhập lỗi thì finally vẫn đóng các client này
+                        loginAll(fresh);
+                        admin.post("/api/experiment/runtime/reset-peak", Map.of());
+                        E9Run r = e9Round(cur, 10, k, gapMs, payload);
+                        int threads = admin.get("/api/experiment/runtime").get("peakThreads").getAsInt();
+                        int disconnects = (int) cs.stream().filter(c -> !c.isOpen()).count();
+                        scale.append("| ").append(v.name).append(" | ").append(n).append(" | ").append(r.received)
+                                .append(" / ").append(r.expected).append(" | ").append(r.lost()).append(" | ")
+                                .append(Stats.f(r.lat.p50)).append(" | ").append(Stats.f(r.lat.p95)).append(" | ")
+                                .append(Stats.f(r.lat.p99)).append(" | ").append(Stats.f(r.lat.max)).append(" | ")
+                                .append(Stats.f(r.last.avg)).append(" | ").append(Stats.f(r.last.max)).append(" | ")
+                                .append(Stats.f(r.loop.avg)).append(" | ").append(Stats.f(r.loop.max)).append(" | ")
+                                .append(threads).append(" | ").append(disconnects).append(" |\n");
+                        scaleRows.add(String.join(",", v.code, "" + n, "" + r.expected, "" + r.received, "" + r.lost(),
+                                Stats.f(r.lat.p50), Stats.f(r.lat.p95), Stats.f(r.lat.p99), Stats.f(r.lat.max),
+                                Stats.f(r.last.avg), Stats.f(r.last.max), Stats.f(r.loop.avg), Stats.f(r.loop.max),
+                                "" + threads, "" + disconnects));
+                        System.out.printf("  %-6s %4d CN: nhan %d/%d p50=%.2fms p95=%.2fms toi CN cuoi TB=%.2fms vong gui TB=%.2fms luong=%d mat ket noi=%d%n",
+                                v.code, n, r.received, r.expected, r.lat.p50, r.lat.p95, r.last.avg, r.loop.avg, threads,
+                                disconnects);
+                    }
+                    for (int pl : burstPayloads) {
+                        E9Run r = e9Round(cur, 5, burstK, 0, pl);
+                        double sec = r.drainMs / 1000;
+                        double tput = sec > 0 ? r.received / sec : 0;
+                        // dòng tin = "BROADCAST|" + số thứ tự + ";" + payload + "\n"
+                        double mbs = sec > 0 ? r.received * (pl + 16.0) / sec / 1e6 : 0;
+                        burst.append("| ").append(v.name).append(" | ").append(pl).append(" | ").append(r.received)
+                                .append(" / ").append(r.expected).append(" | ").append(r.lost()).append(" | ")
+                                .append(Stats.f1(r.drainMs)).append(" | ").append(Stats.f1(tput)).append(" | ")
+                                .append(Stats.f(mbs)).append(" | ").append(Stats.f(r.lat.p95)).append(" | ")
+                                .append(Stats.f(r.lat.max)).append(" | ").append(Stats.f(r.loop.avg)).append(" |\n");
+                        burstRows.add(String.join(",", v.code, "" + pl, "" + r.expected, "" + r.received, "" + r.lost(),
+                                Stats.f(r.drainMs), Stats.f(tput), Stats.f(mbs), Stats.f(r.lat.p95), Stats.f(r.lat.max),
+                                Stats.f(r.loop.avg)));
+                        System.out.printf("  %-6s don dap %d byte: nhan %d/%d xa het %.0fms %.0f tin/s %.2f MB/s p95=%.1fms%n",
+                                v.code, pl, r.received, r.expected, r.drainMs, tput, mbs, r.lat.p95);
+                    }
+                    if (hold > 0 && v == variants.get(variants.size() - 1)) {
+                        e9Hold(cur, cs.size(), hold);
+                    }
+                } finally {
+                    cs.forEach(SimClient::abort);
+                }
+            }
+        }
+        scale.append("\n\"Mất\" = không tới trong 15 giây sau broadcast cuối. Mỗi mức tải gửi trước 10 broadcast khởi động ")
+                .append("không tính. Client ảo, server và CSDL cùng một máy (loopback).\n\n");
+        burst.append("\nThời gian xả hết: từ broadcast đầu tiên tới khi chi nhánh cuối cùng nhận tin cuối cùng. ")
+                .append("MB/s tính theo số byte dòng tin chi nhánh nhận được.\n\n");
+        writeCsv("e9_broadcast_fanout.csv",
+                "server,so_cn,tin_ky_vong,tin_nhan,mat,p50_ms,p95_ms,p99_ms,max_ms,toi_cn_cuoi_tb_ms,toi_cn_cuoi_max_ms,vong_gui_tb_ms,vong_gui_max_ms,luong_dinh,mat_ket_noi",
+                scaleRows);
+        writeCsv("e9_broadcast_burst.csv",
+                "server,payload_byte,tin_ky_vong,tin_nhan,mat,thoi_gian_xa_ms,thong_luong_tin_s,mb_s,p95_ms,max_ms,vong_gui_tb_ms",
+                burstRows);
+        summary.append(scale).append(burst);
+    }
+
+    /** Một lượt E9: vài broadcast khởi động, rồi k broadcast đánh số, chờ tới khi mọi chi nhánh nhận đủ (tối đa 15 s). */
+    private E9Run e9Round(AtomicReference<E9Probe> cur, int warmup, int k, int gapMs, int payload) throws Exception {
+        String pad = "x".repeat(payload);
+        for (int i = 0; i < warmup; i++) {
+            admin.post("/api/experiment/broadcast", Map.of("noiDung", "w;" + pad), 10);
+        }
+        Thread.sleep(500);
+        E9Probe pr = new E9Probe(k);
+        cur.set(pr);
+        List<Double> loop = new ArrayList<>();
+        int expected = 0;
+        long first = System.nanoTime();
+        for (int i = 0; i < k; i++) {
+            pr.sentAt.set(i, System.nanoTime());
+            JsonObject r = admin.post("/api/experiment/broadcast", Map.of("noiDung", i + ";" + pad), 10);
+            loop.add(r.get("elapsedMs").getAsDouble());
+            expected += r.get("sent").getAsInt();
+            if (gapMs > 0) {
+                Thread.sleep(gapMs);
+            }
+        }
+        long deadline = System.currentTimeMillis() + 15_000;
+        while (pr.total.get() < expected && System.currentTimeMillis() < deadline) {
+            Thread.sleep(20);
+        }
+        List<Double> last = new ArrayList<>();
+        long end = first;
+        for (int i = 0; i < k; i++) {
+            if (pr.got.get(i) > 0) {
+                last.add((pr.lastAt.get(i) - pr.sentAt.get(i)) / 1e6);
+                end = Math.max(end, pr.lastAt.get(i));
+            }
+        }
+        return new E9Run(expected, pr.total.get(), new Stats(pr.lat), new Stats(last), new Stats(loop),
+                (end - first) / 1e6);
+    }
+
+    /** Giữ n chi nhánh online và broadcast 1 tin/giây trong vài giây để chụp màn hình trang admin. */
+    private void e9Hold(AtomicReference<E9Probe> cur, int n, int seconds) throws Exception {
+        System.out.printf("E9 HOLD: %d CN online, giu %d s – mo http://127.0.0.1:%d/admin/%n", n, seconds, adminPort);
+        cur.set(new E9Probe(0));
+        long end = System.currentTimeMillis() + seconds * 1000L;
+        for (int i = 0; System.currentTimeMillis() < end; i++) {
+            admin.post("/api/experiment/broadcast", Map.of("noiDung", "w;Thong bao thu nghiem E9 so " + i), 10);
+            Thread.sleep(1000);
+        }
+        System.out.println("E9 HOLD: xong");
+    }
+
+    private static List<Integer> ints(String csv) {
+        List<Integer> out = new ArrayList<>();
+        for (String s : csv.split(",")) {
+            out.add(Integer.parseInt(s.trim()));
+        }
+        return out;
     }
 
     private static String cell(java.util.Collection<Double> v) {

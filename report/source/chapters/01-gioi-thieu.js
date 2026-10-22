@@ -1,0 +1,41 @@
+// Chương 1. Giới thiệu (N4)
+module.exports = (L) => {
+  const { add, P, H1, H2, B, N, newList } = L;
+
+  add(H1("1. Giới thiệu", "1"));
+  add(H2("1.1. Bối cảnh"));
+  add(P("Trong mô hình phân phối nhiều chi nhánh, mỗi chi nhánh chỉ giữ một lượng hàng nhỏ để bán hằng ngày, còn kho tổng của công ty cấp bổ sung khi cần. Với hàng giá trị cao như máy móc, thiết bị, không chi nhánh nào muốn tồn quá nhiều, nhưng hết hàng giữa chừng thì mất khách. Thông tin “chi nhánh nào sắp hết mặt hàng nào” vì vậy cần tới công ty càng sớm càng tốt, và quyết định cấp hàng phải dựa trên số tồn thật của kho tổng tại đúng thời điểm đó."));
+  add(P("Dữ liệu mẫu của project mô phỏng một đại lý bán buôn máy móc, theo mẫu Công ty TNHH XNK Toboki Việt Nam. Có 31 mặt hàng thuộc 7 danh mục (máy hút bụi, máy cắt gạch, máy tời, máy rửa xe, máy đầm…), 15 chi nhánh với một chi nhánh thật là CN01 Lĩnh Nam, cùng công nợ hai chiều giữa chi nhánh, công ty và nhà cung cấp. Ngoài ra có 1000 chi nhánh ảo SIM001–SIM1000 dùng cho thực nghiệm tải."));
+  add(H2("1.2. Vấn đề và động lực"));
+  add(P("Bài toán thoạt nhìn giống một ứng dụng quản lý kho thông thường. Phần khó thật sự nằm ở **mạng** và **đồng thời**. Khi chi nhánh và công ty ở các máy khác nhau, nối với nhau qua mạng LAN hoặc WAN, các tình huống sau xảy ra thường xuyên. Mỗi tình huống là một động lực trực tiếp của project:"));
+  add(B("**Tranh chấp kho tổng.** Nhiều chi nhánh xác nhận nhận hàng trong cùng một khoảnh khắc. Nếu server đọc tồn rồi mới ghi, hai yêu cầu có thể cùng thấy “đủ hàng” và kho bị xuất vượt. Lỗi này không bao giờ lộ ra khi kiểm thử bằng tay từng bước một."));
+  add(B("**Mất tin khi mất kết nối.** Server đẩy đề xuất cấp hàng (OFFER) đúng lúc dây mạng của chi nhánh bị rút. Lệnh ghi vào socket vẫn thành công, vì dữ liệu chỉ cần vào bộ đệm của hệ điều hành, nhưng chi nhánh không bao giờ nhận được."));
+  add(B("**Client chậm.** Một máy chi nhánh bị treo và ngừng đọc socket. Nếu server ghi trực tiếp, luồng gửi broadcast bị chặn ở máy đó, và mọi chi nhánh khác cũng không nhận được tin."));
+  add(B("**Kết nối lại hàng loạt.** Server khởi động lại thì mọi chi nhánh mất kết nối cùng lúc. Nếu tất cả cùng thử lại theo nhịp 5 giây, server phải nhận một đợt kết nối dồn cục ngay khi vừa lên."));
+  add(B("**Mở rộng và bị tấn công.** Số chi nhánh tăng từ 20 lên hàng trăm thì mô hình mỗi kết nối một luồng tốn tài nguyên tuyến tính. Server mở cổng TCP trong mạng cũng sẽ gặp dò mật khẩu, gửi lệnh dồn dập, gửi dữ liệu rác."));
+  add(P("Các tình huống trên là nội dung trọng tâm của môn Lập trình mạng: thiết kế giao thức trên TCP, xử lý nhiều kết nối đồng thời, phát hiện và phục hồi khi mất kết nối, và bảo vệ dịch vụ mạng. Project chọn giải quyết chúng một cách có đo đạc, thay vì chỉ làm cho chức năng chạy được."));
+  add(H2("1.3. Phát biểu bài toán"));
+  add(P("Xây dựng một hệ thống Client/Server gồm một server công ty và N chi nhánh (thiết kế cho 10–20, kiểm chứng tới 1000) trong mạng LAN. Chi nhánh ghi nhận bán hàng và tự báo thiếu khi tồn dưới ngưỡng. Công ty nhận cảnh báo theo thời gian thực rồi gửi hàng ngay, báo không đủ hàng, hoặc gửi đề xuất để chi nhánh xác nhận. Server trừ kho tổng và cộng kho chi nhánh. Hệ thống phải giữ được bốn tính chất:"));
+  const l1 = newList();
+  add(N("**An toàn dữ liệu:** kho tổng không bao giờ bị xuất vượt, kể cả khi nhiều chi nhánh thao tác cùng lúc.", l1));
+  add(N("**Tin cậy:** không mất yêu cầu hay tin đẩy khi mạng chập chờn hoặc server khởi động lại.", l1));
+  add(N("**Cô lập lỗi:** một chi nhánh lỗi hoặc chậm không làm ảnh hưởng các chi nhánh khác.", l1));
+  add(N("**Mở rộng:** tài nguyên server không tăng tuyến tính theo số chi nhánh đang kết nối.", l1));
+  add(H2("1.4. Mục tiêu và phạm vi"));
+  add(B("Thiết kế một giao thức tầng ứng dụng riêng trên TCP, không dùng HTTP, RMI hay thư viện messaging cho giao tiếp giữa chi nhánh và server."));
+  add(B("Hiện thực server với hai mô hình I/O (BIO và NIO) chọn được bằng cấu hình, và client có heartbeat, tự tìm server, tự nối lại."));
+  add(B("Đáp ứng 25 yêu cầu chức năng và 10 yêu cầu phi chức năng trong bản đặc tả (SRS) của nhóm, kiểm chứng bằng các ca kiểm thử tích hợp chạy trên TCP thật."));
+  add(B("Với mỗi tình huống ở mục 1.2, đề xuất một giải pháp, giữ cách làm thông thường làm baseline, và đo so sánh bằng số liệu thật."));
+  add(P("**Ngoài phạm vi:** thanh toán và vận chuyển thật, triển khai trên Internet công cộng, ứng dụng di động, mã hóa đường truyền (TLS) và chạy nhiều server song song. Những phần này được nêu ở Chương 12 như hướng phát triển."));
+  add(H2("1.5. Đóng góp chính"));
+  const l2 = newList();
+  add(N("Một giao thức dòng văn bản 33 lệnh trên **một kết nối TCP dùng chung cho request và push**, có quy tắc đóng khung, escape, giới hạn độ dài và mã lỗi rõ ràng (Chương 5).", l2));
+  add(N("**Trừ kho nguyên tử** bằng `UPDATE … WHERE so_luong >= ?` kèm khóa dòng yêu cầu, so sánh với đọc-rồi-ghi và khóa Java (E1).", l2));
+  add(N("**Giao tin theo trạng thái:** hàng đợi offline cộng bước gửi lại từ CSDL sau `LOGIN_OK`. Bước này xử lý được cả trường hợp “rút dây” mà server chưa phát hiện (E2).", l2));
+  add(N("**Hàng đợi gửi có giới hạn** và **server NIO giữ thứ tự tin** theo từng kết nối, so sánh với ghi trực tiếp và mô hình mỗi kết nối một luồng ở 50–1000 chi nhánh (E3, E4, E7, E9).", l2));
+  add(N("**Nối lại jitter lệch pha:** giảm đỉnh tải mà vẫn giữ giới hạn nối lại trong 5 giây (E5).", l2));
+  add(N("**Giám sát an ninh** ba chế độ off/detect/block theo IP và theo phiên, không chặn nhầm chi nhánh thật (E8).", l2));
+  add(N("Một **bộ thực nghiệm tái lập được**: một lệnh khởi động server theo từng biến thể, giả lập tới 1000 chi nhánh, xuất CSV và biểu đồ.", l2));
+  add(H2("1.6. Cấu trúc báo cáo"));
+  add(P("Chương 2 trình bày cơ sở lý thuyết về mạng và đồng thời mà các thiết kế sau dựa vào. Chương 3 định nghĩa bài toán và mô hình lỗi. Chương 4 mô tả kiến trúc. Chương 5 thiết kế giao thức và giao tiếp mạng. Chương 6 và 7 trình bày hiện thực tầng mạng phía server và các cơ chế tin cậy, chịu lỗi. Chương 8 trình bày cổng HTTP/SSE và an ninh mạng. Chương 9 mô tả thiết lập thực nghiệm và kiểm thử, Chương 10 trình bày kết quả và thảo luận. Chương 11 tổng hợp đóng góp, Chương 12 nêu hạn chế và hướng phát triển, Chương 13 kết luận."));
+};
