@@ -100,6 +100,73 @@ export function fmtNumber(n: number | null | undefined): string {
   return n == null ? "—" : n.toLocaleString("vi-VN");
 }
 
+/** Tiền đồng: 15725000 → "15.725.000 đ". */
+export function fmtMoney(n: number | null | undefined): string {
+  return n == null ? "—" : `${n.toLocaleString("vi-VN")} đ`;
+}
+
+export const DEBT_LABEL: Record<string, string> = {
+  DA_TRA_DU: "Đã trả đủ",
+  CON_NO: "Còn nợ",
+  VUOT_HAN_MUC: "Vượt hạn mức",
+  CHUA_PHAT_SINH: "Chưa phát sinh",
+};
+
+export const DEBT_TONE: Record<string, string> = {
+  DA_TRA_DU: "success",
+  CON_NO: "warn",
+  VUOT_HAN_MUC: "danger",
+  CHUA_PHAT_SINH: "muted",
+};
+
+export const NOTICE_TYPE_LABEL: Record<string, string> = {
+  TIN: "Tin thường",
+  HOI_NHU_CAU: "Hỏi nhu cầu",
+  SP_MOI: "Sản phẩm mới",
+};
+
+export const NOTICE_STATE_LABEL: Record<string, string> = {
+  DA_GUI: "Chưa xem",
+  DA_XEM: "Đã xem",
+  CAN_HANG: "Cần hàng",
+  KHONG_CAN: "Không cần",
+  MUON_NHAP: "Muốn nhập",
+  BO_QUA: "Bỏ qua",
+};
+
+export const NOTICE_STATE_TONE: Record<string, string> = {
+  DA_GUI: "muted",
+  DA_XEM: "info",
+  CAN_HANG: "success",
+  KHONG_CAN: "muted",
+  MUON_NHAP: "success",
+  BO_QUA: "muted",
+};
+
+/** Bút toán sổ công nợ: chiều + làm tăng nợ, − làm giảm nợ. */
+export const ENTRY_LABEL: Record<string, [string, "+" | "−"]> = {
+  XUAT: ["Nhận hàng", "+"],
+  DC_NHAN: ["Nhận điều chuyển", "+"],
+  DC_GIAO: ["Giao điều chuyển", "−"],
+  THU: ["Phiếu thu", "−"],
+  NHAP: ["Phiếu nhập", "+"],
+  CHI: ["Phiếu chi", "−"],
+};
+
+/**
+ * Trước khi Gửi hàng: hỏi server chi nhánh có vượt hạn mức nợ không. Vượt thì hỏi xác nhận (chỉ cảnh báo,
+ * không chặn). Lỗi khi kiểm tra thì vẫn cho gửi.
+ */
+export async function confirmCredit(maCn: string, soTien: number): Promise<boolean> {
+  try {
+    const c = await api<{ conNo: number; hanMuc: number; sauKhiGui: number; vuotHanMuc: boolean }>(
+      `/api/debts/branches/${encodeURIComponent(maCn)}/check?soTien=${Math.max(0, Math.round(soTien))}`);
+    return !c.vuotHanMuc || confirm(`${maCn} sẽ nợ ${fmtMoney(c.sauKhiGui)} / hạn mức ${fmtMoney(c.hanMuc)}. Vẫn gửi?`);
+  } catch {
+    return true;
+  }
+}
+
 export function today(offsetDays = 0): string {
   const d = new Date(Date.now() + offsetDays * 86400000);
   const pad = (x: number) => String(x).padStart(2, "0");

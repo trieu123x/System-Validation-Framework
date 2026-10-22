@@ -23,6 +23,13 @@ final class BranchState {
         String tenHang;
         int soLuong;
         int nguong;
+        // server cũ không gửi 4 trường sau: để rỗng / null
+        String model = "";
+        String danhMuc = "";
+        Long giaXuat;
+        Long giaBanLe;
+        // tham chiếu ảnh Cloudinary (phần sau /image/upload/), rỗng = chưa có ảnh
+        String anh = "";
     }
 
     static final class Request {
@@ -47,6 +54,21 @@ final class BranchState {
     record Notice(String time, String level, String text) {
     }
 
+    /** Thông báo có phản hồi (tin NOTICE), trạng thái do server quyết định. */
+    static final class InboxItem {
+        long id;
+        String loai;
+        String trangThai;
+        String taoLuc;
+        String tieuDe;
+        String noiDung;
+        String maSp = "";
+        Integer deXuat;
+        Integer soLuong;
+        Integer maYc;
+        String anh = "";
+    }
+
     Status status = Status.DISCONNECTED;
     String statusDetail = "Chua dang nhap";
     String server = "";
@@ -57,8 +79,12 @@ final class BranchState {
     final Map<Integer, Transfer> transfers = new TreeMap<>(Comparator.reverseOrder());
     final Deque<Notice> broadcasts = new ArrayDeque<>();
     final Deque<Notice> notices = new ArrayDeque<>();
+    /** Hộp thư thông báo, mới nhất trước. */
+    final TreeMap<Long, InboxItem> inbox = new TreeMap<>(Comparator.reverseOrder());
     List<Map<String, Object>> history = new ArrayList<>();
     String historyRange = "";
+    /** Tin DEBT gần nhất: tongNhan, daTra, conNo, hanMuc, butToan, capNhat. */
+    Map<String, Object> debt;
 
     void clearBranchData() {
         maCn = null;
@@ -68,8 +94,10 @@ final class BranchState {
         transfers.clear();
         broadcasts.clear();
         notices.clear();
+        inbox.clear();
         history = new ArrayList<>();
         historyRange = "";
+        debt = null;
     }
 
     Request request(int maYc) {
@@ -95,6 +123,15 @@ final class BranchState {
         }
     }
 
+    /** Ghi đè theo id; giữ tối đa 100 thông báo mới nhất. @return true nếu là thông báo chưa từng nhận. */
+    boolean putInbox(InboxItem it) {
+        boolean fresh = inbox.put(it.id, it) == null;
+        while (inbox.size() > 100) {
+            inbox.remove(inbox.lastKey());
+        }
+        return fresh;
+    }
+
     Notice notice(String level, String text) {
         Notice n = new Notice(now(), level, text);
         notices.addFirst(n);
@@ -115,13 +152,16 @@ final class BranchState {
         m.put("server", server);
         m.put("maCn", maCn);
         m.put("tenCn", tenCn);
+        m.put("slug", BranchSlug.of(tenCn));
         m.put("inventory", new ArrayList<>(inventory.values()));
         m.put("requests", new ArrayList<>(requests.values()));
         m.put("transfers", new ArrayList<>(transfers.values()));
         m.put("broadcasts", new ArrayList<>(broadcasts));
         m.put("notices", new ArrayList<>(notices));
+        m.put("inbox", new ArrayList<>(inbox.values()));
         m.put("history", history);
         m.put("historyRange", historyRange);
+        m.put("debt", debt);
         return m;
     }
 }

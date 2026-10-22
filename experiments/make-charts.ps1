@@ -113,4 +113,23 @@ Add-Bars $c 'b' 'Đỉnh lần thử / 100 ms' $polLabel $peak $red '#,0.#'
 Add-Bars $c 'c' 'Số lần thử / client' $polLabel $att $gray '0.00'
 $c.SaveImage((Join-Path $out 'e5_reconnect.png'), 'Png')
 
+# ---------- E8 ----------
+$e8f = Join-Path $res 'e8.csv'
+if (Test-Path $e8f) {
+    $e8 = Import-Csv $e8f
+    $modes = @('off', 'detect', 'block')
+    $first = $modes | ForEach-Object { $m = $_; $e8 | Where-Object che_do -eq $m | Select-Object -First 1 }
+    $handled = $modes | ForEach-Object { $m = $_; ($e8 | Where-Object che_do -eq $m | Measure-Object -Property tin_xu_ly -Sum).Sum }
+    $blocked = $modes | ForEach-Object { $m = $_; ($e8 | Where-Object che_do -eq $m | Measure-Object -Property bi_chan -Sum).Sum }
+    $c = New-Chart 'E8 – Bị tấn công: security.mode off / detect / block (5 kẻ tấn công, 20 chi nhánh thật)'
+    [void](Add-Area $c 'a' 'SALE p95 (ms)' 2 31)
+    [void](Add-Area $c 'b' 'Tin tấn công được xử lý' 35 31)
+    [void](Add-Area $c 'c' 'Kẻ tấn công bị chặn (/5)' 68 31)
+    Add-Bars $c 'a' 'p95 bình thường' $modes ($first | ForEach-Object sale_p95_binh_thuong_ms) $gray '0.00'
+    Add-Bars $c 'a' 'p95 khi bị tấn công' $modes ($first | ForEach-Object sale_p95_bi_tan_cong_ms) $red '0.00'
+    Add-Bars $c 'b' 'Tin được xử lý' $modes $handled $blue '#,0'
+    Add-Bars $c 'c' 'Bị chặn / ngắt' $modes $blocked $green '0'
+    $c.SaveImage((Join-Path $out 'e8_security.png'), 'Png')
+}
+
 Write-Output "Da ve bieu do vao $out"

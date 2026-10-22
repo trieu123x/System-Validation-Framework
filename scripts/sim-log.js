@@ -29,7 +29,7 @@ if (args.help) {
     '  --real               bật chế độ chạy thật (--clients tối đa 1000)',
     '  --start-server       tự bật server.jar (max.clients đủ lớn) ở cổng 5100/8180, tắt khi xong',
     '  --host=127.0.0.1     máy server; --port=5000 --admin-port=8080 khi dùng server đang chạy',
-    '  --product=SP05       mặt hàng dùng để thử; --ship=10 số lượng mỗi lần "Gửi hàng"',
+    '  --product=TB05       mặt hàng dùng để thử; --ship=10 số lượng mỗi lần "Gửi hàng"',
     '  --admin-user=admin --admin-password=admin123 --branch-password=123456',
     '  --psql=đường_dẫn     psql.exe (mặc định tìm trong C:\\Program Files\\PostgreSQL\\*\\bin)',
     '  --keep               không dọn dữ liệu của lượt chạy',
@@ -170,11 +170,11 @@ async function run(tickMs, realMs, onTick) {
 
 // ---------- dữ liệu ban đầu ----------
 const SP = [
-  { ma: 'SP01', ten: 'Nước suối 500ml', dv: 'chai', gia: 5000, heSo: 2.0 },
-  { ma: 'SP02', ten: 'Mì gói', dv: 'gói', gia: 4000, heSo: 1.4 },
-  { ma: 'SP03', ten: 'Sữa tươi 1L', dv: 'hộp', gia: 32000, heSo: 0.9 },
-  { ma: 'SP04', ten: 'Gạo 5kg', dv: 'bao', gia: 120000, heSo: 0.5 },
-  { ma: 'SP05', ten: 'Dầu ăn 1L', dv: 'chai', gia: 55000, heSo: 1.2 },
+  { ma: 'TB01', ten: 'Máy hút bụi công nghiệp khô và ướt 16 lít', dv: 'cái', gia: 927000, heSo: 2.0 },
+  { ma: 'TB02', ten: 'Máy hút bụi 35 lít', dv: 'cái', gia: 1352000, heSo: 1.4 },
+  { ma: 'TB03', ten: 'Máy hút bụi 45 lít', dv: 'cái', gia: 1573000, heSo: 0.9 },
+  { ma: 'TB04', ten: 'Máy hút bụi 80 lít, 2 mô tơ', dv: 'cái', gia: 3103000, heSo: 0.5 },
+  { ma: 'TB05', ten: 'Máy hút bụi 100 lít, 3 mô tơ', dv: 'cái', gia: 4038000, heSo: 1.2 },
 ];
 const spByMa = Object.fromEntries(SP.map(s => [s.ma, s]));
 // Mỗi CN xin trung bình ~24,5 đơn vị một mặt hàng → nhu cầu mỗi SP ≈ 4,9·N.
@@ -589,9 +589,9 @@ async function phase1() {
   const c0 = rowCounts();
   table(['bang', 'so_dong'], Object.entries(c0), [1]);
   await sleep(500);
-  sql('SELECT sp.ma_sp, sp.ten, sp.don_vi, sp.gia, kt.so_luong FROM san_pham sp JOIN kho_tong kt USING (ma_sp) ORDER BY 1;');
-  table(['ma_sp', 'ten', 'don_vi', 'gia', 'so_luong'],
-    SP.map(s => [s.ma, s.ten, s.dv, s.gia.toFixed(2), khoTong0[s.ma]]), [3, 4]);
+  sql('SELECT sp.ma_sp, sp.ten, sp.don_vi, sp.gia_xuat, kt.so_luong FROM san_pham sp JOIN kho_tong kt USING (ma_sp) ORDER BY 1;');
+  table(['ma_sp', 'ten', 'don_vi', 'gia_xuat', 'so_luong'],
+    SP.map(s => [s.ma, s.ten, s.dv, String(s.gia), khoTong0[s.ma]]), [3, 4]);
   await sleep(500);
   sql('SELECT ma_cn, ten, dia_chi, gia_lap FROM chi_nhanh ORDER BY ma_cn LIMIT 5;');
   table(['ma_cn', 'ten', 'dia_chi', 'gia_lap'], clients.slice(0, 5).map(c => [c.ma, c.ten, 'Trình giả lập tải', 't']));
@@ -807,7 +807,7 @@ const ADMIN_PORT = parseInt(args['admin-port'], 10) || (START_SERVER ? 8180 : 80
 const ADMIN_USER = args['admin-user'] || 'admin';
 const ADMIN_PASSWORD = args['admin-password'] || 'admin123';
 const BRANCH_PASSWORD = args['branch-password'] || '123456';
-const PRODUCT = typeof args.product === 'string' ? args.product : 'SP05';
+const PRODUCT = typeof args.product === 'string' ? args.product : 'TB05';
 const SHIP = parseInt(args.ship, 10) || 10;
 const KEEP = !!args.keep;
 const TON_CN = 12;
@@ -1025,7 +1025,8 @@ function startServer() {
     // không có tools\ thì dùng java trên PATH
   }
   const logFile = path.join(os.tmpdir(), `sim-log-server-${PORT}.log`);
-  const argv = ['-jar', jar, 'open.browser=false', 'log.quiet=true', 'discovery.enabled=false',
+  // security.mode=off: 1000 CN ảo cùng IP 127.0.0.1 sẽ dính CONN_FLOOD
+  const argv = ['-jar', jar, 'open.browser=false', 'log.quiet=true', 'discovery.enabled=false', 'security.mode=off',
     `max.clients=${N + 100}`, `tcp.port=${PORT}`, `admin.http.port=${ADMIN_PORT}`];
   const p = spawn(java, argv, { cwd: ROOT });
   const log = fs.createWriteStream(logFile);

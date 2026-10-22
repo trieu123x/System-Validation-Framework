@@ -1,6 +1,7 @@
 package phanphoi.server;
 
 import phanphoi.common.Config;
+import phanphoi.server.security.SecurityRules;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -48,6 +49,9 @@ public final class ServerSettings {
     public volatile WriteMode writeMode;
     /** Giới hạn số tin chờ gửi của một kết nối trước khi bị coi là client chậm. */
     public final int sendQueueLimit;
+    /** Giám sát an ninh (thực nghiệm E8): off = baseline, detect = chỉ ghi sự kiện, block = đề xuất. */
+    public volatile SecurityRules.Mode securityMode;
+    public final SecurityRules securityRules;
 
     public ServerSettings(Config cfg) {
         ioMode = IoMode.valueOf(cfg.get("io.mode", "nio").toUpperCase());
@@ -55,6 +59,8 @@ public final class ServerSettings {
         delivery = Delivery.valueOf(cfg.get("delivery", "queue_resync").toUpperCase());
         writeMode = WriteMode.valueOf(cfg.get("write.mode", "queued").toUpperCase());
         sendQueueLimit = cfg.getInt("send.queue.limit", 2000);
+        securityMode = SecurityRules.parseMode(cfg.get("security.mode", "block"));
+        securityRules = new SecurityRules(cfg);
     }
 
     public void update(Map<String, String> values) {
@@ -67,6 +73,9 @@ public final class ServerSettings {
         if (values.containsKey("writeMode")) {
             writeMode = WriteMode.valueOf(values.get("writeMode").toUpperCase());
         }
+        if (values.containsKey("securityMode")) {
+            securityMode = SecurityRules.parseMode(values.get("securityMode"));
+        }
     }
 
     public Map<String, Object> toMap() {
@@ -76,6 +85,7 @@ public final class ServerSettings {
         m.put("delivery", delivery.name());
         m.put("writeMode", writeMode.name());
         m.put("sendQueueLimit", sendQueueLimit);
+        m.put("securityMode", securityMode.name());
         return m;
     }
 }

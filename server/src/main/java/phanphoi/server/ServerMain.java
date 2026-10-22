@@ -46,7 +46,7 @@ public final class ServerMain {
         tcp.start();
         System.out.println("[server] cau hinh: " + settings.toMap());
 
-        DiscoveryResponder discovery = new DiscoveryResponder(udpPort, tcpPort);
+        DiscoveryResponder discovery = new DiscoveryResponder(udpPort, tcpPort, ctx.security());
         if (cfg.getBool("discovery.enabled", true)) {
             discovery.start();
         }
@@ -74,6 +74,7 @@ public final class ServerMain {
             try {
                 tcp.close();
                 ctx.log().close();
+                ctx.securityLog().close();
             } catch (Exception ignored) {
                 // đang tắt
             }

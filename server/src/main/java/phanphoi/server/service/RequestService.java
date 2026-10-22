@@ -38,14 +38,24 @@ public final class RequestService {
     private final Outbox outbox;
     private final Events events;
     private final TransferService transfers;
+    private final DebtService debts;
     private final ServerSettings settings;
 
-    public RequestService(Db db, Outbox outbox, Events events, TransferService transfers, ServerSettings settings) {
+    public RequestService(Db db, Outbox outbox, Events events, TransferService transfers, DebtService debts,
+                          ServerSettings settings) {
         this.db = db;
         this.outbox = outbox;
         this.events = events;
         this.transfers = transfers;
+        this.debts = debts;
         this.settings = settings;
+    }
+
+    /** Ghi phiếu xuất, chốt đơn giá = gia_xuat hiện tại (đổi giá sau đó không làm đổi nợ của YC này). */
+    private static void insertPhieuXuat(Connection c, int maYc, String maCn, String maSp, int soLuong) throws SQLException {
+        Db.update(c, """
+                INSERT INTO phieu_xuat (ma_yc, ma_cn, ma_sp, so_luong, don_gia)
+                SELECT ?, ?, ?, ?, gia_xuat FROM san_pham WHERE ma_sp = ?""", maYc, maCn, maSp, soLuong, maSp);
     }
 
     private static Yc lockYc(Connection c, int maYc, String maCn) throws SQLException {
@@ -93,6 +103,39 @@ public final class RequestService {
         });
         if (alert != null) {
             events.publish(Events.ALERT, alert);
+        }
+    }
+
+    /**
+     * YC từ phản hồi thông báo (Cần hàng / Muốn nhập), trong transaction của người gọi. Dùng chung chỉ mục
+     * uq_yeu_cau_dang_mo với LOW_STOCK: (CN, SP) đã có YC mở thì trả mã YC đó, ghi số xin nếu YC còn CHO.
+     * @return {maYc, 1 nếu vừa tạo YC mới / 0 nếu dùng YC đang mở}
+     */
+    static int[] openFromNotice(Connection c, String maCn, String maSp, int soLuong) throws SQLException {
+        Integer maYc = Db.one(c, """
+                INSERT INTO yeu_cau (ma_cn, ma_sp, so_luong_xin) VALUES (?, ?, ?)
+                ON CONFLICT (ma_cn, ma_sp) WHERE trang_thai NOT IN ('HOAN_TAT', 'TU_CHOI') DO NOTHING
+                RETURNING ma_yc""", rs -> rs.getInt(1), maCn, maSp, soLuong);
+        if (maYc != null) {
+            return new int[]{maYc, 1};
+        }
+        Integer open = Db.one(c, """
+                SELECT ma_yc FROM yeu_cau WHERE ma_cn = ? AND ma_sp = ? AND trang_thai NOT IN ('HOAN_TAT', 'TU_CHOI')
+                FOR UPDATE""", rs -> rs.getInt(1), maCn, maSp);
+        if (open == null) {
+            // YC đang mở vừa đóng (Đã nhận / Từ chối) giữa INSERT và SELECT: CN bấm lại là tạo được YC mới
+            throw new ServiceException(ErrorCode.E03, "Yeu cau " + maSp + " vua dong, hay tra loi lai");
+        }
+        Db.update(c, "UPDATE yeu_cau SET so_luong_xin = ?, cap_nhat_luc = CURRENT_TIMESTAMP WHERE ma_yc = ? AND trang_thai = 'CHO'",
+                soLuong, open);
+        return new int[]{open, 0};
+    }
+
+    /** Đẩy cảnh báo mới (như LOW_STOCK) hoặc cập nhật YC lên trang admin sau khi transaction đã commit. */
+    void publishOpened(int maYc, boolean created) throws SQLException {
+        Map<String, Object> row = db.read(c -> Db.one(c, ALERT_SQL + " WHERE y.ma_yc = ?", Db::toMap, maYc));
+        if (row != null) {
+            events.publish(created ? Events.ALERT : Events.REQUEST, row);
         }
     }
 
@@ -155,8 +198,7 @@ public final class RequestService {
                 shortage[0] = true;
                 return null;
             }
-            Db.update(c, "INSERT INTO phieu_xuat (ma_yc, ma_cn, ma_sp, so_luong) VALUES (?, ?, ?, ?)",
-                    maYc, maCn, yc.maSp, soLuong);
+            insertPhieuXuat(c, maYc, maCn, yc.maSp, soLuong);
             Db.update(c, """
                     UPDATE yeu_cau SET so_luong_giao = ?, trang_thai = 'DA_GIAO', cap_nhat_luc = CURRENT_TIMESTAMP
                     WHERE ma_yc = ?""", soLuong, maYc);
@@ -194,7 +236,10 @@ public final class RequestService {
         }
     }
 
-    /** RECEIVED (FR-20): cộng kho CN và đóng YC. @return true nếu kho CN vừa thay đổi. */
+    /**
+     * RECEIVED (FR-20): cộng kho CN, đóng YC và ghi nợ XUAT trong cùng transaction.
+     * @return true nếu kho CN vừa thay đổi.
+     */
     public boolean received(String maCn, int maYc) throws SQLException {
         boolean changed = db.tx(c -> {
             Yc yc = lockYc(c, maYc, maCn);
@@ -208,6 +253,7 @@ public final class RequestService {
                             ON CONFLICT (ma_cn, ma_sp) DO UPDATE SET so_luong = kho_chi_nhanh.so_luong + EXCLUDED.so_luong""",
                             maCn, yc.maSp, yc.giao);
                     setState(c, maYc, HOAN_TAT);
+                    DebtService.recordDelivery(c, maYc);
                     return true;
                 }
                 default -> throw new ServiceException(ErrorCode.E03,
@@ -217,6 +263,7 @@ public final class RequestService {
         if (changed) {
             publishRequest(maYc);
             events.publish(Events.STOCK, Map.of("maCn", maCn));
+            debts.changed(maCn);
         }
         return changed;
     }
@@ -271,23 +318,95 @@ public final class RequestService {
             if (!SHIPPABLE.contains(row[2])) {
                 throw new ServiceException(ErrorCode.E03, "Yeu cau dang o trang thai " + row[2] + ", khong the gui hang");
             }
-            if (!takeFromCentral(c, row[1], soLuong)) {
-                Integer coThe = Db.one(c, "SELECT so_luong FROM kho_tong WHERE ma_sp = ?", rs -> rs.getInt(1), row[1]);
-                throw new ServiceException(ErrorCode.E05, "Kho tong chi con " + (coThe == null ? 0 : coThe) + " "
+            if (!shipLocked(c, maYc, row[0], row[1], soLuong)) {
+                throw new ServiceException(ErrorCode.E05, "Kho tong chi con " + centralStock(c, row[1]) + " "
                         + row[1] + ", khong du gui " + soLuong + ". Hay bao het hang hoac nhap them kho");
             }
-            Db.update(c, "INSERT INTO phieu_xuat (ma_yc, ma_cn, ma_sp, so_luong) VALUES (?, ?, ?, ?)",
-                    maYc, row[0], row[1], soLuong);
-            Db.update(c, """
-                    UPDATE yeu_cau SET so_luong_de_xuat = COALESCE(so_luong_de_xuat, ?), so_luong_chot = ?,
-                        so_luong_giao = ?, trang_thai = 'DA_GIAO', cap_nhat_luc = CURRENT_TIMESTAMP
-                    WHERE ma_yc = ?""", soLuong, soLuong, soLuong, maYc);
-            TransferService.cancelPending(c, maYc);
             return row;
         });
-        outbox.send(target[0], Message.of(Command.DELIVERED, maYc, target[1], soLuong));
+        afterShip(target[0], maYc, target[1], soLuong);
+    }
+
+    /** Xuất kho tổng cho YC đã khóa dòng, YC → DA_GIAO. @return false nếu kho tổng không đủ (chưa đổi gì). */
+    private boolean shipLocked(Connection c, int maYc, String maCn, String maSp, int soLuong) throws SQLException {
+        if (!takeFromCentral(c, maSp, soLuong)) {
+            return false;
+        }
+        insertPhieuXuat(c, maYc, maCn, maSp, soLuong);
+        Db.update(c, """
+                UPDATE yeu_cau SET so_luong_de_xuat = COALESCE(so_luong_de_xuat, ?), so_luong_chot = ?,
+                    so_luong_giao = ?, trang_thai = 'DA_GIAO', cap_nhat_luc = CURRENT_TIMESTAMP
+                WHERE ma_yc = ?""", soLuong, soLuong, soLuong, maYc);
+        TransferService.cancelPending(c, maYc);
+        return true;
+    }
+
+    private static int centralStock(Connection c, String maSp) throws SQLException {
+        Integer coThe = Db.one(c, "SELECT so_luong FROM kho_tong WHERE ma_sp = ?", rs -> rs.getInt(1), maSp);
+        return coThe == null ? 0 : coThe;
+    }
+
+    private void afterShip(String maCn, int maYc, String maSp, int soLuong) throws SQLException {
+        outbox.send(maCn, Message.of(Command.DELIVERED, maYc, maSp, soLuong));
         publishRequest(maYc);
         events.publish(Events.PRODUCTS, null);
+    }
+
+    /**
+     * Admin bổ sung chủ động từ trang Kho chi nhánh: chưa có YC mở cho (CN, SP) thì tạo YC rồi gửi hàng luôn
+     * trong cùng transaction; có YC CHO/DA_DE_XUAT thì gửi hàng cho YC đó. Chi nhánh vẫn bấm Đã nhận như luồng
+     * Gửi thẳng, giao thức không đổi. LOW_STOCK đến cùng lúc cũng đi qua uq_yeu_cau_dang_mo và khóa dòng YC,
+     * nên chỉ một YC được gửi hàng.
+     * @return mã YC đã gửi hàng.
+     */
+    public int replenish(String maCn, String maSp, int soLuong) throws SQLException {
+        if (settings.acceptStrategy == AcceptStrategy.SYNCHRONIZED) {
+            synchronized (CENTRAL_LOCK) {
+                return replenishTx(maCn, maSp, soLuong);
+            }
+        }
+        return replenishTx(maCn, maSp, soLuong);
+    }
+
+    private int replenishTx(String maCn, String maSp, int soLuong) throws SQLException {
+        if (soLuong <= 0) {
+            throw new ServiceException(ErrorCode.E05, "So luong bo sung phai > 0");
+        }
+        int maYc = db.tx(c -> {
+            if (Db.one(c, "SELECT 1 FROM chi_nhanh WHERE ma_cn = ? AND NOT gia_lap", rs -> 1, maCn) == null) {
+                throw new ServiceException(ErrorCode.E04, "Khong tim thay chi nhanh " + maCn);
+            }
+            StockService.requireProduct(c, maSp);
+            String findOpen = """
+                    SELECT ma_yc, trang_thai FROM yeu_cau
+                    WHERE ma_cn = ? AND ma_sp = ? AND trang_thai NOT IN ('HOAN_TAT', 'TU_CHOI') FOR UPDATE""";
+            Object[] open = Db.one(c, findOpen, rs -> new Object[]{rs.getInt(1), rs.getString(2)}, maCn, maSp);
+            if (open == null) {
+                Integer id = Db.one(c, """
+                        INSERT INTO yeu_cau (ma_cn, ma_sp) VALUES (?, ?)
+                        ON CONFLICT (ma_cn, ma_sp) WHERE trang_thai NOT IN ('HOAN_TAT', 'TU_CHOI') DO NOTHING
+                        RETURNING ma_yc""", rs -> rs.getInt(1), maCn, maSp);
+                // LOW_STOCK vừa chen vào giữa: dùng YC của nó
+                open = id != null ? new Object[]{id, CHO}
+                        : Db.one(c, findOpen, rs -> new Object[]{rs.getInt(1), rs.getString(2)}, maCn, maSp);
+                if (open == null) {
+                    throw new ServiceException(ErrorCode.E03, "Yeu cau vua thay doi, thu lai");
+                }
+            }
+            int id = (Integer) open[0];
+            String st = (String) open[1];
+            if (!CHO.equals(st) && !DA_DE_XUAT.equals(st)) {
+                throw new ServiceException(ErrorCode.E03, "Da co YC" + id + " dang giao (" + st + ")");
+            }
+            if (!shipLocked(c, id, maCn, maSp, soLuong)) {
+                // rollback: YC vừa tạo (nếu có) cũng không còn
+                throw new ServiceException(ErrorCode.E03, "Kho tong chi con " + centralStock(c, maSp) + " "
+                        + maSp + ", khong du bo sung " + soLuong);
+            }
+            return id;
+        });
+        afterShip(maCn, maYc, maSp, soLuong);
+        return maYc;
     }
 
     /**
@@ -328,8 +447,9 @@ public final class RequestService {
             SELECT y.ma_yc, y.ma_cn, cn.ten AS ten_cn, y.ma_sp, sp.ten AS ten_sp,
                    COALESCE(k.so_luong, 0) AS so_luong_con, COALESCE(k.nguong_toi_thieu, 0) AS nguong,
                    COALESCE(k.nguong_toi_thieu, 0) - COALESCE(k.so_luong, 0) AS muc_thieu,
-                   GREATEST(2 * COALESCE(k.nguong_toi_thieu, 0) - COALESCE(k.so_luong, 0), 1) AS goi_y,
-                   COALESCE(kt.so_luong, 0) AS ton_tong,
+                   COALESCE(y.so_luong_xin,
+                            GREATEST(2 * COALESCE(k.nguong_toi_thieu, 0) - COALESCE(k.so_luong, 0), 1)) AS goi_y,
+                   COALESCE(kt.so_luong, 0) AS ton_tong, sp.gia_xuat, y.so_luong_xin,
                    y.so_luong_de_xuat, y.so_luong_chot, y.so_luong_giao, y.trang_thai, y.tao_luc, y.cap_nhat_luc
             FROM yeu_cau y
             JOIN chi_nhanh cn ON cn.ma_cn = y.ma_cn

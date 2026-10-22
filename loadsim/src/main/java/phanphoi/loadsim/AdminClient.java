@@ -1,5 +1,6 @@
 package phanphoi.loadsim;
 
+import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import phanphoi.common.web.Http;
 
@@ -47,6 +48,16 @@ final class AdminClient {
 
     JsonObject get(String path) throws IOException, InterruptedException {
         return send(HttpRequest.newBuilder(URI.create(base + path)).GET(), 30);
+    }
+
+    /** GET trả về mảng JSON (vd /api/security/events). */
+    JsonArray getArray(String path) throws IOException, InterruptedException {
+        HttpResponse<String> r = http.send(HttpRequest.newBuilder(URI.create(base + path)).GET()
+                .timeout(Duration.ofSeconds(30)).build(), HttpResponse.BodyHandlers.ofString());
+        if (r.statusCode() != 200) {
+            throw new HttpError(r.statusCode(), r.body());
+        }
+        return Http.GSON.fromJson(r.body(), JsonArray.class);
     }
 
     JsonObject post(String path, Object body) throws IOException, InterruptedException {

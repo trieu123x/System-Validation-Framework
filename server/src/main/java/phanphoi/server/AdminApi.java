@@ -1,17 +1,23 @@
 package phanphoi.server;
 
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.sun.net.httpserver.HttpServer;
 import phanphoi.common.web.Http;
+import phanphoi.common.web.OriginGuard;
 import phanphoi.common.web.Router;
 import phanphoi.common.web.StaticFiles;
 import phanphoi.server.db.Db;
+import phanphoi.server.service.NoticeService;
+import phanphoi.server.service.StockService;
 
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.net.InetSocketAddress;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Executors;
@@ -27,6 +33,7 @@ public final class AdminApi implements AutoCloseable {
     private final HttpServer http;
     private final Map<String, Object> info;
     private final AdminAuth auth;
+    private final Object loginLock = new Object();
 
     /** Không cần đăng nhập: trang đăng nhập cần biết vai trò và trạng thái phiên. */
     private static final Set<String> PUBLIC = Set.of("/api/role", "/api/auth/login", "/api/auth/me", "/api/auth/logout");
@@ -48,6 +55,10 @@ public final class AdminApi implements AutoCloseable {
         }
         http.createContext("/api/", ex -> {
             String path = ex.getRequestURI().getPath().replaceAll("/+$", "");
+            if (!originAllowed(ex)) {
+                Http.error(ex, 403, "Origin/Host khong hop le");
+                return;
+            }
             // API thực nghiệm (trình giả lập tải) chỉ bật khi experiment.api=true và chỉ nghe trên localhost
             boolean open = PUBLIC.contains(path) || (experimentApi && path.startsWith("/api/experiment/"));
             if (!open && !auth.valid(ex)) {
@@ -75,9 +86,21 @@ public final class AdminApi implements AutoCloseable {
         });
         r.post("/api/auth/login", (ex, p) -> {
             JsonObject b = Http.body(ex);
-            String token = auth.login(Http.str(b, "user"), Http.str(b, "matKhau"));
-            if (token == null) {
-                throw new Http.ApiException(401, "Sai ten dang nhap hoac mat khau");
+            String token;
+            // ADMIN_BRUTE_FORCE: sai admin.lock.fails lần thì khóa đăng nhập, kể cả khi sau đó nhập đúng.
+            // Tuần tự hoá kiểm tra khóa → xác thực → đếm lần sai, để nhiều request song song không vượt quá số lần thử.
+            synchronized (loginLock) {
+                long locked = ctx.security().adminLockedUntil(System.currentTimeMillis());
+                if (locked > 0) {
+                    throw new Http.ApiException(429, "Dang nhap bi khoa den "
+                            + java.time.LocalTime.ofInstant(java.time.Instant.ofEpochMilli(locked), java.time.ZoneId.systemDefault())
+                            .withNano(0) + " vi sai mat khau nhieu lan");
+                }
+                token = auth.login(Http.str(b, "user"), Http.str(b, "matKhau"));
+                if (token == null) {
+                    ctx.security().onAdminLoginFail(clientIp(ex), System.currentTimeMillis());
+                    throw new Http.ApiException(401, "Sai ten dang nhap hoac mat khau");
+                }
             }
             ex.getResponseHeaders().add("Set-Cookie", AdminAuth.setCookie(token));
             Http.ok(ex, Map.of("loggedIn", true, "user", auth.user()));
@@ -94,15 +117,15 @@ public final class AdminApi implements AutoCloseable {
         r.get("/api/branches", (ex, p) -> Http.ok(ex, ctx.stock().branches(ctx.registry().onlineIds())));
 
         // ---- sản phẩm, kho tổng (FR-07..09) ----
+        r.get("/api/categories", (ex, p) -> Http.ok(ex, ctx.stock().categories()));
         r.get("/api/products", (ex, p) -> Http.ok(ex, ctx.stock().products()));
         r.post("/api/products", (ex, p) -> {
             JsonObject b = Http.body(ex);
-            ctx.stock().addProduct(Http.str(b, "maSp"), Http.str(b, "ten"), Http.str(b, "donVi"), money(b));
+            ctx.stock().addProduct(product(Http.str(b, "maSp"), b));
             Http.ok(ex, Map.of("ok", true));
         });
         r.put("/api/products/{id}", (ex, p) -> {
-            JsonObject b = Http.body(ex);
-            ctx.stock().updateProduct(p.get(0), Http.str(b, "ten"), Http.str(b, "donVi"), money(b));
+            ctx.stock().updateProduct(product(p.get(0), Http.body(ex)));
             Http.ok(ex, Map.of("ok", true));
         });
         r.delete("/api/products/{id}", (ex, p) -> {
@@ -112,12 +135,30 @@ public final class AdminApi implements AutoCloseable {
         r.get("/api/imports", (ex, p) -> Http.ok(ex, ctx.stock().imports(100)));
         r.post("/api/imports", (ex, p) -> {
             JsonObject b = Http.body(ex);
-            int ton = ctx.stock().importStock(Http.str(b, "maSp"), Http.integer(b, "soLuong"), Http.str(b, "nhaCungCap"));
+            Long donGia = Http.str(b, "donGia").isEmpty() ? null : money(b, "donGia");
+            int ton = ctx.stock().importStock(Http.str(b, "maSp"), Http.integer(b, "soLuong"), Http.str(b, "maNcc"), donGia);
             Http.ok(ex, Map.of("tonTong", ton));
+        });
+        r.get("/api/suppliers", (ex, p) -> Http.ok(ex, ctx.stock().suppliers()));
+        r.post("/api/suppliers", (ex, p) -> {
+            JsonObject b = Http.body(ex);
+            ctx.stock().addSupplier(Http.str(b, "maNcc"), Http.str(b, "ten"), Http.str(b, "mst"),
+                    Http.str(b, "diaChi"), Http.str(b, "dienThoai"));
+            Http.ok(ex, Map.of("ok", true));
         });
         r.get("/api/stock/branches", (ex, p) ->
                 Http.ok(ex, ctx.stock().branchStock(Http.query(ex).getOrDefault("maCn", ""))));
         r.get("/api/reconcile", (ex, p) -> Http.ok(ex, ctx.stock().reconcile()));
+
+        // ---- quản lý kho chi nhánh ----
+        r.get("/api/warehouses", (ex, p) -> Http.ok(ex, ctx.stock().warehouses(ctx.registry().onlineIds())));
+        r.get("/api/warehouses/{maCn}", (ex, p) ->
+                Http.ok(ex, ctx.stock().warehouse(p.get(0), ctx.registry().onlineIds())));
+        r.post("/api/warehouses/{maCn}/replenish", (ex, p) -> {
+            JsonObject b = Http.body(ex);
+            int maYc = ctx.requests().replenish(p.get(0), Http.str(b, "maSp"), Http.integer(b, "soLuong"));
+            Http.ok(ex, Map.of("maYc", maYc));
+        });
 
         // ---- cảnh báo, cấp hàng (FR-15, FR-16, FR-23) ----
         r.get("/api/alerts", (ex, p) -> Http.ok(ex, ctx.requests().pendingAlerts()));
@@ -139,6 +180,39 @@ public final class AdminApi implements AutoCloseable {
             Http.ok(ex, Map.of("ok", true));
         });
 
+        // ---- công nợ ----
+        r.get("/api/debts/summary", (ex, p) -> Http.ok(ex, ctx.debts().summary()));
+        r.get("/api/debts/branches", (ex, p) -> {
+            Map<String, String> q = Http.query(ex);
+            Http.ok(ex, ctx.debts().branchSummary(q.getOrDefault("trangThai", ""), "true".equals(q.get("sim"))));
+        });
+        r.get("/api/debts/branches/{maCn}", (ex, p) -> Http.ok(ex, ctx.debts().branchLedger(p.get(0))));
+        r.get("/api/debts/branches/{maCn}/check", (ex, p) -> {
+            JsonObject q = new JsonObject();
+            q.addProperty("soTien", Http.query(ex).getOrDefault("soTien", ""));
+            Http.ok(ex, ctx.debts().check(p.get(0), money(q, "soTien")));
+        });
+        r.post("/api/debts/branches/{maCn}/payments", (ex, p) -> {
+            JsonObject b = Http.body(ex);
+            long con = ctx.debts().recordPayment(p.get(0), money(b, "soTien"), Http.str(b, "ghiChu"));
+            Http.ok(ex, Map.of("conNo", con));
+        });
+        r.put("/api/branches/{maCn}/credit-limit", (ex, p) -> {
+            JsonObject b = Http.body(ex);
+            if (Http.str(b, "hanMuc").isEmpty()) {
+                throw new Http.ApiException(400, "Thieu han muc");
+            }
+            ctx.debts().setCreditLimit(p.get(0), money(b, "hanMuc"));
+            Http.ok(ex, Map.of("ok", true));
+        });
+        r.get("/api/debts/suppliers", (ex, p) -> Http.ok(ex, ctx.debts().supplierSummary()));
+        r.get("/api/debts/suppliers/{maNcc}", (ex, p) -> Http.ok(ex, ctx.debts().supplierLedger(p.get(0))));
+        r.post("/api/debts/suppliers/{maNcc}/payments", (ex, p) -> {
+            JsonObject b = Http.body(ex);
+            long con = ctx.debts().paySupplier(p.get(0), money(b, "soTien"), Http.str(b, "ghiChu"));
+            Http.ok(ex, Map.of("conNo", con));
+        });
+
         // ---- điều chuyển (7.2-B) ----
         r.get("/api/transfers", (ex, p) -> Http.ok(ex, ctx.transfers().list()));
 
@@ -151,6 +225,26 @@ public final class AdminApi implements AutoCloseable {
             int sent = ctx.outbox().broadcast(noiDung);
             Http.ok(ex, Map.of("guiNgay", sent));
         });
+        // thông báo có phản hồi: chiNhanh null = tất cả, hoặc [{maCn, deXuat?}]
+        r.post("/api/notices", (ex, p) -> {
+            JsonObject b = Http.body(ex);
+            String soLuong = Http.str(b, "soLuongDeXuat");
+            List<NoticeService.Target> targets = null;
+            if (b.has("chiNhanh") && b.get("chiNhanh").isJsonArray()) {
+                targets = new ArrayList<>();
+                for (JsonElement e : b.getAsJsonArray("chiNhanh")) {
+                    JsonObject t = e.getAsJsonObject();
+                    String deXuat = Http.str(t, "deXuat");
+                    targets.add(new NoticeService.Target(Http.str(t, "maCn"), deXuat.isEmpty() ? null : Http.integer(t, "deXuat")));
+                }
+            }
+            Http.ok(ex, ctx.notices().create(Http.str(b, "loai"), Http.str(b, "tieuDe"), Http.str(b, "noiDung"),
+                    Http.str(b, "maSp"), soLuong.isEmpty() ? null : Http.integer(b, "soLuongDeXuat"), targets));
+        });
+        r.get("/api/notices", (ex, p) -> Http.ok(ex, ctx.notices().list(100)));
+        r.get("/api/notices/suggest", (ex, p) ->
+                Http.ok(ex, ctx.notices().suggest(Http.query(ex).getOrDefault("maSp", ""))));
+        r.get("/api/notices/{id}", (ex, p) -> Http.ok(ex, ctx.notices().detail(Long.parseLong(p.get(0)))));
 
         // ---- nhật ký (FR-25) ----
         r.get("/api/logs", (ex, p) -> {
@@ -176,15 +270,133 @@ public final class AdminApi implements AutoCloseable {
             s.put("runtime", ExperimentApi.runtime(ctx));
             return s;
         })));
+
+        // ---- giám sát an ninh ----
+        r.get("/api/security/overview", (ex, p) -> {
+            long now = System.currentTimeMillis();
+            Map<String, Object> s = new LinkedHashMap<>();
+            s.put("ketNoi", ctx.registry().connections().size());
+            s.put("tinGiay", ctx.security().msgsPerSecond(now));
+            s.put("ipBiChan", ctx.security().bans().active(now).size());
+            s.put("suKien24h", ctx.db().read(c -> Db.one(c, """
+                    SELECT count(*) FILTER (WHERE muc = 'HIGH') AS high, count(*) FILTER (WHERE muc = 'MEDIUM') AS medium,
+                           count(*) FILTER (WHERE muc = 'LOW') AS low
+                    FROM su_kien_bao_mat WHERE thoi_gian > CURRENT_TIMESTAMP - INTERVAL '24 hours'""", Db::toMap)));
+            s.put("mode", ctx.settings().securityMode.name());
+            s.put("suKienBiBo", ctx.security().droppedEvents());
+            Http.ok(ex, s);
+        });
+        r.get("/api/security/events", (ex, p) -> {
+            Map<String, String> q = Http.query(ex);
+            String muc = q.getOrDefault("muc", "");
+            String loai = q.getOrDefault("loai", "");
+            String nguon = q.getOrDefault("nguon", "");
+            String ip = q.getOrDefault("ip", "");
+            String maCn = q.getOrDefault("maCn", "");
+            int limit = Math.max(1, Math.min(Integer.parseInt(q.getOrDefault("limit", "300")), 2000));
+            Http.ok(ex, ctx.db().read(c -> Db.rows(c, """
+                    SELECT id, thoi_gian, nguon, loai, muc, ip, ma_cn, chi_tiet, hanh_dong FROM su_kien_bao_mat
+                    WHERE (? = '' OR muc = ?) AND (? = '' OR loai = ?) AND (? = '' OR nguon = ?)
+                      AND (? = '' OR ip = ?) AND (? = '' OR ma_cn = ?)
+                    ORDER BY id DESC LIMIT ?""", muc, muc, loai, loai, nguon, nguon, ip, ip, maCn, maCn, limit)));
+        });
+        r.get("/api/security/ips", (ex, p) -> Http.ok(ex, ctx.security().ipTable(System.currentTimeMillis())));
+        r.get("/api/security/sessions", (ex, p) -> {
+            long now = System.currentTimeMillis();
+            java.util.List<Map<String, Object>> rows = new java.util.ArrayList<>();
+            for (phanphoi.server.net.ClientHandler h : ctx.registry().connections()) {
+                Map<String, Object> m = new LinkedHashMap<>();
+                m.put("id", h.id());
+                m.put("maCn", h.maCn());
+                m.put("ip", h.ip());
+                m.put("moLuc", java.time.LocalDateTime.ofInstant(java.time.Instant.ofEpochMilli(h.stats().openedAt()),
+                        java.time.ZoneId.systemDefault()).format(Db.TIME_FORMAT).substring(0, 19));
+                m.put("tinVao", h.stats().in());
+                m.put("tinRa", h.stats().out());
+                m.put("tinGiay", h.stats().msgsPerSecond(now));
+                m.put("lenhCuoi", h.stats().lastCmd());
+                rows.add(m);
+            }
+            rows.sort(java.util.Comparator.comparing(m -> (Long) m.get("id")));
+            Http.ok(ex, rows);
+        });
+        r.post("/api/security/bans", (ex, p) -> {
+            JsonObject b = Http.body(ex);
+            String ip = Http.str(b, "ip");
+            int phut = Http.integer(b, "phut");
+            if (!ip.matches("[0-9A-Fa-f.:]{2,45}")) {
+                throw new Http.ApiException(400, "IP khong hop le");
+            }
+            if (phut < 1 || phut > 1440) {
+                throw new Http.ApiException(400, "So phut chan phai tu 1 den 1440");
+            }
+            long until = ctx.security().banManually(ip, phut, System.currentTimeMillis());
+            // ngắt luôn các kết nối đang mở từ IP này
+            for (phanphoi.server.net.ClientHandler h : ctx.registry().connections()) {
+                if (ip.equals(h.ip())) {
+                    h.close();
+                }
+            }
+            Http.ok(ex, Map.of("until", java.time.LocalDateTime.ofInstant(java.time.Instant.ofEpochMilli(until),
+                    java.time.ZoneId.systemDefault()).format(Db.TIME_FORMAT).substring(0, 19)));
+        });
+        r.delete("/api/security/bans/{ip}", (ex, p) ->
+                Http.ok(ex, Map.of("ok", ctx.security().unban(p.get(0), System.currentTimeMillis()))));
+        r.post("/api/security/sessions/{id}/kick", (ex, p) -> {
+            long id = Long.parseLong(p.get(0));
+            for (phanphoi.server.net.ClientHandler h : ctx.registry().connections()) {
+                if (h.id() == id) {
+                    ctx.security().record("ADMIN", "ADMIN_KICK", "LOW", h.ip(), h.maCn(),
+                            "Admin ngat phien #" + id, "NGAT", System.currentTimeMillis());
+                    h.close();
+                    Http.ok(ex, Map.of("ok", true));
+                    return;
+                }
+            }
+            throw new Http.ApiException(404, "Khong tim thay phien " + id);
+        });
         return r;
     }
 
-    private static BigDecimal money(JsonObject b) {
-        String s = Http.str(b, "gia");
+    /** Kiểm tra Origin/Host (ADMIN_CSRF, ADMIN_DNS_REBIND); false thì trả 403. */
+    private boolean originAllowed(com.sun.net.httpserver.HttpExchange ex) {
+        String origin = ex.getRequestHeaders().getFirst("Origin");
+        String host = ex.getRequestHeaders().getFirst("Host");
+        OriginGuard.Verdict v = OriginGuard.check(origin, host, ctx.settings().securityRules.allowedOrigins);
+        if (v == OriginGuard.Verdict.OK) {
+            return true;
+        }
+        String loai = v == OriginGuard.Verdict.CSRF ? "ADMIN_CSRF" : "ADMIN_DNS_REBIND";
+        String detail = ex.getRequestMethod() + " " + ex.getRequestURI().getPath() + " Origin=" + origin + " Host=" + host;
+        ctx.security().onHttpViolation(loai, clientIp(ex), detail, System.currentTimeMillis());
+        return false;
+    }
+
+    private static String clientIp(com.sun.net.httpserver.HttpExchange ex) {
+        return ex.getRemoteAddress().getAddress().getHostAddress();
+    }
+
+    private static StockService.Product product(String maSp, JsonObject b) {
+        return new StockService.Product(maSp, Http.str(b, "ten"), Http.str(b, "donVi"), Http.str(b, "model"),
+                Http.str(b, "maDm"), money(b, "giaNhap"), money(b, "giaXuat"), money(b, "giaBanLe"));
+    }
+
+    private static final BigDecimal MAX_MONEY = BigDecimal.TEN.pow(12);
+
+    /** Số tiền nguyên đồng trong [0, 10^12]; để trống thì 0. */
+    static long money(JsonObject b, String key) {
+        String s = Http.str(b, key);
+        if (s.isEmpty()) {
+            return 0;
+        }
         try {
-            return s.isEmpty() ? BigDecimal.ZERO : new BigDecimal(s);
-        } catch (NumberFormatException e) {
-            throw new Http.ApiException(400, "Gia khong hop le");
+            BigDecimal v = new BigDecimal(s);
+            if (v.signum() < 0 || v.compareTo(MAX_MONEY) > 0 || v.stripTrailingZeros().scale() > 0) {
+                throw new Http.ApiException(400, "Truong '" + key + "' phai la so nguyen dong tu 0 den 10^12");
+            }
+            return v.longValueExact();
+        } catch (NumberFormatException | ArithmeticException e) {
+            throw new Http.ApiException(400, "Truong '" + key + "' khong hop le");
         }
     }
 

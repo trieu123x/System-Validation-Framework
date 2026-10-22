@@ -3,12 +3,17 @@ package phanphoi.loadsim;
 import com.google.gson.JsonObject;
 import phanphoi.common.Command;
 import phanphoi.common.Config;
+import phanphoi.common.LineReader;
 import phanphoi.common.Message;
 import phanphoi.common.ReconnectPolicy;
 
+import java.io.BufferedOutputStream;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.lang.management.ManagementFactory;
+import java.net.InetSocketAddress;
+import java.net.Socket;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -73,7 +78,7 @@ public final class Experiments {
         Experiments x = new Experiments(cfg);
         Files.createDirectories(x.outDir);
         String run = cfg.get("run", "all");
-        List<String> which = "all".equals(run) ? List.of("e1", "e2", "e3", "e4", "e5", "e6", "e7") : List.of(run.split(","));
+        List<String> which = "all".equals(run) ? List.of("e1", "e2", "e3", "e4", "e5", "e6", "e7", "e8") : List.of(run.split(","));
         x.summary.append("# Kết quả thực nghiệm\n\n").append(x.environment()).append('\n');
         for (String e : which) {
             System.out.println("\n========== " + e.toUpperCase() + " ==========");
@@ -85,6 +90,7 @@ public final class Experiments {
                 case "e5" -> x.e5();
                 case "e6" -> x.e6();
                 case "e7" -> x.e7();
+                case "e8" -> x.e8();
                 default -> System.err.println("Khong co thuc nghiem " + e);
             }
         }
@@ -103,7 +109,7 @@ public final class Experiments {
         int reps = cfg.getInt("e1.reps", 5);
         int qty = 8;
         int stock = clients * qty / 2; // chỉ đủ cho một nửa số chi nhánh
-        String sp = "SP05";
+        String sp = "TB05";
         List<String> rows = new ArrayList<>();
         StringBuilder md = new StringBuilder();
         md.append("## E1 – Tranh chấp kho tổng (").append(clients).append(" chi nhánh cùng ACCEPT ").append(qty)
@@ -320,7 +326,7 @@ public final class Experiments {
                 }
             });
         }
-        String[] products = {"SP01", "SP02", "SP03", "SP04", "SP05"};
+        String[] products = {"TB01", "TB02", "TB03", "TB04", "TB05"};
         Random rnd = new Random(42);
         long interval = 1000L / rate;
         while (System.currentTimeMillis() < end) {
@@ -517,7 +523,7 @@ public final class Experiments {
             cs.add(new SimClient(sim(i), HOST, PORT, PASSWORD));
         }
         loginAll(cs);
-        String[] products = {"SP01", "SP02", "SP03", "SP04", "SP05"};
+        String[] products = {"TB01", "TB02", "TB03", "TB04", "TB05"};
         ConcurrentLinkedQueue<Double> lat = new ConcurrentLinkedQueue<>();
         AtomicInteger sent = new AtomicInteger();
         AtomicInteger lost = new AtomicInteger();
@@ -876,7 +882,7 @@ public final class Experiments {
     }
 
     private E6Run e6Once(int n, int rounds, AtomicReference<E6State> current) throws Exception {
-        String sp = cfg.get("e6.product", "SP05");
+        String sp = cfg.get("e6.product", "TB05");
         int nguong = 10;
         int ship = 10;
         int stock = n * rounds * ship * 4 / 5; // đủ cho 80% số lần gửi
@@ -1128,6 +1134,494 @@ public final class Experiments {
         summary.append(md);
     }
 
+    // =====================================================================================
+    // E8 – Bị tấn công: so sánh security.mode = off | detect | block
+    // =====================================================================================
+
+    /** Kết quả của một kẻ tấn công trong một lượt. */
+    private static final class Attack {
+        final String name;
+        final String host;
+        final String behaviour;
+        final AtomicInteger handled = new AtomicInteger();
+        volatile long startedAt;
+        volatile long blockedAt;
+        volatile String blockedBy = "";
+
+        Attack(String name, String host, String behaviour) {
+            this.name = name;
+            this.host = host;
+            this.behaviour = behaviour;
+        }
+
+        void blocked(String why) {
+            if (blockedAt == 0) {
+                blockedAt = System.currentTimeMillis();
+                blockedBy = why;
+            }
+        }
+    }
+
+    /** Socket thô cho kẻ tấn công: luồng đọc riêng gọi onLine với mỗi dòng nhận được. */
+    private static final class RawConn implements AutoCloseable {
+        private final Socket socket;
+        private final OutputStream out;
+        volatile boolean closed;
+
+        RawConn(String host, int port, java.util.function.Consumer<String> onLine) throws IOException {
+            socket = new Socket();
+            socket.connect(new InetSocketAddress(host, port), 3000);
+            socket.setTcpNoDelay(true);
+            out = new BufferedOutputStream(socket.getOutputStream());
+            Thread t = new Thread(() -> {
+                try {
+                    LineReader r = new LineReader(socket.getInputStream());
+                    String line;
+                    while ((line = r.readLine()) != null) {
+                        if (line != LineReader.TOO_LONG) {
+                            onLine.accept(line);
+                        }
+                    }
+                } catch (IOException ignored) {
+                    // server đóng hoặc mình đóng
+                } finally {
+                    closed = true;
+                }
+            }, "e8-attacker");
+            t.setDaemon(true);
+            t.start();
+        }
+
+        boolean send(String line) {
+            if (closed) {
+                return false;
+            }
+            try {
+                out.write((line + "\n").getBytes(StandardCharsets.UTF_8));
+                out.flush();
+                return true;
+            } catch (IOException e) {
+                closed = true;
+                return false;
+            }
+        }
+
+        @Override
+        public void close() {
+            try {
+                socket.close();
+            } catch (IOException ignored) {
+                // đã đóng
+            }
+        }
+    }
+
+    /**
+     * Địa chỉ nguồn cho kẻ tấn công: mỗi kẻ một IP để quy tắc theo IP không chạm vào chi nhánh thật ở 127.0.0.1.
+     * Windows không cho bind 127.0.0.x khác làm IP nguồn, nên mặc định lấy các địa chỉ của chính máy này
+     * (nối tới địa chỉ nào thì server thấy IP nguồn là địa chỉ đó): IPv4 không phải loopback, IPv6 toàn cục, ::1.
+     * Ghi đè bằng e8.attacker.hosts=a,b,c,d.
+     */
+    private List<String> attackerHosts(int need) throws IOException {
+        String conf = cfg.get("e8.attacker.hosts", "");
+        List<String> out = new ArrayList<>();
+        if (!conf.isBlank()) {
+            for (String h : conf.split(",")) {
+                if (!h.isBlank()) {
+                    out.add(h.trim());
+                }
+            }
+        } else {
+            List<String> v6 = new ArrayList<>();
+            for (java.net.NetworkInterface nic : Collections.list(java.net.NetworkInterface.getNetworkInterfaces())) {
+                if (!nic.isUp() || nic.isLoopback()) {
+                    continue;
+                }
+                for (java.net.InetAddress a : Collections.list(nic.getInetAddresses())) {
+                    if (a.isLoopbackAddress() || a.isLinkLocalAddress()) {
+                        continue;
+                    }
+                    String h = a.getHostAddress().replaceAll("%.*$", "");
+                    if (a instanceof java.net.Inet4Address) {
+                        out.add(h);
+                    } else {
+                        v6.add(h);
+                    }
+                }
+            }
+            out.addAll(v6);
+            out.add("::1");
+        }
+        List<String> distinct = new ArrayList<>(new java.util.LinkedHashSet<>(out));
+        if (distinct.isEmpty()) {
+            throw new IllegalStateException("Khong tim duoc dia chi cho ke tan cong, dat e8.attacker.hosts=");
+        }
+        List<String> picked = new ArrayList<>();
+        for (int i = 0; i < need; i++) {
+            picked.add(distinct.get(i % distinct.size()));
+        }
+        if (distinct.size() < need) {
+            System.out.println("  canh bao: chi co " + distinct.size() + " dia chi, ke tan cong dung chung IP: " + picked);
+        }
+        return picked;
+    }
+
+    private void e8() throws Exception {
+        int n = cfg.getInt("e8.clients", 20);
+        int warmupSec = cfg.getInt("e8.warmup.seconds", 5);
+        int calmSec = cfg.getInt("e8.calm.seconds", 10);
+        int attackSec = cfg.getInt("e8.attack.seconds", 30);
+        int floodRate = cfg.getInt("e8.flood.rate", 500);
+        int scrapeRate = cfg.getInt("e8.scrape.rate", 200);
+        int junkRate = cfg.getInt("e8.junk.rate", 50);
+        int bruteRate = cfg.getInt("e8.brute.rate", 20);
+        int idle = cfg.getInt("e8.idle.connections", 50);
+        List<String> hosts = attackerHosts(4);
+        List<String> rows = new ArrayList<>();
+        StringBuilder md = new StringBuilder();
+        StringBuilder detail = new StringBuilder();
+        md.append("## E8 – Bị tấn công (").append(n).append(" chi nhánh thật SALE 2 tin/s ở 127.0.0.1, ")
+                .append(calmSec).append(" s bình thường rồi ").append(attackSec).append(" s bị tấn công)\n\n")
+                .append("5 kẻ tấn công: dò mật khẩu CN01 (").append(hosts.get(0)).append(", ").append(bruteRate)
+                .append(" lần/s), flood PING ").append(floodRate).append(" tin/s (").append(hosts.get(1))
+                .append("), cào INVENTORY_GET/HISTORY_GET ").append(scrapeRate).append(" tin/s bằng tài khoản SIM900 (127.0.0.1), ")
+                .append("gửi rác ").append(junkRate).append(" dòng/s (").append(hosts.get(2)).append("), mở ").append(idle)
+                .append(" kết nối không LOGIN (").append(hosts.get(3)).append(").\n\n")
+                .append("| security.mode | Kẻ tấn công bị chặn/ngắt | CN thật bị chặn nhầm | SALE p95 bình thường (ms) | ")
+                .append("SALE p95 khi bị tấn công (ms) | SALE mất | Tin tấn công được xử lý |\n")
+                .append("|---|---:|---:|---:|---:|---:|---:|\n");
+        detail.append("| security.mode | Kẻ tấn công | IP | Tin được xử lý | Tới sự kiện đầu (ms) | Tới khi bị chặn (ms) | Bị chặn bởi |\n")
+                .append("|---|---|---|---:|---:|---:|---|\n");
+        for (String mode : cfg.get("e8.modes", "off,detect,block").split(",")) {
+            System.out.println("  luot security.mode=" + mode);
+            List<String> args = serverArgs("e8.server");
+            args.add("security.mode=" + mode);
+            try (ServerProcess srv = startServer("e8-" + mode, args)) {
+                admin.login(cfg.get("e8.admin.user", "admin"), cfg.get("e8.admin.password", "admin123"));
+                List<SimClient> cs = new ArrayList<>();
+                for (int i = 1; i <= n; i++) {
+                    cs.add(new SimClient(sim(i), HOST, PORT, PASSWORD));
+                }
+                loginAll(cs);
+                ConcurrentLinkedQueue<Double> calm = new ConcurrentLinkedQueue<>();
+                ConcurrentLinkedQueue<Double> hot = new ConcurrentLinkedQueue<>();
+                AtomicInteger saleLost = new AtomicInteger();
+                Set<String> falseBlocked = ConcurrentHashMap.newKeySet();
+                // vài giây đầu JVM còn khởi động nóng: bán nhưng không tính vào số đo
+                long measureFrom = System.currentTimeMillis() + warmupSec * 1000L;
+                long attackAt = measureFrom + calmSec * 1000L;
+                long end = attackAt + attackSec * 1000L;
+                ExecutorService pool = Executors.newFixedThreadPool(n + 8);
+                CountDownLatch done = new CountDownLatch(n);
+                for (SimClient c : cs) {
+                    pool.execute(() -> {
+                        long next = System.currentTimeMillis() + ThreadLocalRandom.current().nextLong(500);
+                        try {
+                            while (System.currentTimeMillis() < end) {
+                                long wait = next - System.currentTimeMillis();
+                                if (wait > 0) {
+                                    Thread.sleep(wait);
+                                }
+                                next += 500;
+                                long t = System.nanoTime();
+                                long sentAt = System.currentTimeMillis();
+                                c.send(Message.of(Command.SALE, "TB01", 1));
+                                Message r = c.await(5000, Command.SALE_OK, Command.ERROR);
+                                if (r == null) {
+                                    saleLost.incrementAndGet();
+                                } else if (r.command() == Command.ERROR) {
+                                    if ("E06".equals(r.param(0))) {
+                                        falseBlocked.add(c.id + " (E06: " + r.param(1) + ")");
+                                    }
+                                    saleLost.incrementAndGet();
+                                } else if (sentAt >= measureFrom) {
+                                    (sentAt < attackAt ? calm : hot).add((System.nanoTime() - t) / 1e6);
+                                }
+                            }
+                        } catch (Exception e) {
+                            saleLost.incrementAndGet();
+                        } finally {
+                            if (!c.isOpen()) {
+                                falseBlocked.add(c.id + " (mat ket noi)");
+                            }
+                            done.countDown();
+                        }
+                    });
+                }
+                Thread.sleep(Math.max(0, attackAt - System.currentTimeMillis()));
+                List<Attack> attacks = List.of(
+                        new Attack("do_mat_khau", hosts.get(0), "LOGIN sai CN01"),
+                        new Attack("flood_ping", hosts.get(1), "PING " + floodRate + "/s"),
+                        new Attack("cao_du_lieu", HOST, "INVENTORY_GET/HISTORY_GET " + scrapeRate + "/s"),
+                        new Attack("gui_rac", hosts.get(2), "dong rac " + junkRate + "/s"),
+                        new Attack("khong_login", hosts.get(3), idle + " ket noi khong LOGIN"));
+                CountDownLatch attacksDone = new CountDownLatch(attacks.size());
+                pool.execute(() -> runAttack(attacksDone, () -> bruteForce(attacks.get(0), bruteRate, end)));
+                pool.execute(() -> runAttack(attacksDone, () -> floodPing(attacks.get(1), floodRate, end)));
+                pool.execute(() -> runAttack(attacksDone, () -> scrape(attacks.get(2), scrapeRate, end)));
+                pool.execute(() -> runAttack(attacksDone, () -> junk(attacks.get(3), junkRate, end)));
+                pool.execute(() -> runAttack(attacksDone, () -> idleConnections(attacks.get(4), idle, end)));
+                done.await(attackSec + calmSec + 30L, TimeUnit.SECONDS);
+                attacksDone.await(30, TimeUnit.SECONDS);
+                pool.shutdownNow();
+                Thread.sleep(1500); // chờ bộ ghi sự kiện đưa xuống CSDL
+                for (SimClient c : cs) {
+                    if (!c.isOpen()) {
+                        falseBlocked.add(c.id + " (mat ket noi)");
+                    }
+                }
+                for (com.google.gson.JsonElement e : admin.getArray("/api/security/ips")) {
+                    JsonObject ip = e.getAsJsonObject();
+                    if ("127.0.0.1".equals(ip.get("ip").getAsString()) && "BI_CHAN".equals(ip.get("trangThai").getAsString())) {
+                        falseBlocked.add("127.0.0.1 (IP bi chan)");
+                    }
+                }
+                cs.forEach(SimClient::close);
+                int blockedCount = 0;
+                int handledTotal = 0;
+                Stats sCalm = new Stats(calm);
+                Stats sHot = new Stats(hot);
+                for (Attack a : attacks) {
+                    long firstEvent = firstEventAt(a);
+                    String tEvent = firstEvent > 0 ? Stats.f1(Math.max(0, firstEvent - a.startedAt)) : "";
+                    String tBlock = a.blockedAt > 0 ? Stats.f1(a.blockedAt - a.startedAt) : "";
+                    if (a.blockedAt > 0) {
+                        blockedCount++;
+                    }
+                    handledTotal += a.handled.get();
+                    // CSV không dùng ngoặc kép: bỏ dấu phẩy khỏi các trường mô tả
+                    rows.add(String.join(",", mode, a.name, a.host, a.behaviour.replace(',', ';'), "" + a.handled.get(),
+                            tEvent, tBlock, a.blockedAt > 0 ? "1" : "0", a.blockedBy.replace(',', ';'), "" + falseBlocked.size(),
+                            Stats.f(sCalm.p95), Stats.f(sHot.p95), "" + saleLost.get()));
+                    detail.append("| ").append(mode).append(" | ").append(a.name).append(" | ").append(a.host).append(" | ")
+                            .append(a.handled.get()).append(" | ").append(tEvent.isEmpty() ? "—" : tEvent).append(" | ")
+                            .append(tBlock.isEmpty() ? "—" : tBlock).append(" | ").append(a.blockedBy.isEmpty() ? "—" : a.blockedBy)
+                            .append(" |\n");
+                    System.out.printf("    %-12s %-28s xu ly=%d su kien=%s ms chan=%s ms %s%n", a.name, a.host, a.handled.get(),
+                            tEvent.isEmpty() ? "-" : tEvent, tBlock.isEmpty() ? "-" : tBlock, a.blockedBy);
+                }
+                md.append("| ").append(mode).append(" | ").append(blockedCount).append("/").append(attacks.size()).append(" | ")
+                        .append(falseBlocked.size()).append(" | ").append(Stats.f(sCalm.p95)).append(" | ")
+                        .append(Stats.f(sHot.p95)).append(" | ").append(saleLost.get()).append(" | ").append(handledTotal)
+                        .append(" |\n");
+                System.out.printf("  %s: chan %d/5, chan nham %d %s, SALE p95 %.2f -> %.2f ms, mat %d%n", mode, blockedCount,
+                        falseBlocked.size(), falseBlocked, sCalm.p95, sHot.p95, saleLost.get());
+            }
+        }
+        md.append("\n").append(detail).append("\n\"Tin được xử lý\": số trả lời bình thường kẻ tấn công nhận được (LOGIN_FAIL, PONG, ")
+                .append("INVENTORY/HISTORY, ERROR|E01, kết nối được nhận). \"Bị chặn\": nhận ERROR|E06 hoặc bị server đóng kết nối. ")
+                .append("Thời gian tính từ lúc kẻ tấn công bắt đầu.\n\n");
+        writeCsv("e8.csv", "che_do,ke_tan_cong,ip,hanh_vi,tin_xu_ly,toi_su_kien_ms,toi_khi_bi_chan_ms,bi_chan,bi_chan_boi,"
+                + "cn_that_bi_chan_nham,sale_p95_binh_thuong_ms,sale_p95_bi_tan_cong_ms,sale_mat", rows);
+        summary.append(md);
+    }
+
+    @FunctionalInterface
+    private interface AttackBody {
+        void run() throws Exception;
+    }
+
+    private static void runAttack(CountDownLatch done, AttackBody body) {
+        try {
+            body.run();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        } catch (Exception e) {
+            System.err.println("  loi ke tan cong: " + e.getMessage());
+        } finally {
+            done.countDown();
+        }
+    }
+
+    /** Thời điểm (ms) sự kiện an ninh đầu tiên server ghi cho kẻ tấn công này, 0 nếu không có. */
+    private long firstEventAt(Attack a) throws IOException, InterruptedException {
+        String q = HOST.equals(a.host) ? "loai=SCRAPING" : "ip=" + java.net.URLEncoder.encode(
+                java.net.InetAddress.getByName(a.host).getHostAddress(), StandardCharsets.UTF_8);
+        long first = 0;
+        for (com.google.gson.JsonElement e : admin.getArray("/api/security/events?limit=2000&" + q)) {
+            long t = LocalDateTime.parse(e.getAsJsonObject().get("thoiGian").getAsString(),
+                    DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS"))
+                    .atZone(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli();
+            if (t >= a.startedAt - 1000 && (first == 0 || t < first)) {
+                first = t;
+            }
+        }
+        return first;
+    }
+
+    /** Nối tới host; nhận ERROR|E06 ngay (IP bị chặn) thì ghi là bị chặn. */
+    private static RawConn open(Attack a, java.util.function.Consumer<String> onLine) throws IOException {
+        return new RawConn(a.host, PORT, line -> {
+            if (line.startsWith("ERROR|E06")) {
+                a.blocked("E06: " + line.substring(Math.min(line.length(), 10)));
+            }
+            onLine.accept(line);
+        });
+    }
+
+    private static void bruteForce(Attack a, int rate, long end) throws Exception {
+        a.startedAt = System.currentTimeMillis();
+        int i = 0;
+        while (System.currentTimeMillis() < end) {
+            RawConn c;
+            try {
+                c = open(a, line -> {
+                    if (line.startsWith("LOGIN_FAIL")) {
+                        a.handled.incrementAndGet();
+                    }
+                });
+            } catch (IOException e) {
+                Thread.sleep(200);
+                continue;
+            }
+            try (c) {
+                while (!c.closed && System.currentTimeMillis() < end) {
+                    c.send("LOGIN|CN01|doan" + (i++));
+                    Thread.sleep(1000L / rate);
+                }
+                if (c.closed) {
+                    a.blocked("server dong ket noi");
+                }
+            }
+            Thread.sleep(300);
+        }
+    }
+
+    private static void floodPing(Attack a, int rate, long end) throws Exception {
+        a.startedAt = System.currentTimeMillis();
+        int batch = Math.max(1, rate / 100);
+        while (System.currentTimeMillis() < end) {
+            RawConn c;
+            try {
+                c = open(a, line -> {
+                    if (line.startsWith("PONG")) {
+                        a.handled.incrementAndGet();
+                    }
+                });
+            } catch (IOException e) {
+                Thread.sleep(200);
+                continue;
+            }
+            try (c) {
+                while (!c.closed && System.currentTimeMillis() < end) {
+                    for (int k = 0; k < batch; k++) {
+                        c.send("PING");
+                    }
+                    Thread.sleep(10);
+                }
+                if (c.closed) {
+                    a.blocked("server dong ket noi");
+                }
+            }
+            Thread.sleep(300);
+        }
+    }
+
+    private static void scrape(Attack a, int rate, long end) throws Exception {
+        a.startedAt = System.currentTimeMillis();
+        while (System.currentTimeMillis() < end) {
+            CountDownLatch in = new CountDownLatch(1);
+            RawConn c;
+            try {
+                c = open(a, line -> {
+                    if (line.startsWith("LOGIN_OK")) {
+                        in.countDown();
+                    } else if (line.startsWith("INVENTORY|") || line.startsWith("HISTORY|")) {
+                        a.handled.incrementAndGet();
+                    }
+                });
+            } catch (IOException e) {
+                Thread.sleep(200);
+                continue;
+            }
+            try (c) {
+                c.send("LOGIN|SIM900|" + PASSWORD);
+                if (!in.await(3, TimeUnit.SECONDS)) {
+                    Thread.sleep(300);
+                    continue;
+                }
+                long gap = Math.max(1, 1000L / rate);
+                int k = 0;
+                while (!c.closed && System.currentTimeMillis() < end) {
+                    c.send(k++ % 2 == 0 ? "INVENTORY_GET" : "HISTORY_GET|1970-01-01|2100-12-31");
+                    Thread.sleep(gap);
+                }
+                if (c.closed) {
+                    a.blocked("server dong ket noi");
+                }
+            }
+            Thread.sleep(300);
+        }
+    }
+
+    private static void junk(Attack a, int rate, long end) throws Exception {
+        a.startedAt = System.currentTimeMillis();
+        String big = "X".repeat(5000);
+        while (System.currentTimeMillis() < end) {
+            RawConn c;
+            try {
+                c = open(a, line -> {
+                    if (line.startsWith("ERROR|E01")) {
+                        a.handled.incrementAndGet();
+                    }
+                });
+            } catch (IOException e) {
+                Thread.sleep(200);
+                continue;
+            }
+            try (c) {
+                int k = 0;
+                while (!c.closed && System.currentTimeMillis() < end) {
+                    c.send(k % 5 == 4 ? big : "R@C|" + ThreadLocalRandom.current().nextInt() + "|\\x");
+                    k++;
+                    Thread.sleep(1000L / rate);
+                }
+                if (c.closed) {
+                    a.blocked("server dong ket noi");
+                }
+            }
+            Thread.sleep(300);
+        }
+    }
+
+    private static void idleConnections(Attack a, int count, long end) throws Exception {
+        a.startedAt = System.currentTimeMillis();
+        // kết nối → đã bị từ chối bằng ERROR|E06 chưa (bị từ chối thì không tính là "được xử lý")
+        Map<RawConn, java.util.concurrent.atomic.AtomicBoolean> conns = new java.util.LinkedHashMap<>();
+        try {
+            while (System.currentTimeMillis() < end) {
+                conns.entrySet().removeIf(e -> {
+                    if (!e.getKey().closed) {
+                        return false;
+                    }
+                    if (e.getValue().get()) {
+                        a.handled.decrementAndGet();
+                    }
+                    a.blocked("server dong ket noi");
+                    e.getKey().close();
+                    return true;
+                });
+                while (conns.size() < count && System.currentTimeMillis() < end) {
+                    java.util.concurrent.atomic.AtomicBoolean rejected = new java.util.concurrent.atomic.AtomicBoolean();
+                    try {
+                        RawConn c = open(a, line -> {
+                            if (line.startsWith("ERROR|E06")) {
+                                rejected.set(true);
+                            }
+                        });
+                        conns.put(c, rejected);
+                        a.handled.incrementAndGet();
+                    } catch (IOException e) {
+                        break;
+                    }
+                }
+                Thread.sleep(500);
+            }
+        } finally {
+            conns.keySet().forEach(RawConn::close);
+        }
+    }
+
     private static String cell(java.util.Collection<Double> v) {
         Stats s = new Stats(v);
         return s.n == 0 ? "—" : Stats.f1(s.avg) + " / " + Stats.f1(s.p95) + " / " + Stats.f1(s.max);
@@ -1141,8 +1635,10 @@ public final class Experiments {
     // =====================================================================================
 
     private ServerProcess startServer(String tag, List<String> args) throws Exception {
+        // security.mode=off: 1000 kết nối từ 127.0.0.1 sẽ dính CONN_FLOOD, giữ số liệu E1–E7 so được với trước;
+        // E8 ghi đè bằng tham số riêng (tham số sau thắng)
         List<String> all = new ArrayList<>(List.of("max.clients=2000", "db.pool.size=20",
-                "tcp.port=" + PORT, "admin.http.port=" + adminPort));
+                "tcp.port=" + PORT, "admin.http.port=" + adminPort, "security.mode=off"));
         all.addAll(args);
         ServerProcess p = new ServerProcess(serverJar, outDir.resolve("logs").resolve("server-" + tag + ".log"), all);
         p.awaitReady();

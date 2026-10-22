@@ -17,4 +17,12 @@ public interface Transport {
     void close();
 
     String remote();
+
+    /** IP của client, không kèm cổng (khóa của các bộ đếm theo IP). */
+    String ip();
+
+    static String ipOf(java.net.SocketAddress a) {
+        return a instanceof java.net.InetSocketAddress isa && isa.getAddress() != null
+                ? isa.getAddress().getHostAddress() : String.valueOf(a);
+    }
 }

@@ -52,17 +52,36 @@ public final class BioServer extends NetServer {
                 s.setKeepAlive(true);
                 if (ctx.registry().connections().size() >= maxClients) {
                     // từ chối rõ ràng thay vì để client treo chờ luồng rảnh
+                    ctx.security().onServerFull(System.currentTimeMillis());
                     try (s) {
                         s.getOutputStream().write(ClientHandler.serverFullLine(maxClients));
                     }
                     continue;
                 }
-                BioTransport t = ctx.settings().writeMode == WriteMode.QUEUED
-                        ? new QueuedTransport(s, ctx.settings().sendQueueLimit)
-                        : new DirectTransport(s);
-                ClientHandler h = new ClientHandler(ctx, t);
-                h.onOpen();
-                pool.execute(() -> readLoop(s, h));
+                String ip = Transport.ipOf(s.getRemoteSocketAddress());
+                String deny = ctx.security().onAccept(ip, System.currentTimeMillis());
+                if (deny != null) {
+                    try (s) {
+                        s.getOutputStream().write(ClientHandler.bannedLine(deny));
+                    }
+                    continue;
+                }
+                ClientHandler h = null;
+                try {
+                    BioTransport t = ctx.settings().writeMode == WriteMode.QUEUED
+                            ? new QueuedTransport(s, ctx.settings().sendQueueLimit)
+                            : new DirectTransport(s);
+                    h = new ClientHandler(ctx, t);
+                    h.onOpen();
+                    ClientHandler handler = h;
+                    pool.execute(() -> readLoop(s, handler));
+                } catch (IOException | RuntimeException e) {
+                    // chưa vào được vòng đọc: dọn phiên (trả lại chỗ trong bộ đếm kết nối theo IP nếu đã tính)
+                    if (h != null) {
+                        h.onClosed();
+                    }
+                    s.close();
+                }
             } catch (IOException e) {
                 if (!serverSocket.isClosed()) {
                     System.err.println("[server] loi accept: " + e.getMessage());
@@ -105,17 +124,24 @@ public final class BioServer extends NetServer {
         protected final Socket socket;
         protected final OutputStream out;
         private final String remote;
+        private final String ip;
         protected final AtomicBoolean closed = new AtomicBoolean();
 
         BioTransport(Socket socket) throws IOException {
             this.socket = socket;
             this.out = new BufferedOutputStream(socket.getOutputStream());
             this.remote = socket.getRemoteSocketAddress().toString();
+            this.ip = Transport.ipOf(socket.getRemoteSocketAddress());
         }
 
         @Override
         public String remote() {
             return remote;
+        }
+
+        @Override
+        public String ip() {
+            return ip;
         }
 
         @Override

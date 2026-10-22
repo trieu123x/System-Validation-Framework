@@ -12,3 +12,7 @@
     \i /db/seed_demo.sql
   \endif
 \endif
+
+-- 3 mặt hàng mới (không có ở chi nhánh thật) và ảnh trên Cloudinary; chạy sau seed_demo
+\i /db/seed_hang_moi.sql
+\i /db/seed_images.sql

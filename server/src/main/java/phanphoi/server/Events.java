@@ -14,6 +14,12 @@ public final class Events {
     public static final String TRANSFER = "transfer";
     public static final String MESSAGE = "message";
     public static final String PRODUCTS = "products";
+    /** Sổ công nợ đổi: {maCn} hoặc {maNcc}. */
+    public static final String DEBT = "debt";
+    /** Thông báo mới hoặc chi nhánh vừa trả lời: {id} hoặc {id, maCn}. */
+    public static final String NOTICE = "notice";
+    /** Một sự kiện an ninh (su_kien_bao_mat). */
+    public static final String SECURITY = "security";
 
     private final SseHub hub = new SseHub();
 

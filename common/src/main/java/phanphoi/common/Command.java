@@ -38,7 +38,17 @@ public enum Command {
     TRANSFER_DONE(3),
     // 7.2-A: tự tìm server qua UDP
     DISCOVER(0),
-    HERE(2);
+    HERE(2),
+    // công nợ: tongNhan, daTra, conNo, hanMuc, danh sách id,loai,soTien,thoiGian,ghiChu (50 bút toán mới nhất)
+    DEBT_GET(0),
+    DEBT(5),
+    // client báo sự kiện an ninh phát hiện ở máy chi nhánh: loai, chiTiet (≤ 500 ký tự); chỉ sau khi đăng nhập
+    SECURITY_REPORT(2),
+    // thông báo có phản hồi (trạng thái mới nhất, CN ghi đè theo id):
+    // id, loai, trangThai, taoLuc, tieuDe, noiDung, maSp, deXuat, soLuong, maYc, anh (trường không áp dụng để rỗng)
+    NOTICE(11),
+    // CN trả lời thông báo: id, traLoi (XEM | CAN_HANG | KHONG_CAN | MUON_NHAP | BO_QUA), soLuong (0 khi không cần)
+    NOTICE_REPLY(3);
 
     private static final Map<String, Command> BY_NAME = new HashMap<>();
 

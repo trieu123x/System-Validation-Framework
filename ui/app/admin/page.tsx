@@ -2,15 +2,19 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { api, UNAUTHORIZED, useDebounced, useEvents } from "@/lib/api";
-import type { Branch, LogRow, Product, RequestRow, Stats } from "@/lib/types";
+import type { Branch, LogRow, Product, RequestRow, SecurityEventRow, Stats } from "@/lib/types";
 import { Dot, Shell, Toasts, useToasts } from "@/components/ui";
-import { CompanyLogin, LoginScreen } from "@/components/Login";
-import { Overview } from "@/components/admin/Overview";
+import { CompanyFooter, CompanyLogin, LoginScreen } from "@/components/Login";
+import { COMPANY } from "@/lib/company";
+import { NO_FILTER, Overview, type OverviewFilter } from "@/components/admin/Overview";
 import { Products } from "@/components/admin/Products";
-import { BranchStock, Reconcile, RequestHistory, Transfers } from "@/components/admin/Records";
-import { Broadcast, Monitor } from "@/components/admin/Comms";
+import { Reconcile, RequestHistory, Transfers } from "@/components/admin/Records";
+import { Warehouses } from "@/components/admin/Warehouses";
+import { Notices } from "@/components/admin/Notices";
+import { Security } from "@/components/admin/Security";
+import { Debts } from "@/components/admin/Debts";
 
-type Tab = "overview" | "products" | "stock" | "history" | "transfers" | "broadcast" | "monitor" | "reconcile";
+type Tab = "overview" | "products" | "stock" | "debts" | "history" | "transfers" | "broadcast" | "monitor" | "reconcile";
 
 /** Cổng đăng nhập công ty: chưa có phiên (hoặc phiên hết hạn) thì hiện trang đăng nhập. */
 export default function AdminPage() {
@@ -45,7 +49,8 @@ function AdminApp({ user, onLogout }: { user: string; onLogout: () => void }) {
   const [fresh, setFresh] = useState<Set<number>>(new Set());
   const [live, setLive] = useState<LogRow[]>([]);
   const [showSim, setShowSim] = useState(false);
-  const [v, setV] = useState({ stock: 0, requests: 0, transfers: 0, products: 0 });
+  const [overviewFilter, setOverviewFilter] = useState<OverviewFilter>(NO_FILTER);
+  const [v, setV] = useState({ stock: 0, requests: 0, transfers: 0, products: 0, debts: 0, security: 0, notices: 0 });
 
   const bump = (k: keyof typeof v) => setV((x) => ({ ...x, [k]: x[k] + 1 }));
   const flash = (maYc: number) => {
@@ -71,6 +76,9 @@ function AdminApp({ user, onLogout }: { user: string; onLogout: () => void }) {
   const refreshProducts = useDebounced(() => { loadProducts(); bump("products"); bump("stock"); }, 800);
   const refreshTransfers = useDebounced(() => { bump("transfers"); loadRequests(); }, 400);
   const refreshBranches = useDebounced(loadBranches, 300);
+  const refreshDebts = useDebounced(() => bump("debts"), 800);
+  const refreshSecurity = useDebounced(() => bump("security"), 500);
+  const [highCount, setHighCount] = useState(0);
   const isSim = (maCn: string) => maCn.startsWith("SIM");
 
   const connected = useEvents({
@@ -94,6 +102,15 @@ function AdminApp({ user, onLogout }: { user: string; onLogout: () => void }) {
     stock: () => refreshStock(),
     products: () => refreshProducts(),
     transfer: () => refreshTransfers(),
+    debt: () => refreshDebts(),
+    notice: () => bump("notices"),
+    security: (e: SecurityEventRow) => {
+      if (e.muc === "HIGH") {
+        push("error", `🛡 ${e.loai}${e.ip ? ` từ ${e.ip}` : ""}${e.maCn ? ` (${e.maCn})` : ""}: ${e.chiTiet ?? ""}`.slice(0, 220));
+        if (tab !== "monitor") setHighCount((n) => n + 1);
+      }
+      refreshSecurity();
+    },
     message: (m: LogRow) => setLive((l) => [m, ...l].slice(0, 300)),
   });
 
@@ -102,21 +119,24 @@ function AdminApp({ user, onLogout }: { user: string; onLogout: () => void }) {
   const shortage = requests.filter((r) => r.trangThai === "THIEU_HANG" && (showSim || !isSim(r.maCn))).length;
   const shownAlerts = alerts.filter((a) => showSim || !isSim(a.maCn));
   const TITLES: Record<Tab, string> = {
-    overview: "Tổng quan", products: "Hàng hóa & kho tổng", stock: "Tồn kho chi nhánh", history: "Yêu cầu cấp hàng",
-    transfers: "Điều chuyển hàng", broadcast: "Gửi thông báo tới chi nhánh", monitor: "Giám sát giao thức", reconcile: "Đối soát kho",
+    overview: "Tổng quan", products: "Hàng hóa & kho tổng", stock: "Quản lý kho chi nhánh", debts: "Công nợ",
+    history: "Yêu cầu cấp hàng",
+    transfers: "Điều chuyển hàng", broadcast: "Thông báo tới chi nhánh", monitor: "Giám sát an ninh", reconcile: "Đối soát kho",
   };
 
   return (
     <>
-      <Shell<Tab> brand="Phân phối hàng hóa" sub="Quản trị công ty" value={tab} onChange={setTab} title={TITLES[tab]}
+      <Shell<Tab> brand={COMPANY.brand} sub="Quản trị công ty" value={tab} title={TITLES[tab]}
+        onChange={(t) => { setTab(t); if (t === "monitor") setHighCount(0); }}
         nav={[
           { id: "overview", label: "Tổng quan", count: shownAlerts.length, tone: "danger" },
           { id: "products", label: "Hàng hóa" },
           { id: "stock", label: "Kho chi nhánh" },
+          { id: "debts", label: "Công nợ" },
           { id: "history", label: "Yêu cầu cấp hàng" },
           { id: "transfers", label: "Điều chuyển", count: shortage, tone: "warn" },
           { id: "broadcast", label: "Thông báo" },
-          { id: "monitor", label: "Giám sát" },
+          { id: "monitor", label: "Giám sát", count: highCount, tone: "danger" },
           { id: "reconcile", label: "Đối soát" },
         ]}
         status={
@@ -129,23 +149,30 @@ function AdminApp({ user, onLogout }: { user: string; onLogout: () => void }) {
             <button className="btn btn-sm" onClick={onLogout}>Đăng xuất</button>
           </>
         }
-        actions={tab === "overview" && (
+        actions={(tab === "overview" || tab === "debts") && (
           <label className="row muted">
             <input type="checkbox" checked={showSim} onChange={(e) => setShowSim(e.target.checked)} /> Hiện chi nhánh ảo (giả lập tải)
           </label>
         )}>
         {tab === "overview" && (
-          <Overview branches={branches} alerts={shownAlerts} requests={requests} stats={stats} freshIds={fresh}
-            showSim={showSim} push={push} live={live} go={setTab} />
+          <Overview branches={branches} products={products} alerts={shownAlerts} requests={requests} stats={stats}
+            freshIds={fresh} showSim={showSim} push={push} live={live} go={setTab}
+            filter={overviewFilter} setFilter={setOverviewFilter} />
         )}
         {tab === "products" && <Products products={products} version={v.products} push={push} />}
-        {tab === "stock" && <BranchStock branches={realBranches} version={v.stock} />}
+        {tab === "stock" && <Warehouses products={products} version={v.stock + v.requests + v.debts} push={push} />}
+        {tab === "debts" && <Debts version={v.debts + v.requests} showSim={showSim} push={push} />}
         {tab === "history" && <RequestHistory branches={realBranches} products={products} version={v.requests} />}
         {tab === "transfers" && <Transfers version={v.transfers} />}
-        {tab === "broadcast" && <Broadcast push={push} />}
-        {tab === "monitor" && <Monitor live={live} branches={branches} clearLive={() => setLive([])} />}
+        {tab === "broadcast" && (
+          <Notices products={products} branches={branches} version={v.notices + v.stock + v.requests} push={push} />
+        )}
+        {tab === "monitor" && (
+          <Security version={v.security} live={live} branches={branches} clearLive={() => setLive([])} push={push} />
+        )}
         {tab === "reconcile" && <Reconcile version={v.stock + v.requests + v.products} />}
       </Shell>
+      <CompanyFooter />
       <Toasts toasts={toasts} dismiss={dismiss} />
     </>
   );

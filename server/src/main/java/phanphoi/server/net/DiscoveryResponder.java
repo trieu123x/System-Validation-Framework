@@ -4,6 +4,7 @@ import phanphoi.common.Command;
 import phanphoi.common.Message;
 import phanphoi.common.Protocol;
 import phanphoi.common.ProtocolException;
+import phanphoi.server.security.SecurityMonitor;
 
 import java.io.IOException;
 import java.net.DatagramPacket;
@@ -23,11 +24,13 @@ public final class DiscoveryResponder implements AutoCloseable {
 
     private final int udpPort;
     private final int tcpPort;
+    private final SecurityMonitor security;
     private DatagramSocket socket;
 
-    public DiscoveryResponder(int udpPort, int tcpPort) {
+    public DiscoveryResponder(int udpPort, int tcpPort, SecurityMonitor security) {
         this.udpPort = udpPort;
         this.tcpPort = tcpPort;
+        this.security = security;
     }
 
     public void start() throws SocketException {
@@ -55,6 +58,10 @@ public final class DiscoveryResponder implements AutoCloseable {
                     continue;
                 }
                 if (m.command() != Command.DISCOVER) {
+                    continue;
+                }
+                // DISCOVERY_FLOOD: DISCOVER dồn dập từ một IP thì bỏ qua gói vượt mức
+                if (!security.allowDiscovery(p.getAddress().getHostAddress(), System.currentTimeMillis())) {
                     continue;
                 }
                 String ip = localAddressFor(p.getAddress());

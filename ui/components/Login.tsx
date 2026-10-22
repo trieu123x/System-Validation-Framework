@@ -2,6 +2,7 @@
 
 import { FormEvent, ReactNode, useEffect, useState } from "react";
 import { api } from "@/lib/api";
+import { COMPANY } from "@/lib/company";
 
 export type Side = "company" | "branch";
 
@@ -23,7 +24,7 @@ export function LoginScreen({ side, children }: { side: Side; children: ReactNod
   return (
     <div className="login-page">
       <header className="appbar">
-        <div className="appbar-brand"><b>Phân phối hàng hóa</b><span>Đăng nhập hệ thống</span></div>
+        <div className="appbar-brand"><b>{COMPANY.brand}</b><span>Đăng nhập hệ thống</span></div>
       </header>
       <main className="center">
         <section className="card login">
@@ -50,7 +51,16 @@ export function LoginScreen({ side, children }: { side: Side; children: ReactNod
           </div>
         </section>
       </main>
+      <CompanyFooter />
     </div>
+  );
+}
+
+export function CompanyFooter() {
+  return (
+    <footer className="company-footer note">
+      {COMPANY.name} · MST {COMPANY.mst} · {COMPANY.address} · Hotline {COMPANY.hotline}
+    </footer>
   );
 }
 

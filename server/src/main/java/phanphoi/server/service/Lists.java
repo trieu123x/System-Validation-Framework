@@ -15,7 +15,15 @@ final class Lists {
     }
 
     static Message fit(Command command, List<? extends List<?>> records) {
+        return fit(command, List.of(), records);
+    }
+
+    /** Như trên, danh sách là tham số cuối, đứng sau các tham số {@code head}. */
+    static Message fit(Command command, List<?> head, List<? extends List<?>> records) {
         int budget = Protocol.MAX_LINE_BYTES - command.name().length() - 1;
+        for (Object h : head) {
+            budget -= Protocol.escape(String.valueOf(h)).getBytes(StandardCharsets.UTF_8).length + 1;
+        }
         List<List<?>> kept = new ArrayList<>();
         int used = 0;
         for (List<?> r : records) {
@@ -27,6 +35,8 @@ final class Lists {
             kept.add(r);
             used += extra;
         }
-        return Message.of(command, Protocol.encodeList(kept));
+        List<Object> params = new ArrayList<>(head);
+        params.add(Protocol.encodeList(kept));
+        return Message.of(command, params.toArray());
     }
 }

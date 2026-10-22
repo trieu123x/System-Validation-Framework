@@ -2,16 +2,21 @@
 -- Chạy SAU schema.sql + seed.sql + seed_loadsim.sql (scripts\seed-demo.bat).
 -- Chạy lại được: XOÁ toàn bộ dữ liệu giao dịch cũ (yêu cầu, phiếu nhập/xuất, bán hàng, điều chuyển,
 -- nhật ký, tin chờ) rồi sinh lại. Giữ nguyên tài khoản chi nhánh ảo SIM.
--- Kết quả: 15 chi nhánh thật (mật khẩu 123456), 30 mặt hàng, ~60 ngày lịch sử; đối soát kho (NFR-03) vẫn khớp.
+-- Kết quả: 15 chi nhánh thật (mật khẩu 123456), 28 mặt hàng Toboki của seed.sql, ~60 ngày lịch sử,
+-- sổ công nợ có đủ 4 kiểu chi nhánh (đã trả đủ, còn nợ, vượt hạn mức, chưa phát sinh); đối soát kho (NFR-03) vẫn khớp.
 -- Các bất biến được giữ giống server:
 --   tổng phiếu xuất = Σ giao của YC HOAN_TAT lấy từ kho tổng + Σ giao của YC DA_GIAO
 --   YC nhận qua điều chuyển có dieu_chuyen HOAN_TAT, không có phiếu xuất
 --   kho_tong = Σ phiếu nhập − Σ phiếu xuất ≥ 0; tối đa một YC mở cho mỗi (CN, SP)
+--   cong_no_cn: XUAT cho mỗi YC HOAN_TAT có phiếu xuất (so_luong × don_gia),
+--               DC_NHAN / DC_GIAO cho mỗi điều chuyển HOAN_TAT (so_luong × don_gia)
 
 BEGIN;
 
 -- Không RESTART IDENTITY: client.jar lọc tin trùng theo mã YC nên mã mới phải khác mã cũ
-TRUNCATE dieu_chuyen, phieu_xuat, yeu_cau, phieu_nhap, ban_hang, nhat_ky, hang_doi_tin;
+-- thong_bao_cn trỏ tới yeu_cau (FK) nên phải xoá cùng; thông báo cũ trỏ tới YC đã xoá cũng vô nghĩa
+TRUNCATE cong_no_cn, thanh_toan_ncc, dieu_chuyen, phieu_xuat, yeu_cau, phieu_nhap, ban_hang, nhat_ky, hang_doi_tin,
+         thong_bao_cn, thong_bao;
 
 -- Cố định bộ sinh số ngẫu nhiên để lần chạy nào cũng ra cùng dữ liệu
 DO $$ BEGIN PERFORM setseed(0.2026); END $$;
@@ -37,35 +42,7 @@ FROM (VALUES
 ) AS v(ma_cn, ten, dia_chi)
 ON CONFLICT (ma_cn) DO UPDATE SET ten = EXCLUDED.ten, dia_chi = EXCLUDED.dia_chi;
 
--- ---------- mặt hàng (SP01..SP05 giữ như seed.sql vì bộ thực nghiệm dùng) ----------
-INSERT INTO san_pham (ma_sp, ten, don_vi, gia) VALUES
-    ('SP06', 'Nước mắm 500ml',            'chai',  38000),
-    ('SP07', 'Nước tương 500ml',          'chai',  18000),
-    ('SP08', 'Đường trắng 1kg',           'gói',   24000),
-    ('SP09', 'Muối i-ốt 500g',            'gói',    6000),
-    ('SP10', 'Bột ngọt 400g',             'gói',   32000),
-    ('SP11', 'Cà phê hòa tan (20 gói)',   'hộp',   58000),
-    ('SP12', 'Trà xanh đóng chai 455ml',  'chai',  10000),
-    ('SP13', 'Nước ngọt có gas 330ml',    'lon',    9000),
-    ('SP14', 'Bia lon 330ml (24 lon)',    'thùng', 340000),
-    ('SP15', 'Sữa chua (lốc 4 hộp)',      'lốc',   28000),
-    ('SP16', 'Bánh quy bơ 300g',          'hộp',   45000),
-    ('SP17', 'Snack khoai tây 52g',       'gói',   12000),
-    ('SP18', 'Kẹo trái cây 150g',         'gói',   20000),
-    ('SP19', 'Dầu gội 650ml',             'chai', 145000),
-    ('SP20', 'Sữa tắm 900ml',             'chai', 165000),
-    ('SP21', 'Kem đánh răng 180g',        'tuýp',  35000),
-    ('SP22', 'Bột giặt 3kg',              'túi',  155000),
-    ('SP23', 'Nước rửa chén 750ml',       'chai',  32000),
-    ('SP24', 'Giấy vệ sinh (10 cuộn)',    'bịch',  78000),
-    ('SP25', 'Khăn giấy rút 180 tờ',      'gói',   22000),
-    ('SP26', 'Trứng gà (hộp 10 quả)',     'hộp',   35000),
-    ('SP27', 'Xúc xích 500g',             'gói',   62000),
-    ('SP28', 'Cá hộp sốt cà 155g',        'hộp',   26000),
-    ('SP29', 'Bún khô 500g',              'gói',   22000),
-    ('SP30', 'Nước khoáng 1,5L',          'chai',  12000)
-ON CONFLICT (ma_sp) DO UPDATE SET ten = EXCLUDED.ten, don_vi = EXCLUDED.don_vi, gia = EXCLUDED.gia;
-
+-- ---------- mặt hàng: dùng 28 mặt hàng TB01..TB28 của seed.sql ----------
 INSERT INTO kho_tong (ma_sp, so_luong) SELECT ma_sp, 0 FROM san_pham ON CONFLICT (ma_sp) DO NOTHING;
 
 -- Chi nhánh ảo cũng có đủ mặt hàng mới (tồn lớn, không ngưỡng) như seed_loadsim.sql
@@ -76,31 +53,36 @@ WHERE cn.gia_lap
 ON CONFLICT (ma_cn, ma_sp) DO NOTHING;
 
 -- ---------- tồn kho chi nhánh thật ----------
--- ~8% chưa đặt ngưỡng, ~14% dưới ngưỡng (sẽ có YC mở), còn lại đủ hoặc sắp chạm ngưỡng
+-- ~8% chưa đặt ngưỡng, ~14% dưới ngưỡng (sẽ có YC mở), còn lại đủ hoặc sắp chạm ngưỡng.
+-- Máy móc bán chậm nên ngưỡng 2–6 cái; dây đầm (DM06) là hàng tiêu hao nên gấp 4 lần.
 DELETE FROM kho_chi_nhanh k USING chi_nhanh cn WHERE cn.ma_cn = k.ma_cn AND NOT cn.gia_lap;
 
 INSERT INTO kho_chi_nhanh (ma_cn, ma_sp, so_luong, nguong_toi_thieu)
 SELECT ma_cn, ma_sp,
-       CASE WHEN nguong = 0 THEN 20 + floor(r * 150)::int
+       CASE WHEN nguong = 0 THEN 4 + floor(r * 20)::int
             WHEN low THEN floor(r * nguong)::int
             ELSE nguong + floor(r * nguong * 4)::int END,
        nguong
 FROM (
     SELECT cn.ma_cn, sp.ma_sp,
-           CASE WHEN random() < 0.08 THEN 0 ELSE 10 + 5 * floor(random() * 7)::int END AS nguong,
+           CASE WHEN random() < 0.08 THEN 0
+                ELSE (2 + floor(random() * 5)::int) * CASE WHEN sp.ma_dm = 'DM06' THEN 4 ELSE 1 END END AS nguong,
            random() < 0.14 AS low,
            random() AS r
     FROM chi_nhanh cn CROSS JOIN san_pham sp
-    WHERE NOT cn.gia_lap
+    -- TB29..TB31 (seed_hang_moi.sql) là hàng mới, chi nhánh thật chưa có
+    WHERE NOT cn.gia_lap AND sp.ma_sp <= 'TB28'
 ) t;
 
 -- ---------- yêu cầu, phiếu xuất, điều chuyển, phiếu nhập ----------
 DO $$
 DECLARE
     cns     text[] := ARRAY(SELECT ma_cn FROM chi_nhanh WHERE NOT gia_lap ORDER BY ma_cn);
-    sps     text[] := ARRAY(SELECT ma_sp FROM san_pham ORDER BY ma_sp);
+    sps     text[] := ARRAY(SELECT ma_sp FROM san_pham WHERE ma_sp <= 'TB28' ORDER BY ma_sp);
     -- mặt hàng kho tổng gần hết: sinh THIEU_HANG và cảnh báo "kho tổng không đủ"
-    low_sps text[] := ARRAY['SP04', 'SP14', 'SP19', 'SP22'];
+    low_sps text[] := ARRAY['TB05', 'TB12', 'TB19', 'TB21'];
+    -- chi nhánh mới mở: chưa nhận hàng lần nào nên sổ công nợ trống (CHUA_PHAT_SINH)
+    new_cn  text := 'CN15';
     cn      text;
     sp      text;
     donor   text;
@@ -116,39 +98,39 @@ DECLARE
     part    int;
     left_   int;
     target  int;
-    ncc     text[] := ARRAY['Cty TNHH Thực phẩm An Phát', 'Cty CP Phân phối Minh Long', 'Cty TNHH Hóa mỹ phẩm Sao Việt',
-                            'Cty CP Đồ uống Tân Hưng', 'Nhà phân phối Hoàng Gia', 'Cty TNHH Nông sản Phương Nam'];
 BEGIN
     -- 1) YC đã đóng trong 60 ngày qua
     FOREACH cn IN ARRAY cns LOOP
+        CONTINUE WHEN cn = new_cn;
         FOR i IN 1..(25 + floor(random() * 20)::int) LOOP
             sp := sps[1 + floor(random() * array_length(sps, 1))::int];
             t := date_trunc('minute', localtimestamp - interval '60 days' + random() * interval '57 days');
-            q := 5 * (4 + floor(random() * 13)::int);
+            q := 2 + floor(random() * 9)::int;
             roll := random();
             IF roll < 0.12 THEN
                 INSERT INTO yeu_cau (ma_cn, ma_sp, so_luong_de_xuat, trang_thai, tao_luc, cap_nhat_luc)
                 VALUES (cn, sp, q, 'TU_CHOI', t, t + interval '40 minutes');
             ELSIF roll < 0.20 THEN
                 -- kho tổng thiếu, nhận hàng điều chuyển từ chi nhánh khác
-                qq := least(q, 5 * (2 + floor(random() * 6)::int));
+                qq := least(q, 1 + floor(random() * 5)::int);
                 INSERT INTO yeu_cau (ma_cn, ma_sp, so_luong_de_xuat, so_luong_chot, so_luong_giao, trang_thai, tao_luc, cap_nhat_luc)
                 VALUES (cn, sp, q, qq, qq, 'HOAN_TAT', t, t + interval '26 hours') RETURNING ma_yc INTO yc;
                 IF random() < 0.4 THEN
-                    LOOP donor := cns[1 + floor(random() * array_length(cns, 1))::int]; EXIT WHEN donor <> cn; END LOOP;
+                    LOOP donor := cns[1 + floor(random() * array_length(cns, 1))::int]; EXIT WHEN donor NOT IN (cn, new_cn); END LOOP;
                     INSERT INTO dieu_chuyen (ma_yc, tu_cn, den_cn, ma_sp, so_luong, trang_thai, tao_luc, cap_nhat_luc)
                     VALUES (yc, donor, cn, sp, qq, 'TU_CHOI', t + interval '1 hour', t + interval '2 hours');
                 END IF;
-                LOOP donor := cns[1 + floor(random() * array_length(cns, 1))::int]; EXIT WHEN donor <> cn; END LOOP;
-                INSERT INTO dieu_chuyen (ma_yc, tu_cn, den_cn, ma_sp, so_luong, trang_thai, tao_luc, cap_nhat_luc)
-                VALUES (yc, donor, cn, sp, qq, 'HOAN_TAT', t + interval '2 hours', t + interval '5 hours');
+                LOOP donor := cns[1 + floor(random() * array_length(cns, 1))::int]; EXIT WHEN donor NOT IN (cn, new_cn); END LOOP;
+                INSERT INTO dieu_chuyen (ma_yc, tu_cn, den_cn, ma_sp, so_luong, don_gia, trang_thai, tao_luc, cap_nhat_luc)
+                VALUES (yc, donor, cn, sp, qq, (SELECT gia_xuat FROM san_pham WHERE ma_sp = sp), 'HOAN_TAT',
+                        t + interval '2 hours', t + interval '5 hours');
             ELSE
-                qq := CASE WHEN random() < 0.85 THEN q ELSE q - 5 * (1 + floor(random() * 3)::int) END;
+                qq := CASE WHEN random() < 0.85 OR q < 4 THEN q ELSE q - 1 - floor(random() * 2)::int END;
                 INSERT INTO yeu_cau (ma_cn, ma_sp, so_luong_de_xuat, so_luong_chot, so_luong_giao, trang_thai, tao_luc, cap_nhat_luc)
                 VALUES (cn, sp, q, qq, qq, 'HOAN_TAT', t, t + interval '6 hours' + random() * interval '30 hours')
                 RETURNING ma_yc INTO yc;
-                INSERT INTO phieu_xuat (ma_yc, ma_cn, ma_sp, so_luong, thoi_gian)
-                VALUES (yc, cn, sp, qq, t + interval '90 minutes');
+                INSERT INTO phieu_xuat (ma_yc, ma_cn, ma_sp, so_luong, don_gia, thoi_gian)
+                VALUES (yc, cn, sp, qq, (SELECT gia_xuat FROM san_pham WHERE ma_sp = sp), t + interval '90 minutes');
             END IF;
         END LOOP;
     END LOOP;
@@ -189,28 +171,32 @@ BEGIN
         ELSE
             INSERT INTO yeu_cau (ma_cn, ma_sp, so_luong_de_xuat, so_luong_chot, so_luong_giao, trang_thai, tao_luc, cap_nhat_luc)
             VALUES (r.ma_cn, r.ma_sp, q, q, q, 'DA_GIAO', t, t + interval '2 hours') RETURNING ma_yc INTO yc;
-            INSERT INTO phieu_xuat (ma_yc, ma_cn, ma_sp, so_luong, thoi_gian)
-            VALUES (yc, r.ma_cn, r.ma_sp, q, t + interval '2 hours');
+            INSERT INTO phieu_xuat (ma_yc, ma_cn, ma_sp, so_luong, don_gia, thoi_gian)
+            VALUES (yc, r.ma_cn, r.ma_sp, q, (SELECT gia_xuat FROM san_pham WHERE ma_sp = r.ma_sp), t + interval '2 hours');
         END IF;
     END LOOP;
 
-    -- 3) Phiếu nhập kho tổng: tổng nhập = tổng xuất + tồn mong muốn, chia thành 3–6 phiếu trong 90 ngày
+    -- 3) Phiếu nhập kho tổng theo giá nhập: tổng nhập = tổng xuất + tồn mong muốn, chia 3–6 phiếu trong 90 ngày.
+    --    Nhà cung cấp theo danh mục như seed.sql.
     FOR r IN
-        SELECT sp.ma_sp, COALESCE(sum(px.so_luong), 0)::int AS xuat
+        SELECT sp.ma_sp, sp.gia_nhap,
+               CASE WHEN sp.ma_dm IN ('DM02', 'DM03', 'DM07') THEN 'NCC02'
+                    WHEN sp.ma_dm = 'DM06' THEN 'NCC03' ELSE 'NCC01' END AS ma_ncc,
+               COALESCE(sum(px.so_luong), 0)::int AS xuat
         FROM san_pham sp LEFT JOIN phieu_xuat px ON px.ma_sp = sp.ma_sp
         GROUP BY sp.ma_sp ORDER BY sp.ma_sp
     LOOP
-        target := CASE WHEN r.ma_sp = ANY (low_sps) THEN floor(random() * 9)::int
-                       ELSE 10 * (30 + floor(random() * 170)::int) END;
+        target := CASE WHEN r.ma_sp = ANY (low_sps) THEN floor(random() * 3)::int
+                       ELSE 20 + floor(random() * 100)::int END;
         total := r.xuat + target;
         IF total > 0 THEN
-            k := CASE WHEN total < 60 THEN 1 ELSE 3 + floor(random() * 4)::int END;
+            k := CASE WHEN total < 20 THEN 1 ELSE 3 + floor(random() * 4)::int END;
             left_ := total;
             FOR i IN 1..k LOOP
-                part := CASE WHEN i = k THEN left_ ELSE greatest(10, 10 * round(total / k / 10.0 * (0.7 + random() * 0.6))::int) END;
+                part := CASE WHEN i = k THEN left_ ELSE greatest(1, round(total::numeric / k * (0.7 + random() * 0.6))::int) END;
                 part := least(part, left_ - (k - i));
-                INSERT INTO phieu_nhap (ma_sp, so_luong, nha_cung_cap, thoi_gian)
-                VALUES (r.ma_sp, part, ncc[1 + floor(random() * array_length(ncc, 1))::int],
+                INSERT INTO phieu_nhap (ma_sp, so_luong, ma_ncc, don_gia, thoi_gian)
+                VALUES (r.ma_sp, part, r.ma_ncc, r.gia_nhap,
                         date_trunc('minute', localtimestamp - (90 - (i - 1) * 85 / k) * interval '1 day'
                                              + random() * interval '10 hours'));
                 left_ := left_ - part;
@@ -220,11 +206,92 @@ BEGIN
     END LOOP;
 END $$;
 
--- ---------- bán hàng 60 ngày (~35% cặp CN–SP có bán mỗi ngày) ----------
+-- ---------- công nợ chi nhánh: ghi sổ như server ----------
+INSERT INTO cong_no_cn (ma_cn, loai, so_tien, ma_yc, ghi_chu, thoi_gian)
+SELECT px.ma_cn, 'XUAT', px.so_luong * px.don_gia, px.ma_yc,
+       'YC #' || px.ma_yc || ': ' || px.ma_sp || ' x ' || px.so_luong, y.cap_nhat_luc
+FROM phieu_xuat px JOIN yeu_cau y ON y.ma_yc = px.ma_yc
+WHERE y.trang_thai = 'HOAN_TAT';
+
+INSERT INTO cong_no_cn (ma_cn, loai, so_tien, ma_dc, ghi_chu, thoi_gian)
+SELECT x.ma_cn, x.loai, dc.so_luong * dc.don_gia, dc.ma_dc, x.ghi_chu, dc.cap_nhat_luc
+FROM dieu_chuyen dc
+CROSS JOIN LATERAL (VALUES
+    (dc.den_cn, 'DC_NHAN', 'Nhận điều chuyển #' || dc.ma_dc || ' từ ' || dc.tu_cn || ': ' || dc.ma_sp || ' x ' || dc.so_luong),
+    (dc.tu_cn,  'DC_GIAO', 'Giao điều chuyển #' || dc.ma_dc || ' cho ' || dc.den_cn || ': ' || dc.ma_sp || ' x ' || dc.so_luong)
+) AS x(ma_cn, loai, ghi_chu)
+WHERE dc.trang_thai = 'HOAN_TAT';
+
+-- Phiếu thu: chi nhánh có phát sinh chia 3 nhóm xoay vòng theo thứ tự mã
+--   0 → trả đủ (còn nợ 0), 1 → còn nợ 30–80% hạn mức, 2 → vượt hạn mức 10–50%.
+-- Mỗi chi nhánh trả 2–5 lần rải đều trong 60 ngày; lần cuối trả phần lẻ để khớp đúng số còn nợ mong muốn.
+DO $$
+DECLARE
+    r     record;
+    con   numeric;
+    tra0  numeric;
+    tra   numeric;
+    phan  numeric;
+    k     int;
+    i     int;
+BEGIN
+    FOR r IN
+        SELECT c.ma_cn, c.han_muc_no, (row_number() OVER (ORDER BY c.ma_cn) - 1) % 3 AS nhom,
+               sum(CASE WHEN n.loai IN ('XUAT', 'DC_NHAN') THEN n.so_tien ELSE -n.so_tien END) AS no_
+        FROM chi_nhanh c JOIN cong_no_cn n ON n.ma_cn = c.ma_cn
+        WHERE NOT c.gia_lap
+        GROUP BY c.ma_cn, c.han_muc_no ORDER BY c.ma_cn
+    LOOP
+        CONTINUE WHEN r.no_ <= 0;
+        IF r.nhom = 0 THEN
+            con := 0;
+        ELSIF r.nhom = 1 THEN
+            con := least(r.no_, round(r.han_muc_no * (0.3 + random() * 0.5)::numeric, -3));
+        ELSE
+            con := round(r.han_muc_no * (1.1 + random() * 0.4)::numeric, -3);
+            IF con > r.no_ THEN
+                -- nhận chưa đủ nhiều để vượt hạn mức mặc định: hạ hạn mức của chi nhánh này
+                con := r.no_;
+                UPDATE chi_nhanh SET han_muc_no = round(r.no_ * 0.7, -6) WHERE ma_cn = r.ma_cn;
+            END IF;
+        END IF;
+        tra0 := r.no_ - con;
+        tra := tra0;
+        k := 2 + floor(random() * 4)::int;
+        FOR i IN 1..k LOOP
+            EXIT WHEN tra <= 0;
+            phan := CASE WHEN i = k THEN tra ELSE least(tra, round(tra0 / k, -3)) END;
+            -- nợ nhỏ hơn 500 đ mỗi đợt thì làm tròn ra 0: dồn sang đợt sau (so_tien phải > 0)
+            CONTINUE WHEN phan <= 0;
+            INSERT INTO cong_no_cn (ma_cn, loai, so_tien, ghi_chu, thoi_gian)
+            VALUES (r.ma_cn, 'THU', phan, 'Phiếu thu chuyển khoản lần ' || i,
+                    date_trunc('minute', localtimestamp - (58 - i * 55 / k) * interval '1 day' + random() * interval '8 hours'));
+            tra := tra - phan;
+        END LOOP;
+    END LOOP;
+END $$;
+
+-- Phiếu chi nhà cung cấp, 3 đợt: NCC02 trả đủ, NCC01 còn nợ ~30%, NCC03 còn nợ ~60%
+INSERT INTO thanh_toan_ncc (ma_ncc, so_tien, ghi_chu, thoi_gian)
+SELECT pn.ma_ncc, round(sum(pn.so_luong * pn.don_gia) * f.ty_le / 3, -3), 'Phiếu chi chuyển khoản đợt ' || d,
+       date_trunc('minute', localtimestamp - (80 - d * 25) * interval '1 day')
+FROM phieu_nhap pn
+JOIN (VALUES ('NCC01', 0.7), ('NCC02', 1.0), ('NCC03', 0.4)) AS f(ma_ncc, ty_le) ON f.ma_ncc = pn.ma_ncc
+CROSS JOIN generate_series(1, 3) AS d
+GROUP BY pn.ma_ncc, f.ty_le, d;
+
+-- Làm tròn khiến NCC02 lệch vài nghìn đồng: bù vào đợt cuối để trả đúng bằng tổng nhập
+UPDATE thanh_toan_ncc t SET so_tien = t.so_tien + x.lech
+FROM (SELECT (SELECT sum(so_luong * don_gia) FROM phieu_nhap WHERE ma_ncc = 'NCC02')
+           - (SELECT sum(so_tien) FROM thanh_toan_ncc WHERE ma_ncc = 'NCC02') AS lech,
+             (SELECT max(id) FROM thanh_toan_ncc WHERE ma_ncc = 'NCC02') AS id) x
+WHERE t.id = x.id AND x.lech <> 0;
+
+-- ---------- bán hàng 60 ngày (~35% cặp CN–SP có bán mỗi ngày, máy móc bán 1–2 cái) ----------
 INSERT INTO ban_hang (ma_cn, ma_sp, so_luong, thoi_gian)
 SELECT ma_cn, ma_sp, so_luong, thoi_gian
 FROM (
-    SELECT k.ma_cn, k.ma_sp, 1 + floor(random() * 6)::int AS so_luong,
+    SELECT k.ma_cn, k.ma_sp, 1 + floor(random() * 2)::int AS so_luong,
            d + interval '7 hours' + random() * interval '14 hours' AS thoi_gian
     FROM kho_chi_nhanh k
     JOIN chi_nhanh c ON c.ma_cn = k.ma_cn AND NOT c.gia_lap
@@ -286,7 +353,7 @@ SELECT ma_cn, 'BROADCAST|Lịch kiểm kê quý IV: các chi nhánh chốt số 
 FROM chi_nhanh WHERE ma_cn BETWEEN 'CN10' AND 'CN15';
 
 INSERT INTO hang_doi_tin (ma_cn, noi_dung, tao_luc)
-SELECT ma_cn, 'BROADCAST|Từ 01/11 áp dụng bảng giá mới cho nhóm nước giải khát, đề nghị kiểm tra lại tem giá.',
+SELECT ma_cn, 'BROADCAST|Từ 01/11 áp dụng bảng giá mới cho nhóm máy rửa xe cao áp, đề nghị kiểm tra lại tem giá.',
        localtimestamp - interval '2 hours'
 FROM chi_nhanh WHERE ma_cn IN ('CN12', 'CN14');
 

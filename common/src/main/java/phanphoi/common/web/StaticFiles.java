@@ -9,6 +9,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Map;
+import java.util.regex.Pattern;
 
 /** Phục vụ bản build tĩnh của giao diện Next.js (thư mục ui/out). */
 public final class StaticFiles implements HttpHandler {
@@ -26,9 +27,21 @@ public final class StaticFiles implements HttpHandler {
             Map.entry("map", "application/json"));
 
     private final Path root;
+    private final Pattern fallbackPaths;
+    private final String fallbackPage;
 
     public StaticFiles(Path root) {
+        this(root, null, null);
+    }
+
+    /**
+     * Đường dẫn không có file mà khớp {@code fallbackPaths} thì trả trang {@code fallbackPage}
+     * (vd client.jar: /da-nang/ → branch/index.html).
+     */
+    public StaticFiles(Path root, Pattern fallbackPaths, String fallbackPage) {
         this.root = root.toAbsolutePath().normalize();
+        this.fallbackPaths = fallbackPaths;
+        this.fallbackPage = fallbackPage;
     }
 
     @Override
@@ -38,7 +51,11 @@ public final class StaticFiles implements HttpHandler {
                 ex.sendResponseHeaders(405, -1);
                 return;
             }
-            Path file = resolve(ex.getRequestURI().getPath());
+            String path = ex.getRequestURI().getPath();
+            Path file = resolve(path);
+            if (file == null && fallbackPaths != null && fallbackPaths.matcher(path).matches()) {
+                file = resolve(fallbackPage);
+            }
             if (file == null) {
                 if (!Files.isDirectory(root)) {
                     send(ex, 404, "text/plain; charset=utf-8", ("Chua build giao dien. Chay: cd ui && npm install && npm run build\n"

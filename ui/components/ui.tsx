@@ -2,6 +2,7 @@
 
 import { ReactNode, useCallback, useState } from "react";
 import { STATE_LABEL, STATE_TONE, TRANSFER_LABEL } from "@/lib/api";
+import { imageUrl } from "@/lib/images";
 
 export function Badge({ tone = "muted", children }: { tone?: string; children: ReactNode }) {
   return <span className={`badge badge-${tone}`}>{children}</span>;
@@ -11,6 +12,20 @@ export function StateBadge({ state, transfer }: { state: string | null | undefin
   if (!state) return null;
   const label = (transfer ? TRANSFER_LABEL : STATE_LABEL)[state] ?? state;
   return <Badge tone={STATE_TONE[state] ?? "muted"}>{label}</Badge>;
+}
+
+/** Ảnh tượng trưng của mặt hàng; chưa có ảnh hoặc tải lỗi (mất mạng) thì hiện chữ đầu của danh mục. */
+export function ProductImage({ src, alt, category, size = 40 }: {
+  src: string | null | undefined; alt: string; category?: string; size?: number;
+}) {
+  const [failed, setFailed] = useState(false);
+  const url = imageUrl(src, size * 2);
+  const box = { width: size, height: size };
+  if (!url || failed) {
+    return <span className="thumb thumb-empty" style={box} title={category}>{(category || alt).charAt(0)}</span>;
+  }
+  // eslint-disable-next-line @next/next/no-img-element -- export tĩnh, ảnh đã thu nhỏ sẵn trên Cloudinary
+  return <img className="thumb" style={box} src={url} alt={alt} loading="lazy" onError={() => setFailed(true)} />;
 }
 
 export function Dot({ on }: { on: boolean }) {
@@ -138,6 +153,48 @@ export function Facet<T extends string>({ name, options, value, onChange }: {
       ))}
     </div>
   );
+}
+
+/** Thanh lọc ngang đặt trên bảng: các ô `label.field` xếp một hàng, cuối hàng là nút Xoá lọc. */
+export function FilterBar({ active, onClear, children }: { active: boolean; onClear: () => void; children: ReactNode }) {
+  return (
+    <div className="filterbar">
+      {children}
+      <button className="btn" disabled={!active} onClick={onClear}>Xoá lọc</button>
+    </div>
+  );
+}
+
+/** Cột đang sắp xếp; null = giữ thứ tự gốc. */
+export type Sort<K extends string> = { key: K; dir: 1 | -1 } | null;
+
+/** Tiêu đề cột bấm để sắp xếp: lần 1 tăng dần, lần 2 giảm dần, lần 3 bỏ sắp xếp. */
+export function SortTh<K extends string>({ k, sort, onSort, num, children }: {
+  k: K; sort: Sort<K>; onSort: (s: Sort<K>) => void; num?: boolean; children: ReactNode;
+}) {
+  const dir = sort?.key === k ? sort.dir : 0;
+  return (
+    <th className={num ? "num" : undefined} aria-sort={dir === 1 ? "ascending" : dir === -1 ? "descending" : "none"}>
+      <button type="button" className={`th-sort${dir ? " active" : ""}`}
+        onClick={() => onSort(dir === 0 ? { key: k, dir: 1 } : dir === 1 ? { key: k, dir: -1 } : null)}>
+        {children}<span className="sort-icon" aria-hidden>{dir === 1 ? "▲" : dir === -1 ? "▼" : "↕"}</span>
+      </button>
+    </th>
+  );
+}
+
+/** Sắp xếp bản sao của rows theo sort; giá trị null/undefined luôn nằm cuối, chuỗi so theo tiếng Việt và số trong chuỗi. */
+export function sortRows<T, K extends string>(rows: T[], sort: Sort<K>,
+  get: (row: T, key: K) => string | number | null | undefined): T[] {
+  if (!sort) return rows;
+  const { key, dir } = sort;
+  return [...rows].sort((a, b) => {
+    const x = get(a, key), y = get(b, key);
+    if (x == null || y == null) return x == null ? (y == null ? 0 : 1) : -1;
+    const c = typeof x === "number" && typeof y === "number"
+      ? x - y : String(x).localeCompare(String(y), "vi", { numeric: true });
+    return c * dir;
+  });
 }
 
 export function Empty({ children }: { children: ReactNode }) {

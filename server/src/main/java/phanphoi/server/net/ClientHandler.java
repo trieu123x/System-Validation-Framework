@@ -9,11 +9,17 @@ import phanphoi.common.ProtocolException;
 import phanphoi.server.MessageLog;
 import phanphoi.server.ServerContext;
 import phanphoi.server.ServiceException;
+import phanphoi.server.security.SecurityMonitor;
+import phanphoi.server.security.SessionStats;
 
 import java.nio.charset.StandardCharsets;
 import java.sql.SQLException;
+import java.time.LocalDate;
+import java.time.format.DateTimeParseException;
+import java.time.temporal.ChronoUnit;
 import java.util.EnumSet;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Phiên làm việc của một chi nhánh: tách tin, kiểm tra trạng thái đăng nhập, gọi nghiệp vụ, heartbeat.
@@ -32,10 +38,16 @@ public final class ClientHandler {
     private static final Set<Command> FROM_CLIENT = EnumSet.of(
             Command.LOGIN, Command.INVENTORY_GET, Command.SALE, Command.SET_THRESHOLD, Command.LOW_STOCK,
             Command.ACCEPT, Command.REJECT, Command.RECEIVED, Command.HISTORY_GET, Command.PING, Command.PONG,
-            Command.LOGOUT, Command.TRANSFER_ACCEPT, Command.TRANSFER_REJECT);
+            Command.LOGOUT, Command.TRANSFER_ACCEPT, Command.TRANSFER_REJECT, Command.DEBT_GET, Command.SECURITY_REPORT,
+            Command.NOTICE_REPLY);
+
+    private static final AtomicLong SEQ = new AtomicLong();
 
     private final ServerContext ctx;
     private final Transport transport;
+    /** Mã phiên tăng dần, để trang Giám sát ngắt đúng phiên. */
+    private final long id = SEQ.incrementAndGet();
+    private final SessionStats stats = new SessionStats(System.currentTimeMillis());
 
     private volatile String maCn;
     private volatile long lastReadAt = System.currentTimeMillis();
@@ -56,9 +68,27 @@ public final class ClientHandler {
         return transport.remote();
     }
 
+    public String ip() {
+        return transport.ip();
+    }
+
+    public long id() {
+        return id;
+    }
+
+    public SessionStats stats() {
+        return stats;
+    }
+
+    /** Dòng ERROR|E06 cho kết nối bị từ chối vì IP đang bị chặn. */
+    static byte[] bannedLine(String description) {
+        return line(Message.of(Command.ERROR, ErrorCode.E06.name(), description));
+    }
+
     /** Gọi khi kết nối vừa mở. */
     void onOpen() {
         ctx.registry().opened(this);
+        ctx.security().onOpen(stats, ip(), System.currentTimeMillis());
     }
 
     /** Dòng ERROR gửi cho kết nối bị từ chối vì server đã đủ maxClients kết nối. */
@@ -68,11 +98,13 @@ public final class ClientHandler {
 
     /** Một dòng vừa đọc được (không gồm \n), hoặc {@link LineReader#TOO_LONG}. */
     void onLine(String line) {
-        lastReadAt = System.currentTimeMillis();
+        long now = System.currentTimeMillis();
+        lastReadAt = now;
         pongDeadline = 0;
         if (line == LineReader.TOO_LONG) {
             ctx.log().log(maCn, MessageLog.IN, "?", "<dong dai hon " + Protocol.MAX_LINE_BYTES + " byte>");
             sendError(ErrorCode.E01, "Dong tin dai qua " + Protocol.MAX_LINE_BYTES + " byte");
+            malformed("<dong dai hon " + Protocol.MAX_LINE_BYTES + " byte>", now);
             return;
         }
         Message msg;
@@ -81,15 +113,29 @@ public final class ClientHandler {
         } catch (ProtocolException e) {
             ctx.log().log(maCn, MessageLog.IN, firstToken(line), line);
             sendError(ErrorCode.E01, e.getMessage());
+            malformed(line, now);
             return;
         }
         ctx.log().log(maCn, MessageLog.IN, msg.command().name(), line);
+        if (ctx.security().onMessage(stats, ip(), maCn, msg.command(), now) == SecurityMonitor.Action.KICK) {
+            sendError(ErrorCode.E06, "Gui lenh don dap, ngat phien");
+            close();
+            return;
+        }
         try {
             dispatch(msg);
         } catch (ServiceException e) {
             sendError(e.code(), e.getMessage());
+            if (e.code() == ErrorCode.E01) {
+                malformed(line, now);
+            } else if (e.code() == ErrorCode.E04
+                    && ctx.security().onNotFound(stats, ip(), maCn, msg.command(), now) == SecurityMonitor.Action.KICK) {
+                sendError(ErrorCode.E06, "Do ma yeu cau cua chi nhanh khac, ngat phien");
+                close();
+            }
         } catch (ProtocolException e) {
             sendError(ErrorCode.E01, e.getMessage());
+            malformed(line, now);
         } catch (SQLException e) {
             System.err.println("[" + who() + "] loi CSDL: " + e.getMessage());
             sendError(ErrorCode.E03, "Loi CSDL, thu lai sau");
@@ -99,10 +145,18 @@ public final class ClientHandler {
         }
     }
 
+    /** E01 / dòng quá dài: FUZZING theo IP; IP vừa bị chặn thì đóng kết nối. */
+    private void malformed(String sample, long now) {
+        if (ctx.security().onMalformed(ip(), maCn, sample, now)) {
+            close();
+        }
+    }
+
     /** Kết nối đã đóng (do client, do lỗi hoặc do server): dọn phiên. */
     void onClosed() {
         closed = true;
         ctx.registry().closed(this);
+        ctx.security().onClose(stats, ip());
     }
 
     private void dispatch(Message m) throws ProtocolException, SQLException {
@@ -115,6 +169,13 @@ public final class ClientHandler {
         }
         // Từ đây mã CN luôn lấy từ phiên, không lấy từ tham số (NFR-07).
         String cn = maCn;
+        if (cmd == Command.INVENTORY_GET || cmd == Command.HISTORY_GET) {
+            long days = cmd == Command.HISTORY_GET ? historyDays(m.param(0), m.param(1)) : 0;
+            if (ctx.security().onRead(stats, ip(), cn, cmd, days, System.currentTimeMillis())
+                    == SecurityMonitor.Action.REJECT) {
+                throw new ServiceException(ErrorCode.E06, "Vuot gioi han doc du lieu, thu lai sau");
+            }
+        }
         switch (cmd) {
             case LOGIN -> login(m.param(0).trim(), m.param(1));
             case PING -> send(Message.of(Command.PONG));
@@ -137,7 +198,28 @@ public final class ClientHandler {
             case HISTORY_GET -> send(ctx.stock().historyMessage(cn, m.param(0), m.param(1)));
             case TRANSFER_ACCEPT -> send(ctx.transfers().accept(cn, m.intParam(0)));
             case TRANSFER_REJECT -> ctx.transfers().reject(cn, m.intParam(0));
+            case DEBT_GET -> {
+                Message debt = ctx.debts().debtMessage(cn);
+                if (debt != null) {
+                    send(debt);
+                }
+            }
+            case NOTICE_REPLY -> send(ctx.notices().reply(cn, m.intParam(0), m.param(1), m.intParam(2)));
+            case SECURITY_REPORT ->
+                    ctx.security().onClientReport(stats, ip(), cn, m.param(0), m.param(1), System.currentTimeMillis());
             default -> throw new ServiceException(ErrorCode.E01, "Lenh khong ho tro: " + cmd);
+        }
+    }
+
+    /** Độ dài khoảng ngày của HISTORY_GET; để trống một đầu là không giới hạn. Sai định dạng thì 0 (lỗi E01 sau). */
+    static long historyDays(String tu, String den) {
+        if (tu == null || tu.isBlank() || den == null || den.isBlank()) {
+            return Long.MAX_VALUE;
+        }
+        try {
+            return ChronoUnit.DAYS.between(LocalDate.parse(tu.trim()), LocalDate.parse(den.trim())) + 1;
+        } catch (DateTimeParseException e) {
+            return 0;
         }
     }
 
@@ -148,6 +230,11 @@ public final class ClientHandler {
         String ten = ctx.auth().verify(id, password);
         if (ten == null) {
             send(Message.of(Command.LOGIN_FAIL, Protocol.LOGIN_FAIL_WRONG));
+            // BRUTE_FORCE / CRED_STUFFING; IP vừa bị chặn thì đóng luôn kết nối này
+            if (ctx.security().onLoginFail(ip(), id, System.currentTimeMillis())) {
+                sendError(ErrorCode.E06, "Dang nhap sai qua nhieu lan, IP bi chan");
+                close();
+            }
             return;
         }
         if (!ctx.registry().login(id, this)) {
@@ -160,6 +247,7 @@ public final class ClientHandler {
             return;
         }
         maCn = id;
+        ctx.security().onLogin(stats, ip(), System.currentTimeMillis());
         if (!ctx.quiet()) {
             System.out.println("[server] " + id + " dang nhap tu " + remote());
         }
@@ -186,6 +274,7 @@ public final class ClientHandler {
         if (!transport.write(line(m))) {
             return false;
         }
+        stats.sent();
         ctx.log().log(maCn, MessageLog.OUT, m.command().name(), m.toLine());
         return true;
     }
@@ -201,6 +290,12 @@ public final class ClientHandler {
     /** Gọi định kỳ bởi bộ hẹn giờ heartbeat (FR-04). */
     void checkHeartbeat(long now, long idleMs, long pongTimeoutMs) {
         if (closed) {
+            return;
+        }
+        // PRELOGIN_IDLE: mở kết nối mà không LOGIN (chiếm chỗ max.clients)
+        if (maCn == null && ctx.security().onPreloginTimeout(stats, ip(), now)) {
+            sendError(ErrorCode.E06, "Qua thoi gian dang nhap");
+            close();
             return;
         }
         long deadline = pongDeadline;

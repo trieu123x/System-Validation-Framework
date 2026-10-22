@@ -39,6 +39,11 @@ public abstract class NetServer implements AutoCloseable {
     /** FR-04: im lặng idleMs → PING; không có PONG sau pongTimeoutMs → đóng. */
     private void checkHeartbeats() {
         long now = System.currentTimeMillis();
+        try {
+            ctx.security().tick(now);
+        } catch (RuntimeException e) {
+            System.err.println("[server] loi giam sat an ninh: " + e.getMessage());
+        }
         for (ClientHandler h : ctx.registry().connections()) {
             try {
                 h.checkHeartbeat(now, idleMs, pongTimeoutMs);

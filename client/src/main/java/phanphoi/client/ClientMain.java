@@ -13,7 +13,9 @@ import java.awt.Desktop;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.nio.file.Path;
+import java.util.Arrays;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.Executors;
 
 /**
@@ -32,7 +34,11 @@ public final class ClientMain {
                 cfg.getInt("server.port", Protocol.DEFAULT_TCP_PORT),
                 cfg.getInt("discovery.port", Protocol.DEFAULT_DISCOVERY_PORT),
                 ReconnectPolicy.parse(cfg.get("reconnect.strategy", "jitter"),
-                        cfg.getInt("reconnect.base.ms", 500), cfg.getInt("reconnect.cap.ms", 5000)));
+                        cfg.getInt("reconnect.base.ms", 500), cfg.getInt("reconnect.cap.ms", 5000)),
+                new ClientSecurity(
+                        Arrays.stream(cfg.get("security.allowed.origins", "http://localhost:3000,http://localhost:3001")
+                                .split(",")).map(String::trim).filter(x -> !x.isEmpty()).toList(),
+                        cfg.getInt("security.api.max.per.second", 30)));
         agent.start();
 
         HttpServer http = HttpServer.create(new InetSocketAddress(host, httpPort), 50);
@@ -41,8 +47,30 @@ public final class ClientMain {
             t.setDaemon(true);
             return t;
         }));
-        http.createContext("/api/", routes(agent));
-        http.createContext("/", new StaticFiles(Path.of(cfg.get("ui.dir", "ui/out"))));
+        Router api = routes(agent);
+        // API chỉ nghe localhost nhưng trang web lạ trong trình duyệt vẫn gọi được: chặn Origin/Host lạ (CSRF, DNS rebinding)
+        http.createContext("/api/", ex -> {
+            if (!agent.allowHttp(ex.getRequestMethod(), ex.getRequestURI().getPath(),
+                    ex.getRequestHeaders().getFirst("Origin"), ex.getRequestHeaders().getFirst("Host"))) {
+                Http.error(ex, 403, "Origin/Host khong hop le");
+                return;
+            }
+            api.handle(ex);
+        });
+        // trang chi nhánh mở theo tên: /da-nang/ phục vụ bản build của /branch/; đã đăng nhập thì / và /branch/ → 302 sang tên
+        StaticFiles ui = new StaticFiles(Path.of(cfg.get("ui.dir", "ui/out")), BranchSlug.PATH, "/branch/");
+        http.createContext("/", ex -> {
+            String path = ex.getRequestURI().getPath();
+            String slug = agent.slug();
+            if (slug != null && !"branch".equals(slug) && Set.of("/", "/branch", "/branch/").contains(path)) {
+                try (ex) {
+                    ex.getResponseHeaders().set("Location", "/" + slug + "/");
+                    ex.sendResponseHeaders(302, -1);
+                }
+                return;
+            }
+            ui.handle(ex);
+        });
         http.start();
 
         String url = "http://" + ("0.0.0.0".equals(host) ? "localhost" : host) + ":" + httpPort + "/branch/";
@@ -69,6 +97,11 @@ public final class ClientMain {
         r.get("/api/events", (ex, p) -> agent.hub().open(ex,
                 () -> new String[]{"state", Http.GSON.toJson(agent.snapshot())}));
         r.get("/api/config", (ex, p) -> Http.ok(ex, Map.of("server", agent.serverSetting())));
+        r.get("/api/security", (ex, p) -> Http.ok(ex, agent.securitySnapshot()));
+        r.get("/api/debt", (ex, p) -> {
+            Map<String, Object> d = agent.debt();
+            Http.ok(ex, d == null ? Map.of() : d);
+        });
         r.post("/api/login", (ex, p) -> {
             JsonObject b = Http.body(ex);
             Http.ok(ex, agent.login(Http.str(b, "maCn"), Http.str(b, "matKhau"), Http.str(b, "server")));
@@ -109,6 +142,12 @@ public final class ClientMain {
         });
         r.post("/api/transfers/{id}/reject", (ex, p) -> {
             agent.transferAnswer(Integer.parseInt(p.get(0)), false);
+            Http.ok(ex, ok);
+        });
+        r.post("/api/inbox/{id}/reply", (ex, p) -> {
+            JsonObject b = Http.body(ex);
+            String soLuong = Http.str(b, "soLuong");
+            agent.replyNotice(Long.parseLong(p.get(0)), Http.str(b, "traLoi"), soLuong.isEmpty() ? 0 : Http.integer(b, "soLuong"));
             Http.ok(ex, ok);
         });
         r.post("/api/history", (ex, p) -> {

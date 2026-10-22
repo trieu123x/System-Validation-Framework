@@ -1,40 +1,9 @@
 "use client";
 
-import { FormEvent, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import type { Branch, LogRow } from "@/lib/types";
-import { Card, Empty, useAction } from "@/components/ui";
-
-/** FR-22: thông báo tới mọi chi nhánh. */
-export function Broadcast({ push }: { push: (l: string, t: string) => void }) {
-  const [text, setText] = useState("");
-  const { run, busy } = useAction(push);
-
-  const send = async (e: FormEvent) => {
-    e.preventDefault();
-    let sent = 0;
-    const ok = await run(async () => {
-      sent = (await api<{ guiNgay: number }>("/api/broadcast", { noiDung: text })).guiNgay;
-    });
-    if (ok) {
-      push("success", `Đã gửi ngay tới ${sent} chi nhánh online; chi nhánh offline nhận khi đăng nhập lại`);
-      setText("");
-    }
-  };
-
-  return (
-    <Card title="Soạn thông báo gửi tất cả chi nhánh">
-      <form onSubmit={send} className="form-stack" style={{ maxWidth: 720 }}>
-        <textarea rows={5} value={text} onChange={(e) => setText(e.target.value)} required
-          placeholder="Nội dung có thể chứa dấu | và xuống dòng, chi nhánh vẫn hiển thị nguyên văn." />
-        <div className="row">
-          <button className="btn btn-primary" disabled={busy || !text.trim()}>Gửi thông báo</button>
-          <span className="note">Chi nhánh offline sẽ nhận khi đăng nhập lại.</span>
-        </div>
-      </form>
-    </Card>
-  );
-}
+import { Card, Empty } from "@/components/ui";
 
 /** Giám sát giao thức realtime + tra cứu nhật ký (FR-25). */
 export function Monitor({ live, branches, clearLive }: { live: LogRow[]; branches: Branch[]; clearLive: () => void }) {

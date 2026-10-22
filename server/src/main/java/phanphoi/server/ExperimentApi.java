@@ -182,6 +182,7 @@ final class ExperimentApi {
     /** Xoá dữ liệu giao dịch của chi nhánh ảo (giữ nguyên tài khoản và kho). */
     private static void clearSim(Connection c) throws SQLException {
         String sim = "(SELECT ma_cn FROM chi_nhanh WHERE gia_lap)";
+        Db.update(c, "DELETE FROM cong_no_cn WHERE ma_cn IN " + sim);
         Db.update(c, "DELETE FROM dieu_chuyen WHERE den_cn IN " + sim + " OR tu_cn IN " + sim);
         Db.update(c, "DELETE FROM phieu_xuat WHERE ma_cn IN " + sim);
         Db.update(c, "DELETE FROM yeu_cau WHERE ma_cn IN " + sim);

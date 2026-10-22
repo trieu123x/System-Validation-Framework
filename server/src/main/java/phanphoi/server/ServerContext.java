@@ -2,7 +2,11 @@ package phanphoi.server;
 
 import phanphoi.server.db.Db;
 import phanphoi.server.net.SessionRegistry;
+import phanphoi.server.security.SecurityEventLog;
+import phanphoi.server.security.SecurityMonitor;
 import phanphoi.server.service.AuthService;
+import phanphoi.server.service.DebtService;
+import phanphoi.server.service.NoticeService;
 import phanphoi.server.service.Outbox;
 import phanphoi.server.service.RequestService;
 import phanphoi.server.service.StockService;
@@ -20,6 +24,10 @@ public final class ServerContext {
     private final StockService stock;
     private final RequestService requests;
     private final TransferService transfers;
+    private final DebtService debts;
+    private final NoticeService notices;
+    private final SecurityEventLog securityLog;
+    private final SecurityMonitor security;
     private final ServerSettings settings;
     private final boolean quiet;
 
@@ -30,13 +38,18 @@ public final class ServerContext {
         this.events = new Events();
         this.log = new MessageLog(db, events);
         this.registry = new SessionRegistry(events);
+        this.securityLog = new SecurityEventLog(db, events);
+        this.security = new SecurityMonitor(settings.securityRules, () -> settings.securityMode, securityLog);
         this.outbox = new Outbox(db, registry, settings);
         this.auth = new AuthService(db);
         this.stock = new StockService(db, events);
-        this.transfers = new TransferService(db, registry, outbox, events);
-        this.requests = new RequestService(db, outbox, events, transfers, settings);
+        this.debts = new DebtService(db, registry, events);
+        this.transfers = new TransferService(db, registry, outbox, events, debts);
+        this.requests = new RequestService(db, outbox, events, transfers, debts, settings);
         outbox.addResyncSource(requests::resync);
         outbox.addResyncSource(transfers::resync);
+        this.notices = new NoticeService(db, outbox, events, requests);
+        outbox.addResyncSource(notices::resync);
     }
 
     public ServerSettings settings() {
@@ -82,5 +95,21 @@ public final class ServerContext {
 
     public TransferService transfers() {
         return transfers;
+    }
+
+    public DebtService debts() {
+        return debts;
+    }
+
+    public NoticeService notices() {
+        return notices;
+    }
+
+    public SecurityMonitor security() {
+        return security;
+    }
+
+    public SecurityEventLog securityLog() {
+        return securityLog;
     }
 }

@@ -39,12 +39,14 @@ public final class TransferService {
     private final SessionRegistry registry;
     private final Outbox outbox;
     private final Events events;
+    private final DebtService debts;
 
-    public TransferService(Db db, SessionRegistry registry, Outbox outbox, Events events) {
+    public TransferService(Db db, SessionRegistry registry, Outbox outbox, Events events, DebtService debts) {
         this.db = db;
         this.registry = registry;
         this.outbox = outbox;
         this.events = events;
+        this.debts = debts;
     }
 
     /** Huỷ lời mời đang chờ khi YC đã được xử lý theo đường khác (gọi trong transaction của YC). */
@@ -158,11 +160,17 @@ public final class TransferService {
                            cap_nhat_luc = CURRENT_TIMESTAMP
                     WHERE ma_yc = ?""", dc.soLuong, dc.soLuong, dc.maYc);
             setState(c, maDc, "HOAN_TAT");
+            // Nợ đi theo hàng: chốt gia_xuat lúc hoàn tất rồi ghi DC_NHAN / DC_GIAO
+            Db.update(c, "UPDATE dieu_chuyen SET don_gia = (SELECT gia_xuat FROM san_pham WHERE ma_sp = ?) WHERE ma_dc = ?",
+                    dc.maSp, maDc);
+            DebtService.recordTransfer(c, maDc);
             return new Result(Message.of(Command.TRANSFER_DONE, maDc, dc.maSp, con), dc, true, false);
         });
         if (r.delivered) {
             outbox.send(r.dc.denCn, Message.of(Command.DELIVERED, r.dc.maYc, r.dc.maSp, r.dc.soLuong));
             events.publish(Events.STOCK, Map.of("maCn", tuCn));
+            debts.changed(r.dc.denCn);
+            debts.changed(tuCn);
         }
         publish(maDc);
         if (r.retry) {

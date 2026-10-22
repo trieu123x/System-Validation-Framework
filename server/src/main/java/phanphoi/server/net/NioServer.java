@@ -114,17 +114,43 @@ public final class NioServer extends NetServer {
         SocketChannel ch;
         while ((ch = server.accept()) != null) {
             if (ctx.registry().connections().size() >= maxClients) {
-                try (SocketChannel rejected = ch) {
-                    rejected.write(ByteBuffer.wrap(ClientHandler.serverFullLine(maxClients)));
-                }
+                ctx.security().onServerFull(System.currentTimeMillis());
+                reject(ch, ClientHandler.serverFullLine(maxClients));
                 continue;
             }
-            ch.configureBlocking(false);
-            ch.setOption(StandardSocketOptions.TCP_NODELAY, true);
-            ch.setOption(StandardSocketOptions.SO_KEEPALIVE, true);
-            Conn c = new Conn(ch);
-            c.key = ch.register(selector, SelectionKey.OP_READ, c);
-            c.handler.onOpen();
+            String ip;
+            try {
+                ip = Transport.ipOf(ch.getRemoteAddress());
+            } catch (IOException e) {
+                ch.close(); // client đã reset ngay sau bắt tay
+                continue;
+            }
+            // IP bị chặn hoặc vừa mở kết nối dồn dập: chỉ tra bộ nhớ, không chặn luồng Selector
+            String deny = ctx.security().onAccept(ip, System.currentTimeMillis());
+            if (deny != null) {
+                reject(ch, ClientHandler.bannedLine(deny));
+                continue;
+            }
+            try {
+                ch.configureBlocking(false);
+                ch.setOption(StandardSocketOptions.TCP_NODELAY, true);
+                ch.setOption(StandardSocketOptions.SO_KEEPALIVE, true);
+                Conn c = new Conn(ch);
+                c.key = ch.register(selector, SelectionKey.OP_READ, c);
+                c.handler.onOpen();
+            } catch (IOException | RuntimeException e) {
+                // chưa thành phiên (onOpen chưa chạy nên chưa tính vào bộ đếm kết nối theo IP)
+                ch.close();
+            }
+        }
+    }
+
+    /** Gửi một dòng lỗi rồi đóng; client đã reset thì bỏ qua để không làm dở vòng select. */
+    private static void reject(SocketChannel ch, byte[] line) {
+        try (ch) {
+            ch.write(ByteBuffer.wrap(line));
+        } catch (IOException ignored) {
+            // client đã đóng
         }
     }
 
@@ -145,6 +171,7 @@ public final class NioServer extends NetServer {
     private final class Conn implements Transport {
         private final SocketChannel ch;
         private final String remote;
+        private final String ip;
         private final ClientHandler handler;
         private final LineSplitter splitter = new LineSplitter();
         private final ByteBuffer readBuf = ByteBuffer.allocate(8192);
@@ -158,7 +185,13 @@ public final class NioServer extends NetServer {
         Conn(SocketChannel ch) throws IOException {
             this.ch = ch;
             this.remote = String.valueOf(ch.getRemoteAddress());
+            this.ip = Transport.ipOf(ch.getRemoteAddress());
             this.handler = new ClientHandler(ctx, this);
+        }
+
+        @Override
+        public String ip() {
+            return ip;
         }
 
         void read() throws IOException {

@@ -10,8 +10,10 @@ ui/tsconfig.tsbuildinfo
 experiments/results/logs/
 report/source/node_modules/
 config/*.local.properties
+scripts/images/cache/
 .env
 
 # Claude Code local files
 CLAUDE.local.md
 .claude/settings.local.json
+scripts/images/cache/

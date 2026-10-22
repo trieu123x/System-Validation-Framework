@@ -4,87 +4,8 @@ import { useEffect, useState } from "react";
 import { api, fmtNumber, STATE_LABEL } from "@/lib/api";
 import type { Branch, Product, RequestRow, TransferRow } from "@/lib/types";
 import {
-  Badge, Card, Empty, Facet, FilterGroup, LEVEL_LABEL, StateBadge, StockBar, stockLevel, type StockLevel,
+  Badge, Card, Empty, Facet, FilterGroup, StateBadge,
 } from "@/components/ui";
-
-type StockRow = {
-  maCn: string; tenCn: string; maSp: string; tenSp: string; soLuong: number; nguongToiThieu: number; duoiNguong: boolean;
-};
-
-type LevelFilter = "all" | "critical" | "warning" | "unset";
-
-/** FR-09: tồn kho từng chi nhánh, lọc theo mức tồn. */
-export function BranchStock({ branches, version }: { branches: Branch[]; version: number }) {
-  const [maCn, setMaCn] = useState("");
-  const [q, setQ] = useState("");
-  const [level, setLevel] = useState<LevelFilter>("all");
-  const [rows, setRows] = useState<StockRow[]>([]);
-
-  useEffect(() => {
-    api<StockRow[]>(`/api/stock/branches?maCn=${encodeURIComponent(maCn)}`).then(setRows).catch(() => {});
-  }, [maCn, version]);
-
-  const count = (l: StockLevel) => rows.filter((r) => stockLevel(r.soLuong, r.nguongToiThieu) === l).length;
-  const needle = q.trim().toLowerCase();
-  const shown = rows.filter((r) =>
-    (level === "all" || stockLevel(r.soLuong, r.nguongToiThieu) === level)
-    && (!needle || `${r.maCn} ${r.tenCn} ${r.maSp} ${r.tenSp}`.toLowerCase().includes(needle)));
-
-  return (
-    <div className="listpage">
-      <aside className="filters">
-        <FilterGroup title="Tìm kiếm">
-          <input type="search" placeholder="Mã, tên chi nhánh / hàng" value={q}
-            onChange={(e) => setQ(e.target.value)} aria-label="Tìm kiếm" />
-        </FilterGroup>
-        <FilterGroup title="Chi nhánh">
-          <select value={maCn} onChange={(e) => setMaCn(e.target.value)} aria-label="Lọc chi nhánh">
-            <option value="">Tất cả chi nhánh thật</option>
-            {branches.map((b) => <option key={b.maCn} value={b.maCn}>{b.maCn} – {b.ten}</option>)}
-          </select>
-        </FilterGroup>
-        <FilterGroup title="Mức tồn">
-          <Facet<LevelFilter> name="level" value={level} onChange={setLevel} options={[
-            { id: "all", label: "Tất cả", count: rows.length },
-            { id: "critical", label: "Dưới ngưỡng", count: count("critical") },
-            { id: "warning", label: "Sắp chạm ngưỡng", count: count("warning") },
-            { id: "unset", label: "Chưa đặt ngưỡng", count: count("unset") },
-          ]} />
-        </FilterGroup>
-      </aside>
-      <section className="card">
-        {shown.length === 0 ? <Empty>Không có dòng nào khớp bộ lọc.</Empty> : (
-          <div className="table-wrap scroll" style={{ maxHeight: 640 }}>
-            <table>
-              <thead>
-                <tr><th>Chi nhánh</th><th>Mã hàng</th><th>Tên hàng</th><th className="num">Tồn</th><th className="num">Ngưỡng</th><th>Mức tồn</th><th /></tr>
-              </thead>
-              <tbody>
-                {shown.map((r) => {
-                  const l = stockLevel(r.soLuong, r.nguongToiThieu);
-                  return (
-                    <tr key={r.maCn + r.maSp} className={l === "critical" ? "low" : ""}>
-                      <td className="nowrap">{r.maCn} <span className="muted">{r.tenCn}</span></td>
-                      <td className="code">{r.maSp}</td>
-                      <td>{r.tenSp}</td>
-                      <td className="num"><b>{fmtNumber(r.soLuong)}</b></td>
-                      <td className="num">{r.nguongToiThieu ? fmtNumber(r.nguongToiThieu) : "—"}</td>
-                      <td><StockBar soLuong={r.soLuong} nguong={r.nguongToiThieu} /></td>
-                      <td>{l !== "ok" && <Badge tone={LEVEL_TONE[l]}>{LEVEL_LABEL[l]}</Badge>}</td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
-        <div className="table-foot">Hiển thị {shown.length} / {rows.length} dòng</div>
-      </section>
-    </div>
-  );
-}
-
-const LEVEL_TONE: Record<StockLevel, string> = { critical: "danger", warning: "warn", ok: "success", unset: "muted" };
 
 /** FR-23: log yêu cầu và cấp phát, lọc theo CN, SP, trạng thái, khoảng thời gian. */
 export function RequestHistory({ branches, products, version }: {

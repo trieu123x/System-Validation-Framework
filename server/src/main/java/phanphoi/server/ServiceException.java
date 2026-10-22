@@ -21,6 +21,7 @@ public class ServiceException extends Http.ApiException {
         return switch (code) {
             case E04 -> 404;
             case E03 -> 409;
+            case E06 -> 429;
             default -> 400;
         };
     }

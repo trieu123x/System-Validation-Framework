@@ -35,7 +35,7 @@ public final class Outbox {
     }
 
     private static final Set<Command> STATE_MESSAGES =
-            EnumSet.of(Command.OFFER, Command.OUT_OF_STOCK, Command.DELIVERED, Command.TRANSFER_REQ);
+            EnumSet.of(Command.OFFER, Command.OUT_OF_STOCK, Command.DELIVERED, Command.TRANSFER_REQ, Command.NOTICE);
 
     private final Db db;
     private final SessionRegistry registry;

@@ -1,0 +1,16 @@
+che_do,ke_tan_cong,ip,hanh_vi,tin_xu_ly,toi_su_kien_ms,toi_khi_bi_chan_ms,bi_chan,bi_chan_boi,cn_that_bi_chan_nham,sale_p95_binh_thuong_ms,sale_p95_bi_tan_cong_ms,sale_mat
+off,do_mat_khau,192.168.1.103,LOGIN sai CN01,563,,,0,,0,1.81,1.87,0
+off,flood_ping,172.16.0.2,PING 500/s,12665,,,0,,0,1.81,1.87,0
+off,cao_du_lieu,127.0.0.1,INVENTORY_GET/HISTORY_GET 200/s,4331,,,0,,0,1.81,1.87,0
+off,gui_rac,2606:4700:110:89b3:d8dd:408e:2daf:32d1,dong rac 50/s,1319,,,0,,0,1.81,1.87,0
+off,khong_login,::1,50 ket noi khong LOGIN,50,,,0,,0,1.81,1.87,0
+detect,do_mat_khau,192.168.1.103,LOGIN sai CN01,485,249.0,,0,,0,2.06,1.98,0
+detect,flood_ping,172.16.0.2,PING 500/s,9685,2179.0,,0,,0,2.06,1.98,0
+detect,cao_du_lieu,127.0.0.1,INVENTORY_GET/HISTORY_GET 200/s,1937,22.0,,0,,0,2.06,1.98,0
+detect,gui_rac,2606:4700:110:89b3:d8dd:408e:2daf:32d1,dong rac 50/s,969,281.0,,0,,0,2.06,1.98,0
+detect,khong_login,::1,50 ket noi khong LOGIN,50,26.0,,0,,0,2.06,1.98,0
+block,do_mat_khau,192.168.1.103,LOGIN sai CN01,5,250.0,254.0,1,E06: Dang nhap sai qua nhieu lan; IP bi chan,0,2.69,2.17,0
+block,flood_ping,172.16.0.2,PING 500/s,430,1332.0,1336.0,1,E06: Gui lenh don dap; ngat phien,0,2.69,2.17,0
+block,cao_du_lieu,127.0.0.1,INVENTORY_GET/HISTORY_GET 200/s,150,24.0,27.0,1,E06: Vuot gioi han doc du lieu; thu lai sau,0,2.69,2.17,0
+block,gui_rac,2606:4700:110:89b3:d8dd:408e:2daf:32d1,dong rac 50/s,10,281.0,312.0,1,server dong ket noi,0,2.69,2.17,0
+block,khong_login,::1,50 ket noi khong LOGIN,50,28.0,31.0,1,E06: IP bi chan den 01:03,0,2.69,2.17,0
