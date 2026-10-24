@@ -1,0 +1,77 @@
+[
+  {
+    "id": "CN01",
+    "name": "Chi nhánh Lĩnh Nam",
+    "address": "Tổ 21, Lĩnh Nam, Hoàng Mai, Hà Nội"
+  },
+  {
+    "id": "CN02",
+    "name": "Chi nhánh Đà Nẵng",
+    "address": "Hải Châu, Đà Nẵng"
+  },
+  {
+    "id": "CN03",
+    "name": "Chi nhánh TP.HCM",
+    "address": "Quận 1, TP.HCM"
+  },
+  {
+    "id": "CN04",
+    "name": "Chi nhánh Hải Phòng",
+    "address": "Lê Chân, Hải Phòng"
+  },
+  {
+    "id": "CN05",
+    "name": "Chi nhánh Cần Thơ",
+    "address": "Ninh Kiều, Cần Thơ"
+  },
+  {
+    "id": "CN06",
+    "name": "Chi nhánh Huế",
+    "address": "Phú Hội, TP. Huế"
+  },
+  {
+    "id": "CN07",
+    "name": "Chi nhánh Nha Trang",
+    "address": "Lộc Thọ, Nha Trang"
+  },
+  {
+    "id": "CN08",
+    "name": "Chi nhánh Vinh",
+    "address": "Hưng Dũng, Vinh"
+  },
+  {
+    "id": "CN09",
+    "name": "Chi nhánh Biên Hòa",
+    "address": "Tân Phong, Biên Hòa"
+  },
+  {
+    "id": "CN10",
+    "name": "Chi nhánh Quy Nhơn",
+    "address": "Lê Lợi, Quy Nhơn"
+  },
+  {
+    "id": "CN11",
+    "name": "Chi nhánh Thái Nguyên",
+    "address": "Hoàng Văn Thụ, Thái Nguyên"
+  },
+  {
+    "id": "CN12",
+    "name": "Chi nhánh Buôn Ma Thuột",
+    "address": "Tân Lợi, Buôn Ma Thuột"
+  },
+  {
+    "id": "CN13",
+    "name": "Chi nhánh Vũng Tàu",
+    "address": "Phường 7, Vũng Tàu"
+  },
+  {
+    "id": "CN14",
+    "name": "Chi nhánh Nam Định",
+    "address": "Trần Đăng Ninh, Nam Định"
+  },
+  {
+    "id": "CN15",
+    "name": "Chi nhánh Long Xuyên",
+    "address": "Mỹ Long, Long Xuyên"
+  }
+]

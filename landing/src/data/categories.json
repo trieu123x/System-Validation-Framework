@@ -1,0 +1,62 @@
+[
+  {
+    "id": "DM01",
+    "name": "Máy hút bụi",
+    "primary": true,
+    "representativeProductId": "TB01"
+  },
+  {
+    "id": "DM02",
+    "name": "Máy cắt gạch",
+    "primary": true,
+    "representativeProductId": "TB06"
+  },
+  {
+    "id": "DM03",
+    "name": "Máy tời, pa lăng",
+    "primary": true,
+    "representativeProductId": "TB09"
+  },
+  {
+    "id": "DM04",
+    "name": "Máy rửa xe",
+    "primary": true,
+    "representativeProductId": "TB16"
+  },
+  {
+    "id": "DM05",
+    "name": "Máy đầm",
+    "primary": true,
+    "representativeProductId": "TB22"
+  },
+  {
+    "id": "DM06",
+    "name": "Phụ kiện máy đầm",
+    "primary": true,
+    "representativeProductId": "TB26"
+  },
+  {
+    "id": "DM07",
+    "name": "Máy khoan",
+    "primary": true,
+    "representativeProductId": "TB28"
+  },
+  {
+    "id": "DM08",
+    "name": "Máy bơm",
+    "primary": false,
+    "representativeProductId": "TB29"
+  },
+  {
+    "id": "DM09",
+    "name": "Máy phun, bình phun",
+    "primary": false,
+    "representativeProductId": "TB30"
+  },
+  {
+    "id": "DM10",
+    "name": "Máy xoa vữa",
+    "primary": false,
+    "representativeProductId": "TB31"
+  }
+]

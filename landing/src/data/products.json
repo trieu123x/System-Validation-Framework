@@ -1,0 +1,436 @@
+[
+  {
+    "id": "TB01",
+    "name": "Máy hút bụi công nghiệp khô và ướt 16 lít",
+    "model": "TK-16L",
+    "categoryId": "DM01",
+    "category": "Máy hút bụi",
+    "retailPrice": 1090000,
+    "image": {
+      "url": "https://res.cloudinary.com/dfnlbrk4w/image/upload/v1792609532/toboki/TB01.webp",
+      "artist": "Nynexman4464",
+      "license": "CC BY-SA 2.5",
+      "source": "https://commons.wikimedia.org/wiki/File:Craftsman_16_Gallon_Wet-Dry_Vac.jpg"
+    }
+  },
+  {
+    "id": "TB02",
+    "name": "Máy hút bụi 35 lít",
+    "model": "TK-35L",
+    "categoryId": "DM01",
+    "category": "Máy hút bụi",
+    "retailPrice": 1590000,
+    "image": {
+      "url": "https://res.cloudinary.com/dfnlbrk4w/image/upload/v1792609535/toboki/TB02.webp",
+      "artist": "P1898",
+      "license": "CC BY 4.0",
+      "source": "https://commons.wikimedia.org/wiki/File:Ridgid_2026-08-12_Wet_Dry_Vacuum.jpg"
+    }
+  },
+  {
+    "id": "TB03",
+    "name": "Máy hút bụi 45 lít",
+    "model": "TK-45L",
+    "categoryId": "DM01",
+    "category": "Máy hút bụi",
+    "retailPrice": 1850000,
+    "image": {
+      "url": "https://res.cloudinary.com/dfnlbrk4w/image/upload/v1792609537/toboki/TB03.webp",
+      "artist": "PvOberstein",
+      "license": "CC0",
+      "source": "https://commons.wikimedia.org/wiki/File:Advance_VL500_wetdry_vacuum_Yonge.jpg"
+    }
+  },
+  {
+    "id": "TB04",
+    "name": "Máy hút bụi 80 lít, 2 mô tơ",
+    "model": "TK-80L",
+    "categoryId": "DM01",
+    "category": "Máy hút bụi",
+    "retailPrice": 3650000,
+    "image": {
+      "url": "https://res.cloudinary.com/dfnlbrk4w/image/upload/v1792609540/toboki/TB04.webp",
+      "artist": "Hannes Grobe",
+      "license": "CC BY-SA 4.0",
+      "source": "https://commons.wikimedia.org/wiki/File:Nilfisk_GS82_hg.jpg"
+    }
+  },
+  {
+    "id": "TB05",
+    "name": "Máy hút bụi 100 lít, 3 mô tơ",
+    "model": "TK-100L",
+    "categoryId": "DM01",
+    "category": "Máy hút bụi",
+    "retailPrice": 4750000,
+    "image": {
+      "url": "https://res.cloudinary.com/dfnlbrk4w/image/upload/v1792609542/toboki/TB05.webp",
+      "artist": "Matt Brown from London, England",
+      "license": "CC BY 2.0",
+      "source": "https://commons.wikimedia.org/wiki/File:Industrial_sized_Henry_(13267797294).jpg"
+    }
+  },
+  {
+    "id": "TB06",
+    "name": "Bàn cắt gạch 800 mm",
+    "model": "T-800",
+    "categoryId": "DM02",
+    "category": "Máy cắt gạch",
+    "retailPrice": 1150000,
+    "image": {
+      "url": "https://res.cloudinary.com/dfnlbrk4w/image/upload/v1792609546/toboki/TB06.webp",
+      "artist": "Billbeee at en.wikipedia",
+      "license": "CC BY 2.5",
+      "source": "https://commons.wikimedia.org/wiki/File:Ceramic-tile-cutter.jpg"
+    }
+  },
+  {
+    "id": "TB07",
+    "name": "Bàn cắt gạch 1000 mm",
+    "model": "T-1000",
+    "categoryId": "DM02",
+    "category": "Máy cắt gạch",
+    "retailPrice": 1450000,
+    "image": {
+      "url": "https://res.cloudinary.com/dfnlbrk4w/image/upload/v1792609548/toboki/TB07.webp",
+      "artist": "Wielkijacek",
+      "license": "CC BY-SA 4.0",
+      "source": "https://commons.wikimedia.org/wiki/File:Montolit_MASTERPIUMA_93_P3.jpg"
+    }
+  },
+  {
+    "id": "TB08",
+    "name": "Bàn cắt gạch 1200 mm",
+    "model": "T-1200",
+    "categoryId": "DM02",
+    "category": "Máy cắt gạch",
+    "retailPrice": 1900000,
+    "image": {
+      "url": "https://res.cloudinary.com/dfnlbrk4w/image/upload/v1792609551/toboki/TB08.webp",
+      "artist": "Firma Karl Dahm Ansprechpartner Carolin Heuckmann",
+      "license": "CC BY-SA 3.0",
+      "source": "https://commons.wikimedia.org/wiki/File:Fliesenschneider-HighLine.jpg"
+    }
+  },
+  {
+    "id": "TB09",
+    "name": "Máy tời TK200/25",
+    "model": "TK200/25",
+    "categoryId": "DM03",
+    "category": "Máy tời, pa lăng",
+    "retailPrice": 1580000,
+    "image": {
+      "url": "https://res.cloudinary.com/dfnlbrk4w/image/upload/v1792609554/toboki/TB09.webp",
+      "artist": "Aldifahri16",
+      "license": "CC BY-SA 4.0",
+      "source": "https://commons.wikimedia.org/wiki/File:Electric-wire-rope-hoist.jpg"
+    }
+  },
+  {
+    "id": "TB10",
+    "name": "Máy tời TK400/25",
+    "model": "TK400/25",
+    "categoryId": "DM03",
+    "category": "Máy tời, pa lăng",
+    "retailPrice": 2350000,
+    "image": {
+      "url": "https://res.cloudinary.com/dfnlbrk4w/image/upload/v1792609556/toboki/TB10.webp",
+      "artist": "Streetcrane",
+      "license": "CC BY-SA 4.0",
+      "source": "https://commons.wikimedia.org/wiki/File:Street_VX_Wire_Rope_Hoist.jpg"
+    }
+  },
+  {
+    "id": "TB11",
+    "name": "Máy tời TK600/25",
+    "model": "TK600/25",
+    "categoryId": "DM03",
+    "category": "Máy tời, pa lăng",
+    "retailPrice": 2100000,
+    "image": {
+      "url": "https://res.cloudinary.com/dfnlbrk4w/image/upload/v1792609559/toboki/TB11.webp",
+      "artist": "Streetcrane",
+      "license": "CC BY-SA 4.0",
+      "source": "https://commons.wikimedia.org/wiki/File:Street_ZX_Wire_Rope_Hoist.jpg"
+    }
+  },
+  {
+    "id": "TB12",
+    "name": "Máy tời TK1000",
+    "model": "TK1000",
+    "categoryId": "DM03",
+    "category": "Máy tời, pa lăng",
+    "retailPrice": 3550000,
+    "image": {
+      "url": "https://res.cloudinary.com/dfnlbrk4w/image/upload/v1792609561/toboki/TB12.webp",
+      "artist": "Aldifahri16",
+      "license": "CC BY-SA 4.0",
+      "source": "https://commons.wikimedia.org/wiki/File:Electric-chain-hoist-hoist-elektrik-rantai.jpg"
+    }
+  },
+  {
+    "id": "TB13",
+    "name": "Máy tời TK1200/25",
+    "model": "TK1200/25",
+    "categoryId": "DM03",
+    "category": "Máy tời, pa lăng",
+    "retailPrice": 3410000,
+    "image": {
+      "url": "https://res.cloudinary.com/dfnlbrk4w/image/upload/v1792609563/toboki/TB13.webp",
+      "artist": "halfrain",
+      "license": "CC BY-SA 2.0",
+      "source": "https://commons.wikimedia.org/wiki/File:%E6%97%A5%E7%AB%8B%E3%83%A2%E3%83%BC%E3%83%88%E3%83%AB%E3%83%96%E3%83%AD%E3%83%83%E3%82%AF_(Hitachi_Electric_Chain_Hoist)_(16276717289).jpg"
+    }
+  },
+  {
+    "id": "TB14",
+    "name": "Máy tời TK1500/25",
+    "model": "TK1500/25",
+    "categoryId": "DM03",
+    "category": "Máy tời, pa lăng",
+    "retailPrice": 3540000,
+    "image": {
+      "url": "https://res.cloudinary.com/dfnlbrk4w/image/upload/v1792609566/toboki/TB14.webp",
+      "artist": "Rvancopp",
+      "license": "CC BY 3.0 us",
+      "source": "https://commons.wikimedia.org/wiki/File:Bridge_Crane_with_Wire_Rope_Hoist.jpg"
+    }
+  },
+  {
+    "id": "TB15",
+    "name": "Máy tời 2400W, cáp 30 m",
+    "model": "TK2400",
+    "categoryId": "DM03",
+    "category": "Máy tời, pa lăng",
+    "retailPrice": 4590000,
+    "image": {
+      "url": "https://res.cloudinary.com/dfnlbrk4w/image/upload/v1792609568/toboki/TB15.webp",
+      "artist": "W.carter",
+      "license": "CC BY-SA 4.0",
+      "source": "https://commons.wikimedia.org/wiki/File:Electric_winch_on_indoor_portal_crane.jpg"
+    }
+  },
+  {
+    "id": "TB16",
+    "name": "Máy rửa xe TK-888",
+    "model": "TK-888",
+    "categoryId": "DM04",
+    "category": "Máy rửa xe",
+    "retailPrice": 2130000,
+    "image": {
+      "url": "https://res.cloudinary.com/dfnlbrk4w/image/upload/v1792609571/toboki/TB16.webp",
+      "artist": "Mosatsu",
+      "license": "CC BY-SA 4.0",
+      "source": "https://commons.wikimedia.org/wiki/File:Karcher_pressure_washer_K_MINI.webp"
+    }
+  },
+  {
+    "id": "TB17",
+    "name": "Máy rửa xe chỉnh áp 2.500W",
+    "model": "TK-999",
+    "categoryId": "DM04",
+    "category": "Máy rửa xe",
+    "retailPrice": 2010000,
+    "image": {
+      "url": "https://res.cloudinary.com/dfnlbrk4w/image/upload/v1792609573/toboki/TB17.webp",
+      "artist": "Mark Hunter",
+      "license": "CC BY 2.0",
+      "source": "https://commons.wikimedia.org/wiki/File:Sealey_PC2952_Pressure_Washer_(4295125564).jpg"
+    }
+  },
+  {
+    "id": "TB18",
+    "name": "Máy rửa xe cao áp TOK2700",
+    "model": "TOK2700",
+    "categoryId": "DM04",
+    "category": "Máy rửa xe",
+    "retailPrice": 7900000,
+    "image": {
+      "url": "https://res.cloudinary.com/dfnlbrk4w/image/upload/v1792609576/toboki/TB18.webp",
+      "artist": "FBenjr123",
+      "license": "CC BY-SA 4.0",
+      "source": "https://commons.wikimedia.org/wiki/File:Kawasaki_Pressure_Washer_HPW_302.jpg"
+    }
+  },
+  {
+    "id": "TB19",
+    "name": "Máy rửa xe cao áp TOK4000",
+    "model": "TOK4000",
+    "categoryId": "DM04",
+    "category": "Máy rửa xe",
+    "retailPrice": 11200000,
+    "image": {
+      "url": "https://res.cloudinary.com/dfnlbrk4w/image/upload/v1792609579/toboki/TB19.webp",
+      "artist": "Vis M",
+      "license": "CC BY-SA 4.0",
+      "source": "https://commons.wikimedia.org/wiki/File:Stihl_power_washer.jpg"
+    }
+  },
+  {
+    "id": "TB20",
+    "name": "Máy rửa xe cao áp TOK5500",
+    "model": "TOK5500",
+    "categoryId": "DM04",
+    "category": "Máy rửa xe",
+    "retailPrice": 14800000,
+    "image": {
+      "url": "https://res.cloudinary.com/dfnlbrk4w/image/upload/v1792609582/toboki/TB20.webp",
+      "artist": "Foto: Jonn Leffmann",
+      "license": "CC BY 3.0",
+      "source": "https://commons.wikimedia.org/wiki/File:H%C3%B6gtryckstv%C3%A4tt_-_Pressure_washer_-_Ystad-2011.jpg"
+    }
+  },
+  {
+    "id": "TB21",
+    "name": "Máy rửa xe cao áp TOK7500",
+    "model": "TOK7500",
+    "categoryId": "DM04",
+    "category": "Máy rửa xe",
+    "retailPrice": 18500000,
+    "image": {
+      "url": "https://res.cloudinary.com/dfnlbrk4w/image/upload/v1792609584/toboki/TB21.webp",
+      "artist": "Elekes Andor",
+      "license": "CC BY-SA 4.0",
+      "source": "https://commons.wikimedia.org/wiki/File:Pressure_washing.jpg"
+    }
+  },
+  {
+    "id": "TB22",
+    "name": "Máy đầm gà 1.100W",
+    "model": "TK-35",
+    "categoryId": "DM05",
+    "category": "Máy đầm",
+    "retailPrice": 500000,
+    "image": {
+      "url": "https://res.cloudinary.com/dfnlbrk4w/image/upload/v1792609586/toboki/TB22.webp",
+      "artist": "Wacker Neuson SE",
+      "license": "CC BY-SA 3.0",
+      "source": "https://commons.wikimedia.org/wiki/File:Wacker_Neuson_Stampfer_BS_60-2i.jpg"
+    }
+  },
+  {
+    "id": "TB23",
+    "name": "Máy đầm TK-45",
+    "model": "TK-45",
+    "categoryId": "DM05",
+    "category": "Máy đầm",
+    "retailPrice": 500000,
+    "image": {
+      "url": "https://res.cloudinary.com/dfnlbrk4w/image/upload/v1792609589/toboki/TB23.webp",
+      "artist": "Mailtosap",
+      "license": "CC BY-SA 4.0",
+      "source": "https://commons.wikimedia.org/wiki/File:Stampfer_Ammann.JPG"
+    }
+  },
+  {
+    "id": "TB24",
+    "name": "Máy đầm dùi DR-1100",
+    "model": "DR-1100",
+    "categoryId": "DM05",
+    "category": "Máy đầm",
+    "retailPrice": 1450000,
+    "image": {
+      "url": "https://res.cloudinary.com/dfnlbrk4w/image/upload/v1792609592/toboki/TB24.webp",
+      "artist": "Lievers holland",
+      "license": "CC0",
+      "source": "https://commons.wikimedia.org/wiki/File:P14Eactie1_(cropped_to_concrete_vibrator).JPG"
+    }
+  },
+  {
+    "id": "TB25",
+    "name": "Máy đầm dùi 2.500W",
+    "model": "DR-2500",
+    "categoryId": "DM05",
+    "category": "Máy đầm",
+    "retailPrice": 2150000,
+    "image": {
+      "url": "https://res.cloudinary.com/dfnlbrk4w/image/upload/v1792609594/toboki/TB25.webp",
+      "artist": "Baumeister 99/Wacker Neuson",
+      "license": "CC BY-SA 3.0",
+      "source": "https://commons.wikimedia.org/wiki/File:Au%C3%9Fenruettler.jpg"
+    }
+  },
+  {
+    "id": "TB26",
+    "name": "Dây đầm gà 1,2 m / 1,5 m",
+    "model": null,
+    "categoryId": "DM06",
+    "category": "Phụ kiện máy đầm",
+    "retailPrice": 280000,
+    "image": {
+      "url": "https://res.cloudinary.com/dfnlbrk4w/image/upload/v1792609597/toboki/TB26.webp",
+      "artist": "Rasbak",
+      "license": "CC BY-SA 3.0",
+      "source": "https://commons.wikimedia.org/wiki/File:Trilstamper.jpg"
+    }
+  },
+  {
+    "id": "TB27",
+    "name": "Dây đầm dùi",
+    "model": null,
+    "categoryId": "DM06",
+    "category": "Phụ kiện máy đầm",
+    "retailPrice": 630000,
+    "image": {
+      "url": "https://res.cloudinary.com/dfnlbrk4w/image/upload/v1792609599/toboki/TB27.webp",
+      "artist": "U.S. Navy photo by Petty Officer 3rd Class thomas flowers",
+      "license": "Public domain",
+      "source": "https://commons.wikimedia.org/wiki/File:Concrete_Vib_(9022002).jpg"
+    }
+  },
+  {
+    "id": "TB28",
+    "name": "Máy khoan bàn 375W, mũi 1,5–13 mm",
+    "model": "TK-13KB",
+    "categoryId": "DM07",
+    "category": "Máy khoan",
+    "retailPrice": 2140000,
+    "image": {
+      "url": "https://res.cloudinary.com/dfnlbrk4w/image/upload/v1792609601/toboki/TB28.webp",
+      "artist": "LHOON",
+      "license": "CC BY-SA 2.5",
+      "source": "https://commons.wikimedia.org/wiki/File:Drillpress.jpg"
+    }
+  },
+  {
+    "id": "TB29",
+    "name": "Máy bơm nước chìm 750W",
+    "model": "TK-750",
+    "categoryId": "DM08",
+    "category": "Máy bơm",
+    "retailPrice": 1650000,
+    "image": {
+      "url": "https://res.cloudinary.com/dfnlbrk4w/image/upload/v1792609604/toboki/TB29.webp",
+      "artist": "Thamizhpparithi Maari",
+      "license": "CC BY-SA 3.0",
+      "source": "https://commons.wikimedia.org/wiki/File:A_photo_on_Submersible_Pump.JPG"
+    }
+  },
+  {
+    "id": "TB30",
+    "name": "Bình phun bọt tuyết 2 lít",
+    "model": "TK-2L",
+    "categoryId": "DM09",
+    "category": "Máy phun, bình phun",
+    "retailPrice": 450000,
+    "image": {
+      "url": "https://res.cloudinary.com/dfnlbrk4w/image/upload/v1792609607/toboki/TB30.webp",
+      "artist": "Véronique PAGNIER",
+      "license": "CC BY-SA 3.0",
+      "source": "https://commons.wikimedia.org/wiki/File:Sulfateuse.jpg"
+    }
+  },
+  {
+    "id": "TB31",
+    "name": "Máy xoa vữa 600 mm",
+    "model": "TK-600",
+    "categoryId": "DM10",
+    "category": "Máy xoa vữa",
+    "retailPrice": 6900000,
+    "image": {
+      "url": "https://res.cloudinary.com/dfnlbrk4w/image/upload/v1792609609/toboki/TB31.webp",
+      "artist": "DIMEX",
+      "license": "CC BY-SA 4.0",
+      "source": "https://commons.wikimedia.org/wiki/File:Power_trowel_600_el.jpg"
+    }
+  }
+]
