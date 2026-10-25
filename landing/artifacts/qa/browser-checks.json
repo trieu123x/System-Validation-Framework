@@ -1,0 +1,712 @@
+{
+  "url": "http://127.0.0.1:4173/",
+  "timestamp": "2026-10-24T18:07:26.956Z",
+  "chromePath": "C:/Program Files/Google/Chrome/Application/chrome.exe",
+  "node": "v24.22.1",
+  "checks": [
+    {
+      "name": "desktop: page responds HTTP 200",
+      "passed": true,
+      "details": ""
+    },
+    {
+      "name": "desktop: no horizontal overflow",
+      "passed": true,
+      "details": "1440/1440px"
+    },
+    {
+      "name": "desktop: 12 featured products",
+      "passed": true,
+      "details": 12
+    },
+    {
+      "name": "desktop: 15 branches",
+      "passed": true,
+      "details": 15
+    },
+    {
+      "name": "desktop: 7 primary categories and 10 category filters",
+      "passed": true,
+      "details": "7/11"
+    },
+    {
+      "name": "desktop: Vietnamese metadata and one H1",
+      "passed": true,
+      "details": ""
+    },
+    {
+      "name": "desktop: carousel starts at TB01 with counter 01/31 and matching content",
+      "passed": true,
+      "details": ""
+    },
+    {
+      "name": "desktop: product image boxes keep their intended aspect ratio",
+      "passed": true,
+      "details": "[]"
+    },
+    {
+      "name": "desktop: images have alt",
+      "passed": true,
+      "details": ""
+    },
+    {
+      "name": "desktop: images loaded without fallback",
+      "passed": true,
+      "details": "20 loaded, 0 pending, 0 fallbacks"
+    },
+    {
+      "name": "Expand shows all 31 products",
+      "passed": true,
+      "details": ""
+    },
+    {
+      "name": "Filter DM01",
+      "passed": true,
+      "details": "5/5"
+    },
+    {
+      "name": "Filter DM02",
+      "passed": true,
+      "details": "3/3"
+    },
+    {
+      "name": "Filter DM03",
+      "passed": true,
+      "details": "7/7"
+    },
+    {
+      "name": "Filter DM04",
+      "passed": true,
+      "details": "6/6"
+    },
+    {
+      "name": "Filter DM05",
+      "passed": true,
+      "details": "4/4"
+    },
+    {
+      "name": "Filter DM06",
+      "passed": true,
+      "details": "2/2"
+    },
+    {
+      "name": "Filter DM07",
+      "passed": true,
+      "details": "1/1"
+    },
+    {
+      "name": "Filter DM08",
+      "passed": true,
+      "details": "1/1"
+    },
+    {
+      "name": "Filter DM09",
+      "passed": true,
+      "details": "1/1"
+    },
+    {
+      "name": "Filter DM10",
+      "passed": true,
+      "details": "1/1"
+    },
+    {
+      "name": "Reset returns 12 featured products",
+      "passed": true,
+      "details": ""
+    },
+    {
+      "name": "Category card filters products and focuses heading",
+      "passed": true,
+      "details": ""
+    },
+    {
+      "name": "Keyboard skip link focuses main",
+      "passed": true,
+      "details": ""
+    },
+    {
+      "name": "Links have no unsafe URL schemes",
+      "passed": true,
+      "details": ""
+    },
+    {
+      "name": "Carousel next: counter, caption, image and credit match TB02",
+      "passed": true,
+      "details": "{\"id\":\"TB02\",\"index\":2,\"total\":31,\"caption\":\"Sản phẩm 2 trên 31. Máy hút bụiTK-35LMáy hút bụi 35 lít\",\"image\":\"https://res.cloudinary.com/dfnlbrk4w/image/upload/c_limit,w_480,f_auto,q_auto/v1792609535/toboki/TB02.webp\",\"alt\":\"Ảnh minh họa Máy hút bụi 35 lít\",\"source\":\"https://commons.wikimedia.org/wiki/File:Ridgid_2026-08-12_Wet_Dry_Vacuum.jpg\"}"
+    },
+    {
+      "name": "Carousel next: keeps scroll, hash, filter and product list",
+      "passed": true,
+      "details": ""
+    },
+    {
+      "name": "Carousel next: keeps focus on its control",
+      "passed": true,
+      "details": ""
+    },
+    {
+      "name": "Carousel next: remounts product image",
+      "passed": true,
+      "details": ""
+    },
+    {
+      "name": "Carousel previous: counter, caption, image and credit match TB01",
+      "passed": true,
+      "details": "{\"id\":\"TB01\",\"index\":1,\"total\":31,\"caption\":\"Sản phẩm 1 trên 31. Máy hút bụiTK-16LMáy hút bụi công nghiệp khô và ướt 16 lít\",\"image\":\"https://res.cloudinary.com/dfnlbrk4w/image/upload/c_limit,w_480,f_auto,q_auto/v1792609532/toboki/TB01.webp\",\"alt\":\"Ảnh minh họa Máy hút bụi công nghiệp khô và ướt 16 lít\",\"source\":\"https://commons.wikimedia.org/wiki/File:Craftsman_16_Gallon_Wet-Dry_Vac.jpg\"}"
+    },
+    {
+      "name": "Carousel previous: keeps scroll, hash, filter and product list",
+      "passed": true,
+      "details": ""
+    },
+    {
+      "name": "Carousel previous: keeps focus on its control",
+      "passed": true,
+      "details": ""
+    },
+    {
+      "name": "Carousel previous: remounts product image",
+      "passed": true,
+      "details": ""
+    },
+    {
+      "name": "Carousel previous wraps to last: counter, caption, image and credit match TB31",
+      "passed": true,
+      "details": "{\"id\":\"TB31\",\"index\":31,\"total\":31,\"caption\":\"Sản phẩm 31 trên 31. Máy xoa vữaTK-600Máy xoa vữa 600 mm\",\"image\":\"https://res.cloudinary.com/dfnlbrk4w/image/upload/c_limit,w_480,f_auto,q_auto/v1792609609/toboki/TB31.webp\",\"alt\":\"Ảnh minh họa Máy xoa vữa 600 mm\",\"source\":\"https://commons.wikimedia.org/wiki/File:Power_trowel_600_el.jpg\"}"
+    },
+    {
+      "name": "Carousel previous wraps to last: keeps scroll, hash, filter and product list",
+      "passed": true,
+      "details": ""
+    },
+    {
+      "name": "Carousel previous wraps to last: keeps focus on its control",
+      "passed": true,
+      "details": ""
+    },
+    {
+      "name": "Carousel previous wraps to last: remounts product image",
+      "passed": true,
+      "details": ""
+    },
+    {
+      "name": "Carousel next wraps to first: counter, caption, image and credit match TB01",
+      "passed": true,
+      "details": "{\"id\":\"TB01\",\"index\":1,\"total\":31,\"caption\":\"Sản phẩm 1 trên 31. Máy hút bụiTK-16LMáy hút bụi công nghiệp khô và ướt 16 lít\",\"image\":\"https://res.cloudinary.com/dfnlbrk4w/image/upload/c_limit,w_480,f_auto,q_auto/v1792609532/toboki/TB01.webp\",\"alt\":\"Ảnh minh họa Máy hút bụi công nghiệp khô và ướt 16 lít\",\"source\":\"https://commons.wikimedia.org/wiki/File:Craftsman_16_Gallon_Wet-Dry_Vac.jpg\"}"
+    },
+    {
+      "name": "Carousel next wraps to first: keeps scroll, hash, filter and product list",
+      "passed": true,
+      "details": ""
+    },
+    {
+      "name": "Carousel next wraps to first: keeps focus on its control",
+      "passed": true,
+      "details": ""
+    },
+    {
+      "name": "Carousel next wraps to first: remounts product image",
+      "passed": true,
+      "details": ""
+    },
+    {
+      "name": "Carousel Enter activates next: counter, caption, image and credit match TB02",
+      "passed": true,
+      "details": "{\"id\":\"TB02\",\"index\":2,\"total\":31,\"caption\":\"Sản phẩm 2 trên 31. Máy hút bụiTK-35LMáy hút bụi 35 lít\",\"image\":\"https://res.cloudinary.com/dfnlbrk4w/image/upload/c_limit,w_480,f_auto,q_auto/v1792609535/toboki/TB02.webp\",\"alt\":\"Ảnh minh họa Máy hút bụi 35 lít\",\"source\":\"https://commons.wikimedia.org/wiki/File:Ridgid_2026-08-12_Wet_Dry_Vacuum.jpg\"}"
+    },
+    {
+      "name": "Carousel Enter activates next: keeps scroll, hash, filter and product list",
+      "passed": true,
+      "details": ""
+    },
+    {
+      "name": "Carousel Enter activates next: keeps focus on its control",
+      "passed": true,
+      "details": ""
+    },
+    {
+      "name": "Carousel Enter activates next: remounts product image",
+      "passed": true,
+      "details": ""
+    },
+    {
+      "name": "Carousel ArrowLeft activates previous: counter, caption, image and credit match TB01",
+      "passed": true,
+      "details": "{\"id\":\"TB01\",\"index\":1,\"total\":31,\"caption\":\"Sản phẩm 1 trên 31. Máy hút bụiTK-16LMáy hút bụi công nghiệp khô và ướt 16 lít\",\"image\":\"https://res.cloudinary.com/dfnlbrk4w/image/upload/c_limit,w_480,f_auto,q_auto/v1792609532/toboki/TB01.webp\",\"alt\":\"Ảnh minh họa Máy hút bụi công nghiệp khô và ướt 16 lít\",\"source\":\"https://commons.wikimedia.org/wiki/File:Craftsman_16_Gallon_Wet-Dry_Vac.jpg\"}"
+    },
+    {
+      "name": "Carousel ArrowLeft activates previous: keeps scroll, hash, filter and product list",
+      "passed": true,
+      "details": ""
+    },
+    {
+      "name": "Carousel ArrowLeft activates previous: keeps focus on its control",
+      "passed": true,
+      "details": ""
+    },
+    {
+      "name": "Carousel ArrowLeft activates previous: remounts product image",
+      "passed": true,
+      "details": ""
+    },
+    {
+      "name": "Carousel ArrowRight activates next: counter, caption, image and credit match TB02",
+      "passed": true,
+      "details": "{\"id\":\"TB02\",\"index\":2,\"total\":31,\"caption\":\"Sản phẩm 2 trên 31. Máy hút bụiTK-35LMáy hút bụi 35 lít\",\"image\":\"https://res.cloudinary.com/dfnlbrk4w/image/upload/c_limit,w_480,f_auto,q_auto/v1792609535/toboki/TB02.webp\",\"alt\":\"Ảnh minh họa Máy hút bụi 35 lít\",\"source\":\"https://commons.wikimedia.org/wiki/File:Ridgid_2026-08-12_Wet_Dry_Vacuum.jpg\"}"
+    },
+    {
+      "name": "Carousel ArrowRight activates next: keeps scroll, hash, filter and product list",
+      "passed": true,
+      "details": ""
+    },
+    {
+      "name": "Carousel ArrowRight activates next: keeps focus on its control",
+      "passed": true,
+      "details": ""
+    },
+    {
+      "name": "Carousel ArrowRight activates next: remounts product image",
+      "passed": true,
+      "details": ""
+    },
+    {
+      "name": "Carousel restore initial: counter, caption, image and credit match TB01",
+      "passed": true,
+      "details": "{\"id\":\"TB01\",\"index\":1,\"total\":31,\"caption\":\"Sản phẩm 1 trên 31. Máy hút bụiTK-16LMáy hút bụi công nghiệp khô và ướt 16 lít\",\"image\":\"https://res.cloudinary.com/dfnlbrk4w/image/upload/c_limit,w_480,f_auto,q_auto/v1792609532/toboki/TB01.webp\",\"alt\":\"Ảnh minh họa Máy hút bụi công nghiệp khô và ướt 16 lít\",\"source\":\"https://commons.wikimedia.org/wiki/File:Craftsman_16_Gallon_Wet-Dry_Vac.jpg\"}"
+    },
+    {
+      "name": "Carousel restore initial: keeps scroll, hash, filter and product list",
+      "passed": true,
+      "details": ""
+    },
+    {
+      "name": "Carousel restore initial: keeps focus on its control",
+      "passed": true,
+      "details": ""
+    },
+    {
+      "name": "Carousel restore initial: remounts product image",
+      "passed": true,
+      "details": ""
+    },
+    {
+      "name": "Carousel TB27: null model falls back to product name",
+      "passed": true,
+      "details": ""
+    },
+    {
+      "name": "Carousel TB26: null model falls back to product name",
+      "passed": true,
+      "details": ""
+    },
+    {
+      "name": "Carousel simulated image failure shows accessible fallback",
+      "passed": true,
+      "details": ""
+    },
+    {
+      "name": "Carousel next slide resets failed-image state",
+      "passed": true,
+      "details": ""
+    },
+    {
+      "name": "Carousel restored to first slide after coverage",
+      "passed": true,
+      "details": ""
+    },
+    {
+      "name": "Image credits expand",
+      "passed": true,
+      "details": ""
+    },
+    {
+      "name": "tablet: page responds HTTP 200",
+      "passed": true,
+      "details": ""
+    },
+    {
+      "name": "tablet: no horizontal overflow",
+      "passed": true,
+      "details": "768/768px"
+    },
+    {
+      "name": "tablet: 12 featured products",
+      "passed": true,
+      "details": 12
+    },
+    {
+      "name": "tablet: 15 branches",
+      "passed": true,
+      "details": 15
+    },
+    {
+      "name": "tablet: 7 primary categories and 10 category filters",
+      "passed": true,
+      "details": "7/11"
+    },
+    {
+      "name": "tablet: Vietnamese metadata and one H1",
+      "passed": true,
+      "details": ""
+    },
+    {
+      "name": "tablet: carousel starts at TB01 with counter 01/31 and matching content",
+      "passed": true,
+      "details": ""
+    },
+    {
+      "name": "tablet: menu initially closed",
+      "passed": true,
+      "details": ""
+    },
+    {
+      "name": "tablet: menu opens",
+      "passed": true,
+      "details": ""
+    },
+    {
+      "name": "tablet: Escape closes menu and restores focus",
+      "passed": true,
+      "details": ""
+    },
+    {
+      "name": "tablet: product image boxes keep their intended aspect ratio",
+      "passed": true,
+      "details": "[]"
+    },
+    {
+      "name": "tablet: images have alt",
+      "passed": true,
+      "details": ""
+    },
+    {
+      "name": "tablet: images loaded without fallback",
+      "passed": true,
+      "details": "20 loaded, 0 pending, 0 fallbacks"
+    },
+    {
+      "name": "mobile: page responds HTTP 200",
+      "passed": true,
+      "details": ""
+    },
+    {
+      "name": "mobile: no horizontal overflow",
+      "passed": true,
+      "details": "360/360px"
+    },
+    {
+      "name": "mobile: 12 featured products",
+      "passed": true,
+      "details": 12
+    },
+    {
+      "name": "mobile: 15 branches",
+      "passed": true,
+      "details": 15
+    },
+    {
+      "name": "mobile: 7 primary categories and 10 category filters",
+      "passed": true,
+      "details": "7/11"
+    },
+    {
+      "name": "mobile: Vietnamese metadata and one H1",
+      "passed": true,
+      "details": ""
+    },
+    {
+      "name": "mobile: carousel starts at TB01 with counter 01/31 and matching content",
+      "passed": true,
+      "details": ""
+    },
+    {
+      "name": "mobile: menu initially closed",
+      "passed": true,
+      "details": ""
+    },
+    {
+      "name": "mobile: menu opens",
+      "passed": true,
+      "details": ""
+    },
+    {
+      "name": "mobile: Escape closes menu and restores focus",
+      "passed": true,
+      "details": ""
+    },
+    {
+      "name": "mobile: product image boxes keep their intended aspect ratio",
+      "passed": true,
+      "details": "[]"
+    },
+    {
+      "name": "mobile: images have alt",
+      "passed": true,
+      "details": ""
+    },
+    {
+      "name": "mobile: images loaded without fallback",
+      "passed": true,
+      "details": "20 loaded, 0 pending, 0 fallbacks"
+    },
+    {
+      "name": "No application page errors",
+      "passed": true,
+      "details": ""
+    },
+    {
+      "name": "No browser console errors",
+      "passed": true,
+      "details": 0
+    }
+  ],
+  "viewports": [
+    {
+      "name": "desktop",
+      "width": 1440,
+      "scrollWidth": 1440,
+      "products": 12,
+      "branches": 15,
+      "categories": 7,
+      "filters": 11,
+      "title": "TOBOKI — Máy móc và thiết bị",
+      "lang": "vi",
+      "h1": 1,
+      "imageBoxes": [
+        {
+          "id": "TB01",
+          "width": 293,
+          "height": 244.15625
+        },
+        {
+          "id": "TB02",
+          "width": 293,
+          "height": 244.15625
+        },
+        {
+          "id": "TB06",
+          "width": 293,
+          "height": 244.15625
+        },
+        {
+          "id": "TB09",
+          "width": 293,
+          "height": 244.15625
+        },
+        {
+          "id": "TB16",
+          "width": 293,
+          "height": 244.15625
+        },
+        {
+          "id": "TB17",
+          "width": 293,
+          "height": 244.15625
+        },
+        {
+          "id": "TB22",
+          "width": 293,
+          "height": 244.15625
+        },
+        {
+          "id": "TB26",
+          "width": 293,
+          "height": 244.15625
+        },
+        {
+          "id": "TB28",
+          "width": 293,
+          "height": 244.15625
+        },
+        {
+          "id": "TB29",
+          "width": 293,
+          "height": 244.15625
+        },
+        {
+          "id": "TB30",
+          "width": 293,
+          "height": 244.15625
+        },
+        {
+          "id": "TB31",
+          "width": 293,
+          "height": 244.15625
+        }
+      ],
+      "images": {
+        "loaded": 20,
+        "pending": [],
+        "broken": [],
+        "fallbacks": 0,
+        "missingAlt": 0
+      }
+    },
+    {
+      "name": "tablet",
+      "width": 768,
+      "scrollWidth": 768,
+      "products": 12,
+      "branches": 15,
+      "categories": 7,
+      "filters": 11,
+      "title": "TOBOKI — Máy móc và thiết bị",
+      "lang": "vi",
+      "h1": 1,
+      "imageBoxes": [
+        {
+          "id": "TB01",
+          "width": 225.328125,
+          "height": 187.765625
+        },
+        {
+          "id": "TB02",
+          "width": 225.328125,
+          "height": 187.765625
+        },
+        {
+          "id": "TB06",
+          "width": 225.328125,
+          "height": 187.765625
+        },
+        {
+          "id": "TB09",
+          "width": 225.328125,
+          "height": 187.765625
+        },
+        {
+          "id": "TB16",
+          "width": 225.328125,
+          "height": 187.765625
+        },
+        {
+          "id": "TB17",
+          "width": 225.328125,
+          "height": 187.765625
+        },
+        {
+          "id": "TB22",
+          "width": 225.328125,
+          "height": 187.765625
+        },
+        {
+          "id": "TB26",
+          "width": 225.328125,
+          "height": 187.765625
+        },
+        {
+          "id": "TB28",
+          "width": 225.328125,
+          "height": 187.765625
+        },
+        {
+          "id": "TB29",
+          "width": 225.328125,
+          "height": 187.765625
+        },
+        {
+          "id": "TB30",
+          "width": 225.328125,
+          "height": 187.765625
+        },
+        {
+          "id": "TB31",
+          "width": 225.328125,
+          "height": 187.765625
+        }
+      ],
+      "images": {
+        "loaded": 20,
+        "pending": [],
+        "broken": [],
+        "fallbacks": 0,
+        "missingAlt": 0
+      }
+    },
+    {
+      "name": "mobile",
+      "width": 360,
+      "scrollWidth": 360,
+      "products": 12,
+      "branches": 15,
+      "categories": 7,
+      "filters": 11,
+      "title": "TOBOKI — Máy móc và thiết bị",
+      "lang": "vi",
+      "h1": 1,
+      "imageBoxes": [
+        {
+          "id": "TB01",
+          "width": 155,
+          "height": 155
+        },
+        {
+          "id": "TB02",
+          "width": 155,
+          "height": 155
+        },
+        {
+          "id": "TB06",
+          "width": 155,
+          "height": 155
+        },
+        {
+          "id": "TB09",
+          "width": 155,
+          "height": 155
+        },
+        {
+          "id": "TB16",
+          "width": 155,
+          "height": 155
+        },
+        {
+          "id": "TB17",
+          "width": 155,
+          "height": 155
+        },
+        {
+          "id": "TB22",
+          "width": 155,
+          "height": 155
+        },
+        {
+          "id": "TB26",
+          "width": 155,
+          "height": 155
+        },
+        {
+          "id": "TB28",
+          "width": 155,
+          "height": 155
+        },
+        {
+          "id": "TB29",
+          "width": 155,
+          "height": 155
+        },
+        {
+          "id": "TB30",
+          "width": 155,
+          "height": 155
+        },
+        {
+          "id": "TB31",
+          "width": 155,
+          "height": 155
+        }
+      ],
+      "images": {
+        "loaded": 20,
+        "pending": [],
+        "broken": [],
+        "fallbacks": 0,
+        "missingAlt": 0
+      }
+    }
+  ],
+  "errors": [],
+  "network": [],
+  "cancelledImageRequests": [],
+  "browser": "155.0.8059.85"
+}
