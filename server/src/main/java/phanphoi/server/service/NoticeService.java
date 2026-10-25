@@ -7,6 +7,7 @@ import phanphoi.common.Protocol;
 import phanphoi.server.Events;
 import phanphoi.server.ServiceException;
 import phanphoi.server.db.Db;
+import phanphoi.server.mail.EmailNotifications;
 
 import java.nio.charset.StandardCharsets;
 import java.sql.ResultSet;
@@ -58,12 +59,18 @@ public final class NoticeService {
     private final Outbox outbox;
     private final Events events;
     private final RequestService requests;
+    private final EmailNotifications email;
 
     public NoticeService(Db db, Outbox outbox, Events events, RequestService requests) {
+        this(db, outbox, events, requests, EmailNotifications.disabled());
+    }
+
+    public NoticeService(Db db, Outbox outbox, Events events, RequestService requests, EmailNotifications email) {
         this.db = db;
         this.outbox = outbox;
         this.events = events;
         this.requests = requests;
+        this.email = email;
     }
 
     // ================= quy tắc (thuần, có test) =================
@@ -159,6 +166,8 @@ public final class NoticeService {
             return new Created(id, sent);
         });
 
+        // Transaction đã commit; chỉ xếp hàng, SMTP chạy trên luồng riêng.
+        int mailQueued = email.noticeCreated(created.id(), loai, title, body, created.branches());
         int now = 0;
         for (String cn : created.branches()) {
             Message m = message(created.id(), cn);
@@ -171,6 +180,8 @@ public final class NoticeService {
         out.put("id", created.id());
         out.put("tong", created.branches().size());
         out.put("guiNgay", now);
+        out.put("emailEnabled", email.enabled());
+        out.put("emailQueued", mailQueued);
         return out;
     }
 

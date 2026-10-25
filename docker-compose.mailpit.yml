@@ -1,0 +1,24 @@
+# Chi dung thu local: Mailpit giu email de xem, khong chuyen toi hop thu Internet.
+# docker compose -f docker-compose.yml -f docker-compose.mailpit.yml up --build -d
+services:
+  mailpit:
+    # Mirror chinh thuc, giu cung phien ban; tranh duong CDN Docker Hub khi loi DNS.
+    image: ghcr.io/axllent/mailpit:v1.27.4
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8025:8025"
+      - "127.0.0.1:1025:1025"
+  server:
+    environment:
+      MAIL_ENABLED: "true"
+      MAIL_SMTP_HOST: mailpit
+      MAIL_SMTP_PORT: "1025"
+      MAIL_SMTP_SECURITY: none
+      MAIL_SMTP_USERNAME: ""
+      MAIL_SMTP_PASSWORD: ""
+      MAIL_FROM: noreply@phanphoi.test
+      MAIL_ADMIN_RECIPIENTS: admin@phanphoi.test
+      MAIL_BRANCH_RECIPIENTS: CN01=cn01@phanphoi.test;CN02=cn02@phanphoi.test
+    depends_on:
+      mailpit:
+        condition: service_started

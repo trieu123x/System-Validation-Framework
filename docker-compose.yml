@@ -33,9 +33,19 @@ services:
     command: ["server"]
     restart: unless-stopped
     environment:
+      TZ: Asia/Ho_Chi_Minh
       DB_URL: jdbc:postgresql://db:5432/phan_phoi_hang
       DB_PASSWORD: ${DB_PASSWORD:-phanphoi}
       ADMIN_PASSWORD_HASH: ${ADMIN_PASSWORD_HASH:-}
+      MAIL_ENABLED: ${MAIL_ENABLED:-false}
+      MAIL_SMTP_HOST: ${MAIL_SMTP_HOST:-}
+      MAIL_SMTP_PORT: ${MAIL_SMTP_PORT:-587}
+      MAIL_SMTP_SECURITY: ${MAIL_SMTP_SECURITY:-starttls}
+      MAIL_SMTP_USERNAME: ${MAIL_SMTP_USERNAME:-}
+      MAIL_SMTP_PASSWORD: ${MAIL_SMTP_PASSWORD:-}
+      MAIL_FROM: ${MAIL_FROM:-noreply@phanphoi.test}
+      MAIL_ADMIN_RECIPIENTS: ${MAIL_ADMIN_RECIPIENTS:-}
+      MAIL_BRANCH_RECIPIENTS: ${MAIL_BRANCH_RECIPIENTS:-}
     depends_on:
       db:
         condition: service_healthy

@@ -71,6 +71,8 @@ public final class SecurityMonitor {
     /** maCn → (ip → lần đăng nhập sai cuối) cho CRED_STUFFING. */
     private final Map<String, Map<String, Long>> failsByBranch = new ConcurrentHashMap<>();
     private final Map<String, Long> lastEmit = new ConcurrentHashMap<>();
+    /** Mốc IP gần nhất trong tiến trình; không suy đoán vị trí địa lý hay danh tính thiết bị. */
+    private final Map<String, String> lastLoginIp = new ConcurrentHashMap<>();
     private final RateCounter allMsgs = new RateCounter(10);
     private final RateCounter adminFails = new RateCounter(600);
     private final AtomicLong serverFull = new AtomicLong();
@@ -241,6 +243,19 @@ public final class SecurityMonitor {
         if (s != overflow) {
             s.authed.incrementAndGet();
             st.authCounted = true;
+        }
+    }
+
+    /** Sau đăng nhập thành công. maCn=null là tài khoản công ty; lần đầu chỉ tạo mốc so sánh. */
+    public void onSuccessfulLogin(String maCn, String ip, long now) {
+        if (off() || ip == null || ip.isBlank()) return;
+        String account = maCn == null ? "ADMIN" : "CN:" + maCn;
+        if (!lastLoginIp.containsKey(account) && lastLoginIp.size() >= MAX_TRACKED) return;
+        String previous = lastLoginIp.put(account, ip);
+        if (previous != null && !previous.equals(ip)) {
+            emit(account, now, maCn == null ? ADMIN : SERVER, "LOGIN_NEW_IP", MEDIUM, ip, maCn,
+                    "Dang nhap thanh cong tu IP khac lan truoc: " + previous + " -> " + ip
+                            + "; can kiem tra, co the do doi mang/VPN/NAT", GHI_NHAN);
         }
     }
 

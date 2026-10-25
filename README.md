@@ -2,6 +2,9 @@
 
 Bài tập lớn môn Lập trình mạng, Chủ đề 3 (ứng dụng mạng Client/Server).
 
+**Email bổ sung:** server có thể gửi cảnh báo đăng nhập bất thường và email khi công ty tạo thông báo
+cho chi nhánh. Mặc định tắt; xem [cấu hình SMTP, thử Mailpit và giải thích thiết kế](docs/EMAIL.md).
+
 ## 1. Mô tả
 
 **Bài toán.** Một công ty có kho tổng và 10–20 chi nhánh. Chi nhánh bán hàng hằng ngày. Khi tồn kho xuống dưới ngưỡng, chi nhánh cần được cấp hàng nhanh và đúng số lượng. Nếu làm thủ công qua điện thoại hoặc email thì báo chậm, dễ trùng yêu cầu, và kho tổng có thể bị xuất vượt khi nhiều chi nhánh cùng xin một mặt hàng.

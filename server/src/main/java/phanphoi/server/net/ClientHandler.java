@@ -248,6 +248,7 @@ public final class ClientHandler {
         }
         maCn = id;
         ctx.security().onLogin(stats, ip(), System.currentTimeMillis());
+        ctx.security().onSuccessfulLogin(id, ip(), System.currentTimeMillis());
         if (!ctx.quiet()) {
             System.out.println("[server] " + id + " dang nhap tu " + remote());
         }

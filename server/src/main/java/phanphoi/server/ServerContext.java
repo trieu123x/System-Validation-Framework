@@ -1,6 +1,9 @@
 package phanphoi.server;
 
 import phanphoi.server.db.Db;
+import phanphoi.server.mail.EmailNotifications;
+import phanphoi.server.security.EventSink;
+import phanphoi.server.security.SecurityEvent;
 import phanphoi.server.net.SessionRegistry;
 import phanphoi.server.security.SecurityEventLog;
 import phanphoi.server.security.SecurityMonitor;
@@ -30,16 +33,33 @@ public final class ServerContext {
     private final SecurityMonitor security;
     private final ServerSettings settings;
     private final boolean quiet;
+    private final EmailNotifications email;
 
     public ServerContext(Db db, ServerSettings settings, boolean quiet) {
+        this(db, settings, quiet, EmailNotifications.disabled());
+    }
+
+    public ServerContext(Db db, ServerSettings settings, boolean quiet, EmailNotifications email) {
         this.db = db;
         this.settings = settings;
         this.quiet = quiet;
+        this.email = email;
         this.events = new Events();
         this.log = new MessageLog(db, events);
         this.registry = new SessionRegistry(events);
         this.securityLog = new SecurityEventLog(db, events);
-        this.security = new SecurityMonitor(settings.securityRules, () -> settings.securityMode, securityLog);
+        this.security = new SecurityMonitor(settings.securityRules, () -> settings.securityMode, new EventSink() {
+            @Override
+            public void emit(SecurityEvent event) {
+                securityLog.emit(event);
+                email.onSecurityEvent(event);
+            }
+
+            @Override
+            public long dropped() {
+                return securityLog.dropped();
+            }
+        });
         this.outbox = new Outbox(db, registry, settings);
         this.auth = new AuthService(db);
         this.stock = new StockService(db, events);
@@ -48,12 +68,16 @@ public final class ServerContext {
         this.requests = new RequestService(db, outbox, events, transfers, debts, settings);
         outbox.addResyncSource(requests::resync);
         outbox.addResyncSource(transfers::resync);
-        this.notices = new NoticeService(db, outbox, events, requests);
+        this.notices = new NoticeService(db, outbox, events, requests, email);
         outbox.addResyncSource(notices::resync);
     }
 
     public ServerSettings settings() {
         return settings;
+    }
+
+    public EmailNotifications email() {
+        return email;
     }
 
     /** Tắt log từng lần đăng nhập ra console (khi giả lập hàng trăm client). */

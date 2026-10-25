@@ -3,6 +3,8 @@ package phanphoi.server;
 import phanphoi.common.Config;
 import phanphoi.common.Protocol;
 import phanphoi.server.db.Db;
+import phanphoi.server.mail.EmailNotifications;
+import phanphoi.server.mail.MailSettings;
 import phanphoi.server.net.DiscoveryResponder;
 import phanphoi.server.net.BioServer;
 import phanphoi.server.net.NetServer;
@@ -21,6 +23,7 @@ public final class ServerMain {
 
     public static void main(String[] args) throws Exception {
         Config cfg = Config.load("config/server.properties", args);
+        MailSettings mailSettings = MailSettings.from(cfg);
         int tcpPort = cfg.getInt("tcp.port", Protocol.DEFAULT_TCP_PORT);
         int udpPort = cfg.getInt("discovery.port", Protocol.DEFAULT_DISCOVERY_PORT);
         String adminHost = cfg.get("admin.http.host", "127.0.0.1");
@@ -36,7 +39,8 @@ public final class ServerMain {
         System.out.println("[server] da ket noi CSDL");
 
         ServerSettings settings = new ServerSettings(cfg);
-        ServerContext ctx = new ServerContext(db, settings, cfg.getBool("log.quiet", false));
+        ServerContext ctx = new ServerContext(db, settings, cfg.getBool("log.quiet", false), new EmailNotifications(mailSettings));
+        System.out.println("[server] email: " + (ctx.email().enabled() ? "SMTP bat" : "tat"));
         long idleMs = cfg.getInt("heartbeat.idle.seconds", 30) * 1000L;
         long pongMs = cfg.getInt("heartbeat.pong.timeout.seconds", 10) * 1000L;
         NetServer tcp = settings.ioMode == ServerSettings.IoMode.NIO
@@ -78,6 +82,7 @@ public final class ServerMain {
             } catch (Exception ignored) {
                 // đang tắt
             }
+            ctx.email().close();
             db.close();
         }, "shutdown"));
 

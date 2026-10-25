@@ -78,6 +78,7 @@ public final class AdminApi implements AutoCloseable {
         Router r = new Router();
         r.get("/api/role", (ex, p) -> Http.ok(ex, Map.of("role", "admin")));
         r.get("/api/info", (ex, p) -> Http.ok(ex, info));
+        r.get("/api/mail/status", (ex, p) -> Http.ok(ex, ctx.email().status()));
 
         // ---- đăng nhập công ty ----
         r.get("/api/auth/me", (ex, p) -> {
@@ -102,6 +103,7 @@ public final class AdminApi implements AutoCloseable {
                     throw new Http.ApiException(401, "Sai ten dang nhap hoac mat khau");
                 }
             }
+            ctx.security().onSuccessfulLogin(null, clientIp(ex), System.currentTimeMillis());
             ex.getResponseHeaders().add("Set-Cookie", AdminAuth.setCookie(token));
             Http.ok(ex, Map.of("loggedIn", true, "user", auth.user()));
         });
