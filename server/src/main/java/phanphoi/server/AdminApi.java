@@ -34,6 +34,7 @@ public final class AdminApi implements AutoCloseable {
     private final Map<String, Object> info;
     private final AdminAuth auth;
     private final Object loginLock = new Object();
+    private final AdminLoginDevice loginDevices = new AdminLoginDevice();
 
     /** Không cần đăng nhập: trang đăng nhập cần biết vai trò và trạng thái phiên. */
     private static final Set<String> PUBLIC = Set.of("/api/role", "/api/auth/login", "/api/auth/me", "/api/auth/logout");
@@ -86,21 +87,24 @@ public final class AdminApi implements AutoCloseable {
         });
         r.post("/api/auth/login", (ex, p) -> {
             JsonObject b = Http.body(ex);
+            // A signed, HttpOnly cookie distinguishes browser instances behind one Funnel/Caddy proxy.
+            // The token is not an authentication credential; it only scopes failed-login counters.
+            String browserKey = loginDevices.identify(ex);
             String token;
-            // ADMIN_BRUTE_FORCE: sai admin.lock.fails lần thì khóa đăng nhập, kể cả khi sau đó nhập đúng.
-            // Tuần tự hoá kiểm tra khóa → xác thực → đếm lần sai, để nhiều request song song không vượt quá số lần thử.
+            // Serialize check -> authenticate -> count to prevent concurrent requests bypassing the threshold.
             synchronized (loginLock) {
-                long locked = ctx.security().adminLockedUntil(System.currentTimeMillis());
+                long locked = ctx.security().adminLockedUntil(browserKey, System.currentTimeMillis());
                 if (locked > 0) {
-                    throw new Http.ApiException(429, "Dang nhap bi khoa den "
+                    throw new Http.ApiException(429, "Trinh duyet nay bi khoa dang nhap den "
                             + java.time.LocalTime.ofInstant(java.time.Instant.ofEpochMilli(locked), java.time.ZoneId.systemDefault())
                             .withNano(0) + " vi sai mat khau nhieu lan");
                 }
                 token = auth.login(Http.str(b, "user"), Http.str(b, "matKhau"));
                 if (token == null) {
-                    ctx.security().onAdminLoginFail(clientIp(ex), System.currentTimeMillis());
+                    ctx.security().onAdminLoginFail(clientIp(ex), browserKey, System.currentTimeMillis());
                     throw new Http.ApiException(401, "Sai ten dang nhap hoac mat khau");
                 }
+                ctx.security().onAdminLoginSuccess(browserKey);
             }
             ex.getResponseHeaders().add("Set-Cookie", AdminAuth.setCookie(token));
             Http.ok(ex, Map.of("loggedIn", true, "user", auth.user()));

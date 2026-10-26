@@ -8,6 +8,7 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.ArrayDeque;
 import java.util.EnumSet;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -72,9 +73,14 @@ public final class SecurityMonitor {
     private final Map<String, Map<String, Long>> failsByBranch = new ConcurrentHashMap<>();
     private final Map<String, Long> lastEmit = new ConcurrentHashMap<>();
     private final RateCounter allMsgs = new RateCounter(10);
-    private final RateCounter adminFails = new RateCounter(600);
+    /** Login failures are tracked per browser token, not for the whole Admin account or proxy IP. */
+    private static final class AdminFailureState {
+        final ArrayDeque<Long> failures = new ArrayDeque<>();
+        long lockedUntil;
+        long lastSeen;
+    }
+    private final Map<String, AdminFailureState> adminFailures = new ConcurrentHashMap<>();
     private final AtomicLong serverFull = new AtomicLong();
-    private volatile long adminLockedUntil;
     private volatile long lastFullFlush;
 
     public SecurityMonitor(SecurityRules rules, Supplier<Mode> mode, EventSink sink) {
@@ -484,25 +490,57 @@ public final class SecurityMonitor {
 
     // ================= đăng nhập trang công ty =================
 
-    /** @return thời điểm hết khóa đăng nhập admin, 0 nếu không khóa. */
-    public long adminLockedUntil(long now) {
-        long u = adminLockedUntil;
-        return u > now ? u : 0;
+    /** @return thời điểm hết khóa của một trình duyệt, 0 nếu chưa bị khóa. */
+    public long adminLockedUntil(String browserKey, long now) {
+        if (off()) {
+            return 0;
+        }
+        AdminFailureState s = adminFailures.get(browserKey);
+        if (s == null) {
+            return 0;
+        }
+        synchronized (s) {
+            s.lastSeen = now;
+            return s.lockedUntil > now ? s.lockedUntil : 0;
+        }
     }
 
-    /** Sai mật khẩu admin: đủ adminLockFails lần trong adminLockWindowSec thì khóa (cả ở detect). */
-    public void onAdminLoginFail(String ip, long now) {
+    /** Sai Admin đủ ngưỡng -> chỉ khóa browserKey này; vẫn áp dụng cả ở mode=detect. */
+    public void onAdminLoginFail(String ip, String browserKey, long now) {
         if (off()) {
             return;
         }
-        adminFails.add(now);
-        long n = adminFails.sum(now, rules.adminLockWindowSec);
-        if (n >= rules.adminLockFails && adminLockedUntil(now) == 0) {
-            adminLockedUntil = now + rules.adminLockMinutes * 60_000L;
-            emit("admin", now, ADMIN, "ADMIN_BRUTE_FORCE", HIGH, ip, null,
-                    n + " lan sai mat khau trang cong ty trong " + rules.adminLockWindowSec / 60 + " phut; khoa dang nhap den "
-                            + hhmm(adminLockedUntil), KHOA_TK);
+        // Guard against unbounded memory use if very many unique browser cookies arrive.
+        if (!adminFailures.containsKey(browserKey) && adminFailures.size() >= MAX_TRACKED) {
+            throw new IllegalStateException("Too many tracked admin browsers; temporarily refusing new login attempts");
         }
+        AdminFailureState s = adminFailures.computeIfAbsent(browserKey, k -> new AdminFailureState());
+        synchronized (s) {
+            s.lastSeen = now;
+            if (s.lockedUntil > now) {
+                return;
+            }
+            long cutoff = now - rules.adminLockWindowSec * 1000L;
+            while (!s.failures.isEmpty() && s.failures.peekFirst() <= cutoff) {
+                s.failures.removeFirst();
+            }
+            s.failures.addLast(now);
+            if (s.failures.size() >= rules.adminLockFails) {
+                s.lockedUntil = now + rules.adminLockMinutes * 60_000L;
+                s.failures.clear();
+                // Avoid storing the full browser credential in logs; only a short correlation prefix.
+                String shortKey = browserKey.substring(0, Math.min(browserKey.length(), 8));
+                emit("admin-browser-" + shortKey, now, ADMIN, "ADMIN_BRUTE_FORCE", HIGH, ip, null,
+                        "Browser " + shortKey + ": sai mat khau " + rules.adminLockFails
+                                + " lan trong " + rules.adminLockWindowSec + " s; khoa den "
+                                + hhmm(s.lockedUntil), KHOA_TK);
+            }
+        }
+    }
+
+    /** Đăng nhập đúng: xóa các lỗi trước đó của đúng trình duyệt này. */
+    public void onAdminLoginSuccess(String browserKey) {
+        adminFailures.remove(browserKey);
     }
 
     // ================= quản trị =================
@@ -539,6 +577,13 @@ public final class SecurityMonitor {
         lastEmit.values().removeIf(t -> now - t > 600_000);
         failsByBranch.values().forEach(m -> m.values().removeIf(t -> now - t > rules.credStuffingWindowSec * 1000L));
         failsByBranch.values().removeIf(Map::isEmpty);
+        long keepMs = Math.max(600_000L, (long) (rules.adminLockWindowSec + rules.adminLockMinutes * 60) * 1000L);
+        adminFailures.entrySet().removeIf(e -> {
+            AdminFailureState state = e.getValue();
+            synchronized (state) {
+                return state.lockedUntil <= now && now - state.lastSeen > keepMs;
+            }
+        });
     }
 
     /** Tin/giây toàn server, trung bình 10 giây. */

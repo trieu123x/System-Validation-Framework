@@ -14,6 +14,7 @@ import java.net.InetSocketAddress;
 import java.net.URI;
 import java.nio.file.Path;
 import java.util.Arrays;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Executors;
@@ -28,6 +29,9 @@ public final class ClientMain {
         Config cfg = Config.load("config/client.properties", args);
         String host = cfg.get("http.host", "127.0.0.1");
         int httpPort = cfg.getInt("http.port", 8081);
+        // Optional: lock one deployed client instance to one branch ID.
+        // Blank means an independent client.jar may log in to any permitted branch.
+        String fixedBranchId = cfg.get("branch.id", "").trim().toUpperCase(Locale.ROOT);
 
         BranchAgent agent = new BranchAgent(
                 cfg.get("server", "auto"),
@@ -47,7 +51,7 @@ public final class ClientMain {
             t.setDaemon(true);
             return t;
         }));
-        Router api = routes(agent);
+        Router api = routes(agent, fixedBranchId);
         // API chỉ nghe localhost nhưng trang web lạ trong trình duyệt vẫn gọi được: chặn Origin/Host lạ (CSRF, DNS rebinding)
         http.createContext("/api/", ex -> {
             if (!agent.allowHttp(ex.getRequestMethod(), ex.getRequestURI().getPath(),
@@ -89,14 +93,15 @@ public final class ClientMain {
         }, "shutdown"));
     }
 
-    private static Router routes(BranchAgent agent) {
+    private static Router routes(BranchAgent agent, String fixedBranchId) {
         Router r = new Router();
         Map<String, Object> ok = Map.of("ok", true);
         r.get("/api/role", (ex, p) -> Http.ok(ex, Map.of("role", "branch")));
         r.get("/api/state", (ex, p) -> Http.ok(ex, agent.snapshot()));
         r.get("/api/events", (ex, p) -> agent.hub().open(ex,
                 () -> new String[]{"state", Http.GSON.toJson(agent.snapshot())}));
-        r.get("/api/config", (ex, p) -> Http.ok(ex, Map.of("server", agent.serverSetting())));
+        r.get("/api/config", (ex, p) -> Http.ok(ex, Map.of(
+                "server", agent.serverSetting(), "branchId", fixedBranchId)));
         r.get("/api/security", (ex, p) -> Http.ok(ex, agent.securitySnapshot()));
         r.get("/api/debt", (ex, p) -> {
             Map<String, Object> d = agent.debt();
@@ -104,7 +109,12 @@ public final class ClientMain {
         });
         r.post("/api/login", (ex, p) -> {
             JsonObject b = Http.body(ex);
-            Http.ok(ex, agent.login(Http.str(b, "maCn"), Http.str(b, "matKhau"), Http.str(b, "server")));
+            String requestedBranchId = Http.str(b, "maCn").trim().toUpperCase(Locale.ROOT);
+            // Enforce on the server-side; a read-only input alone is not security.
+            if (!fixedBranchId.isEmpty() && !fixedBranchId.equals(requestedBranchId)) {
+                throw new Http.ApiException(403, "Trang nay chi cho phep dang nhap " + fixedBranchId);
+            }
+            Http.ok(ex, agent.login(requestedBranchId, Http.str(b, "matKhau"), Http.str(b, "server")));
         });
         r.post("/api/logout", (ex, p) -> {
             agent.logout();

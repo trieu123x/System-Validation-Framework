@@ -312,12 +312,12 @@ class SecurityRulesTest {
     void adminLockAfterFiveFailsEvenInDetect() {
         mode.set(Mode.DETECT);
         for (int i = 0; i < 4; i++) {
-            m.onAdminLoginFail("127.0.0.1", T0 + i * 1000);
+            m.onAdminLoginFail("127.0.0.1", "browser-A", T0 + i * 1000);
         }
-        assertEquals(0, m.adminLockedUntil(T0 + 4000));
-        m.onAdminLoginFail("127.0.0.1", T0 + 5000);
-        assertEquals(T0 + 5000 + 300_000, m.adminLockedUntil(T0 + 6000));
-        assertEquals(0, m.adminLockedUntil(T0 + 5000 + 300_000));
+        assertEquals(0, m.adminLockedUntil("browser-A", T0 + 4000));
+        m.onAdminLoginFail("127.0.0.1", "browser-A", T0 + 5000);
+        assertEquals(T0 + 5000 + 300_000, m.adminLockedUntil("browser-A", T0 + 6000));
+        assertEquals(0, m.adminLockedUntil("browser-A", T0 + 5000 + 300_000));
         assertEquals(SecurityEvent.KHOA_TK, of("ADMIN_BRUTE_FORCE").get(0).hanhDong());
     }
 
@@ -325,9 +325,37 @@ class SecurityRulesTest {
     void adminNoLockWhenOff() {
         mode.set(Mode.OFF);
         for (int i = 0; i < 10; i++) {
-            m.onAdminLoginFail("127.0.0.1", T0 + i);
+            m.onAdminLoginFail("127.0.0.1", "browser-A", T0 + i);
         }
-        assertEquals(0, m.adminLockedUntil(T0 + 20));
+        assertEquals(0, m.adminLockedUntil("browser-A", T0 + 20));
+    }
+
+    @Test
+    void adminLockIsIndependentForTwoBrowsersSharingOneProxyIp() {
+        String sharedProxyIp = "172.20.0.5";
+        for (int i = 0; i < 5; i++) {
+            m.onAdminLoginFail(sharedProxyIp, "browser-A", T0 + i * 1_000);
+        }
+        assertTrue(m.adminLockedUntil("browser-A", T0 + 5_000) > 0);
+        assertEquals(0, m.adminLockedUntil("browser-B", T0 + 5_000));
+        for (int i = 0; i < 2; i++) {
+            m.onAdminLoginFail(sharedProxyIp, "browser-B", T0 + 5_000 + i * 100);
+        }
+        assertEquals(0, m.adminLockedUntil("browser-B", T0 + 6_000));
+        assertTrue(m.adminLockedUntil("browser-A", T0 + 6_000) > 0);
+    }
+
+    @Test
+    void successfulAdminLoginClearsOnlyThatBrowserFailedAttempts() {
+        for (int i = 0; i < 4; i++) {
+            m.onAdminLoginFail("127.0.0.1", "browser-A", T0 + i * 1000);
+            m.onAdminLoginFail("127.0.0.1", "browser-B", T0 + i * 1000);
+        }
+        m.onAdminLoginSuccess("browser-A");
+        m.onAdminLoginFail("127.0.0.1", "browser-A", T0 + 4_000);
+        assertEquals(0, m.adminLockedUntil("browser-A", T0 + 5_000));
+        m.onAdminLoginFail("127.0.0.1", "browser-B", T0 + 4_000);
+        assertTrue(m.adminLockedUntil("browser-B", T0 + 5_000) > 0);
     }
 
     @Test

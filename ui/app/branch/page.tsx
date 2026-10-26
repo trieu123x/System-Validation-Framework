@@ -124,13 +124,20 @@ export default function BranchPage() {
 
 function Login({ snapshot, agentUp }: { snapshot: BranchSnapshot; agentUp: boolean }) {
   const [maCn, setMaCn] = useState("");
+  const [fixedBranchId, setFixedBranchId] = useState("");
   const [matKhau, setMatKhau] = useState("");
   const [server, setServer] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    api<{ server: string }>("/api/config").then((c) => setServer(c.server)).catch(() => {});
+    api<{ server: string; branchId?: string }>("/api/config").then((c) => {
+      setServer(c.server);
+      if (c.branchId) {
+        setFixedBranchId(c.branchId);
+        setMaCn(c.branchId);
+      }
+    }).catch(() => {});
   }, []);
 
   const submit = async (e: FormEvent) => {
@@ -138,7 +145,7 @@ function Login({ snapshot, agentUp }: { snapshot: BranchSnapshot; agentUp: boole
     setBusy(true);
     setError("");
     try {
-      await api("/api/login", { maCn: maCn.trim().toUpperCase(), matKhau, server });
+      await api("/api/login", { maCn: (fixedBranchId || maCn).trim().toUpperCase(), matKhau, server });
     } catch (err) {
       setError((err as Error).message);
     } finally {
@@ -150,10 +157,12 @@ function Login({ snapshot, agentUp }: { snapshot: BranchSnapshot; agentUp: boole
     <LoginScreen side="branch">
       <form className="form-stack" onSubmit={submit}>
         <label className="field">Mã chi nhánh
-          <input value={maCn} onChange={(e) => setMaCn(e.target.value)} placeholder="VD: CN01" autoFocus required />
+          <input value={fixedBranchId || maCn} onChange={(e) => setMaCn(e.target.value)}
+            placeholder="VD: CN01" readOnly={!!fixedBranchId} autoFocus={!fixedBranchId} required />
         </label>
+        {fixedBranchId && <span className="note">Trang này chỉ dành cho tài khoản {fixedBranchId}.</span>}
         <label className="field">Mật khẩu
-          <input type="password" value={matKhau} onChange={(e) => setMatKhau(e.target.value)} required />
+          <input type="password" value={matKhau} onChange={(e) => setMatKhau(e.target.value)} autoFocus={!!fixedBranchId} required />
         </label>
         <label className="field">Địa chỉ server
           <input value={server} onChange={(e) => setServer(e.target.value)} placeholder="auto hoặc 192.168.1.10:5000" />

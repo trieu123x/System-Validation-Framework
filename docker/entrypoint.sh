@@ -22,7 +22,7 @@ case "$1" in
     ;;
   client)
     shift
-    exec java $JAVA_OPTS -jar client.jar http.host=0.0.0.0 open.browser=false "server=${SERVER:-server:5000}" "$@"
+    exec java $JAVA_OPTS -jar client.jar http.host=0.0.0.0 open.browser=false "server=${SERVER:-server:5000}" "branch.id=${BRANCH_ID:-}" "$@"
     ;;
   loadsim)
     shift
