@@ -69,9 +69,16 @@ export type WarehouseDetail = {
 export type SecurityEventRow = {
   id?: number; thoiGian: string; nguon: "SERVER" | "CLIENT" | "ADMIN"; loai: string; muc: "LOW" | "MEDIUM" | "HIGH";
   ip: string | null; maCn: string | null; chiTiet: string | null; hanhDong: string;
+  eventKey?: string; metadata?: string | ScrapingMetadata; emailStatus?: string | null;
+  review?: string | null; reviewReason?: string | null;
 };
 
+export type ScrapingMetadata = { channel?: string; resource?: string; requestCount?: number; windowSeconds?: number; riskScore?: number; action?: string; retryAfter?: number; signals?: string[] };
+export type ScrapingBlock = { subject: string; expiresAt: number; reason: string };
 export type SecurityOverview = {
+  scraping?: { mode: string; enabled: boolean; requests: number; limited: number; alerts: number; activeBlocks: number; capacityMisses: number };
+  mail?: { enabled: boolean; queued: number; sent: number; failed: number; skipped: number; rejected: number; pending: number };
+  scrapingPersistence?: { pending: number; failures: number };
   ketNoi: number; tinGiay: number; ipBiChan: number; mode: "OFF" | "DETECT" | "BLOCK"; suKienBiBo: number;
   suKien24h: { high: number; medium: number; low: number };
 };

@@ -33,6 +33,7 @@ public final class AdminApi implements AutoCloseable {
     private final HttpServer http;
     private final Map<String, Object> info;
     private final AdminAuth auth;
+    private final phanphoi.server.security.RateCounter monitoringReads = new phanphoi.server.security.RateCounter(60);
     private final Object loginLock = new Object();
 
     /** Không cần đăng nhập: trang đăng nhập cần biết vai trò và trạng thái phiên. */
@@ -64,6 +65,25 @@ public final class AdminApi implements AutoCloseable {
             if (!open && !auth.valid(ex)) {
                 Http.error(ex, 401, "Chua dang nhap");
                 return;
+            }
+            if (!open && ex.getRequestMethod().equals("GET") && (path.startsWith("/api/security/") || path.equals("/api/mail/status"))) {
+                long now = System.currentTimeMillis();
+                monitoringReads.add(now);
+                if (monitoringReads.sum(now, 60) > 600) {
+                    ex.getResponseHeaders().set("Retry-After", "60");
+                    Http.error(ex, 429, "Vuot quota giam sat (600/phut)"); return;
+                }
+            }
+            // Monitoring/control routes remain accessible to resolve blocks. No query string is logged.
+            if (!open && ex.getRequestMethod().equals("GET") && !path.startsWith("/api/security/")
+                    && !path.equals("/api/mail/status") && !path.equals("/api/info")) {
+                String resource = path.replaceAll("/[0-9]+(?=/|$)", "/{id}");
+                var decision = ctx.security().onHttpRead(auth.user(), clientIp(ex), resource.length() > 100 ? resource.substring(0,100) : resource, System.currentTimeMillis());
+                if (decision.denied()) {
+                    ex.getResponseHeaders().set("Retry-After", Integer.toString(decision.retryAfter()));
+                    Http.error(ex, 429, "Truy xuat qua muc. Thu lai sau " + decision.retryAfter() + " giay");
+                    return;
+                }
             }
             r.handle(ex);
         });
@@ -113,7 +133,7 @@ public final class AdminApi implements AutoCloseable {
             Http.ok(ex, Map.of("loggedIn", false));
         });
         r.get("/api/events", (ex, p) -> ctx.events().hub().open(ex,
-                () -> new String[]{Events.BRANCHES, Http.GSON.toJson(Map.of("online", ctx.registry().onlineIds()))}));
+                () -> new String[]{Events.BRANCHES, Http.GSON.toJson(Map.of("online", ctx.registry().onlineIds()))}, () -> auth.valid(ex)));
 
         // ---- chi nhánh (FR-03) ----
         r.get("/api/branches", (ex, p) -> Http.ok(ex, ctx.stock().branches(ctx.registry().onlineIds())));
@@ -285,6 +305,10 @@ public final class AdminApi implements AutoCloseable {
                            count(*) FILTER (WHERE muc = 'LOW') AS low
                     FROM su_kien_bao_mat WHERE thoi_gian > CURRENT_TIMESTAMP - INTERVAL '24 hours'""", Db::toMap)));
             s.put("mode", ctx.settings().securityMode.name());
+            s.put("scraping", ctx.security().scraping().summary(now));
+            s.put("mail", ctx.email().status());
+            s.put("scrapingPersistence", ctx.scrapingStore().status());
+            s.put("realtimeDropped", ctx.securityLog().realtimeDropped());
             s.put("suKienBiBo", ctx.security().droppedEvents());
             Http.ok(ex, s);
         });
@@ -296,11 +320,40 @@ public final class AdminApi implements AutoCloseable {
             String ip = q.getOrDefault("ip", "");
             String maCn = q.getOrDefault("maCn", "");
             int limit = Math.max(1, Math.min(Integer.parseInt(q.getOrDefault("limit", "300")), 2000));
+            int offset = Math.max(0, Math.min(Integer.parseInt(q.getOrDefault("offset", "0")), 1000000));
             Http.ok(ex, ctx.db().read(c -> Db.rows(c, """
-                    SELECT id, thoi_gian, nguon, loai, muc, ip, ma_cn, chi_tiet, hanh_dong FROM su_kien_bao_mat
+                    SELECT id, thoi_gian, nguon, loai, muc, ip, ma_cn, chi_tiet, hanh_dong, event_key, metadata, review, review_reason,
+                    (SELECT string_agg(DISTINCT status, ',') FROM security_email_delivery d WHERE d.event_key=e.event_key) AS email_status
+                    FROM su_kien_bao_mat e
                     WHERE (? = '' OR muc = ?) AND (? = '' OR loai = ?) AND (? = '' OR nguon = ?)
                       AND (? = '' OR ip = ?) AND (? = '' OR ma_cn = ?)
-                    ORDER BY id DESC LIMIT ?""", muc, muc, loai, loai, nguon, nguon, ip, ip, maCn, maCn, limit)));
+                    ORDER BY id DESC LIMIT ? OFFSET ?""", muc, muc, loai, loai, nguon, nguon, ip, ip, maCn, maCn, limit, offset)));
+        });
+        r.get("/api/security/scraping/summary", (ex, p) -> Http.ok(ex, ctx.security().scraping().summary(System.currentTimeMillis())));
+        r.get("/api/security/scraping/blocks", (ex, p) -> Http.ok(ex, ctx.security().scraping().blocks(System.currentTimeMillis())));
+        r.post("/api/security/scraping/blocks/revoke", (ex, p) -> {
+            JsonObject b = Http.body(ex);
+            String subject = Http.str(b, "subject"), reason = Http.str(b, "reason").trim();
+            if (subject.length() > 160 || reason.isEmpty() || reason.length() > 500) throw new Http.ApiException(400, "Can doi tuong va ly do (1..500 ky tu)");
+            boolean had = ctx.security().scraping().revoke(subject);
+            ctx.security().record("ADMIN", "SCRAPING_REVOKE", "LOW", clientIp(ex), null,
+                    "actor=" + auth.user() + "; subject=" + subject + "; reason=" + reason, "GHI_NHAN", System.currentTimeMillis());
+            Http.ok(ex, Map.of("ok", had));
+        });
+        r.post("/api/security/scraping/events/{id}/review", (ex, p) -> {
+            JsonObject b = Http.body(ex);
+            String verdict = Http.str(b, "verdict"), reason = Http.str(b, "reason").trim();
+            if (!Set.of("TRUE_POSITIVE", "FALSE_POSITIVE").contains(verdict) || reason.isEmpty() || reason.length() > 500)
+                throw new Http.ApiException(400, "Danh gia hoac ly do khong hop le");
+            long id = Long.parseLong(p.get(0));
+            int changed = ctx.db().tx(c -> {
+                int n = Db.update(c, "UPDATE su_kien_bao_mat SET review=?, review_reason=? WHERE id=? AND loai IN ('SCRAPING','CLIENT_SCRAPING')", verdict, reason, id);
+                if (n > 0) Db.update(c, "INSERT INTO su_kien_bao_mat(nguon,loai,muc,ip,chi_tiet,hanh_dong) VALUES('ADMIN','SCRAPING_REVIEW','LOW',?,?,'GHI_NHAN')",
+                        clientIp(ex), "actor=" + auth.user() + "; event=" + id + "; " + verdict + "; " + reason);
+                return n;
+            });
+            if (changed == 0) throw new Http.ApiException(404, "Khong tim thay su kien scraping");
+            Http.ok(ex, Map.of("ok", true));
         });
         r.get("/api/security/ips", (ex, p) -> Http.ok(ex, ctx.security().ipTable(System.currentTimeMillis())));
         r.get("/api/security/sessions", (ex, p) -> {

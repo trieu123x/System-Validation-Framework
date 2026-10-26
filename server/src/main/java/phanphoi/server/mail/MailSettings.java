@@ -24,6 +24,9 @@ public final class MailSettings {
     final int queueSize;
     final int attempts;
     final long cooldownMs;
+    final boolean scrapingEnabled;
+    final long scrapingCooldownMs;
+    final int maxPerHour;
 
     private MailSettings() {
         enabled = false;
@@ -39,6 +42,9 @@ public final class MailSettings {
         queueSize = 200;
         attempts = 3;
         cooldownMs = 300000;
+        scrapingEnabled = false;
+        scrapingCooldownMs = 900000;
+        maxPerHour = 20;
     }
 
     private MailSettings(Config cfg, Map<String, String> env) {
@@ -56,6 +62,9 @@ public final class MailSettings {
         queueSize = enabled ? number(cfg.get("mail.queue.size", "200"), 1, 10000) : 200;
         attempts = enabled ? number(cfg.get("mail.attempts", "3"), 1, 5) : 3;
         cooldownMs = enabled ? number(cfg.get("mail.alert.cooldown.seconds", "300"), 1, 86400) * 1000L : 300000L;
+        scrapingEnabled = cfg.getBool("scraping.email.enabled", true);
+        scrapingCooldownMs = number(cfg.get("scraping.email.cooldown.seconds", "900"), 1, 86400) * 1000L;
+        maxPerHour = number(cfg.get("scraping.email.max.per.recipient.hour", "20"), 1, 1000);
         if (enabled) {
             if (host.isBlank() || host.contains("\r") || host.contains("\n")) throw new IllegalArgumentException("Can mail.smtp.host hop le");
             if (!List.of("starttls", "ssl", "none").contains(security)) throw new IllegalArgumentException("mail.smtp.security: starttls | ssl | none");

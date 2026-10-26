@@ -33,6 +33,7 @@ services:
     command: ["server"]
     restart: unless-stopped
     environment:
+      SCRAPING_MODE: ${SCRAPING_MODE:-detect}
       TZ: Asia/Ho_Chi_Minh
       DB_URL: jdbc:postgresql://db:5432/phan_phoi_hang
       DB_PASSWORD: ${DB_PASSWORD:-phanphoi}
@@ -65,6 +66,7 @@ services:
     command: ["client", "http.port=8081"]
     restart: unless-stopped
     environment:
+      SCRAPING_MODE: ${SCRAPING_MODE:-detect}
       SERVER: server:5000
     depends_on:
       server:
@@ -77,6 +79,7 @@ services:
     command: ["client", "http.port=8082"]
     restart: unless-stopped
     environment:
+      SCRAPING_MODE: ${SCRAPING_MODE:-detect}
       SERVER: server:5000
     depends_on:
       server:
@@ -90,6 +93,7 @@ services:
     command: ["loadsim", "clients=50", "duration=60"]
     profiles: ["tools"]
     environment:
+      SCRAPING_MODE: ${SCRAPING_MODE:-detect}
       SERVER: server:5000
     depends_on:
       server:

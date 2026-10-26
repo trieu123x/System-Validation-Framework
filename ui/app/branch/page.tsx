@@ -2,7 +2,7 @@
 
 import { FormEvent, useEffect, useState } from "react";
 import {
-  api, fmtMoney, fmtNumber, NOTICE_STATE_LABEL, NOTICE_STATE_TONE, NOTICE_TYPE_LABEL, STATE_LABEL, today, TRANSFER_LABEL, useEvents,
+  api, fmtMoney, fmtNumber, NOTICE_STATE_LABEL, NOTICE_STATE_TONE, NOTICE_TYPE_LABEL, STATE_LABEL, today, TRANSFER_LABEL, useEvents, UNAUTHORIZED,
 } from "@/lib/api";
 import type {
   BranchDebtInfo, BranchItem, BranchRequest, BranchSnapshot, BranchTransfer, ClientSecurityInfo, InboxItem, Notice,
@@ -32,10 +32,16 @@ export default function BranchPage() {
   const agentUp = useEvents({
     state: (snap: BranchSnapshot) => setS(snap),
     toast: (n: Notice) => push(n.level, n.text),
-  });
+  }, !!s?.maCn);
 
   useEffect(() => {
     api<BranchSnapshot>("/api/state").then(setS).catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    const reset = () => window.location.reload();
+    window.addEventListener(UNAUTHORIZED, reset);
+    return () => window.removeEventListener(UNAUTHORIZED, reset);
   }, []);
 
   // URL theo tên chi nhánh: /da-nang/ khi đã đăng nhập, /branch/ khi đăng xuất (client.jar phục vụ cùng một trang)
@@ -54,7 +60,7 @@ export default function BranchPage() {
   if (!s.maCn) {
     return (
       <>
-        <Login snapshot={s} agentUp={agentUp} />
+        <Login snapshot={s} />
         <Toasts toasts={toasts} dismiss={dismiss} />
       </>
     );
@@ -92,7 +98,7 @@ export default function BranchPage() {
         status={
           <>
             <span title={s.statusDetail}><Dot on={online} />{STATUS_TEXT[s.status]}</span>
-            <button className="btn btn-sm" onClick={() => api("/api/logout", {}).catch(() => {})}>Đăng xuất</button>
+            <button className="btn btn-sm" onClick={() => api("/api/logout", {}).then(() => window.location.reload()).catch(() => {})}>Đăng xuất</button>
           </>
         }>
         {!agentUp && <div className="banner banner-danger">Không liên lạc được với client.jar trên máy này.</div>}
@@ -122,7 +128,7 @@ export default function BranchPage() {
   );
 }
 
-function Login({ snapshot, agentUp }: { snapshot: BranchSnapshot; agentUp: boolean }) {
+function Login({ snapshot }: { snapshot: BranchSnapshot }) {
   const [maCn, setMaCn] = useState("");
   const [matKhau, setMatKhau] = useState("");
   const [server, setServer] = useState("");
@@ -139,6 +145,7 @@ function Login({ snapshot, agentUp }: { snapshot: BranchSnapshot; agentUp: boole
     setError("");
     try {
       await api("/api/login", { maCn: maCn.trim().toUpperCase(), matKhau, server });
+      window.location.reload();
     } catch (err) {
       setError((err as Error).message);
     } finally {
@@ -163,7 +170,6 @@ function Login({ snapshot, agentUp }: { snapshot: BranchSnapshot; agentUp: boole
           {snapshot.statusDetail && <> Trạng thái: {snapshot.statusDetail}</>}
         </span>
         {error && <p className="error">{error}</p>}
-        {!agentUp && <p className="error">Không liên lạc được với client.jar.</p>}
         <button className="btn btn-primary" disabled={busy}>{busy ? "Đang đăng nhập..." : "Đăng nhập"}</button>
       </form>
     </LoginScreen>

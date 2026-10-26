@@ -15,6 +15,7 @@ import java.util.function.Supplier;
 /** Server-Sent Events: đẩy sự kiện realtime xuống trình duyệt (popup cảnh báo, online/offline...). */
 public final class SseHub {
 
+    private final java.util.Map<HttpExchange, java.util.function.BooleanSupplier> validity = new java.util.concurrent.ConcurrentHashMap<>();
     private final List<HttpExchange> clients = new CopyOnWriteArrayList<>();
     private final ScheduledExecutorService keepAlive = Executors.newSingleThreadScheduledExecutor(r -> {
         Thread t = new Thread(r, "sse-keepalive");
@@ -28,6 +29,11 @@ public final class SseHub {
 
     /** Mở luồng SSE; initial (có thể null) là sự kiện gửi ngay cho người mới vào. */
     public void open(HttpExchange ex, Supplier<String[]> initial) throws IOException {
+        open(ex, initial, () -> true);
+    }
+    public synchronized void open(HttpExchange ex, Supplier<String[]> initial, java.util.function.BooleanSupplier valid) throws IOException {
+        if (!valid.getAsBoolean()) { Http.error(ex, 401, "Phien het han"); return; }
+        if (clients.size() >= 64) { ex.getResponseHeaders().set("Retry-After", "15"); Http.error(ex, 429, "Qua nhieu luong SSE"); return; }
         ex.getResponseHeaders().set("Content-Type", "text/event-stream; charset=utf-8");
         ex.getResponseHeaders().set("Cache-Control", "no-store");
         ex.getResponseHeaders().set("X-Accel-Buffering", "no");
@@ -40,12 +46,15 @@ public final class SseHub {
         } else if (!write(ex, ": open\n\n")) {
             return;
         }
+        validity.put(ex, valid);
         clients.add(ex);
     }
 
     public void publish(String event, Object data) {
         writeAll(frame(event, Http.GSON.toJson(data)));
     }
+
+    public void closeAll() { for (HttpExchange ex : clients) ex.close(); clients.clear(); validity.clear(); }
 
     public int size() {
         return clients.size();
@@ -57,7 +66,9 @@ public final class SseHub {
 
     private void writeAll(String frame) {
         for (HttpExchange ex : clients) {
-            if (!write(ex, frame)) {
+            if (!validity.getOrDefault(ex, () -> false).getAsBoolean() || !write(ex, frame)) {
+                ex.close();
+                validity.remove(ex);
                 clients.remove(ex);
             }
         }

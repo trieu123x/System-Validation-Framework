@@ -34,6 +34,8 @@ public final class ServerContext {
     private final ServerSettings settings;
     private final boolean quiet;
     private final EmailNotifications email;
+    private final phanphoi.server.security.ScrapingStore scrapingStore;
+    public phanphoi.server.security.ScrapingStore scrapingStore() { return scrapingStore; }
 
     public ServerContext(Db db, ServerSettings settings, boolean quiet) {
         this(db, settings, quiet, EmailNotifications.disabled());
@@ -60,6 +62,8 @@ public final class ServerContext {
                 return securityLog.dropped();
             }
         });
+        this.scrapingStore = new phanphoi.server.security.ScrapingStore(db, security.scraping());
+        email.audit(scrapingStore::email);
         this.outbox = new Outbox(db, registry, settings);
         this.auth = new AuthService(db);
         this.stock = new StockService(db, events);

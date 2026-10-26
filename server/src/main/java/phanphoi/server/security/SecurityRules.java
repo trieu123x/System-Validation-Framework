@@ -12,6 +12,7 @@ public final class SecurityRules {
     public enum Mode { OFF, DETECT, BLOCK }
 
     /** Chặn IP vì BRUTE_FORCE, CONN_FLOOD (phút). */
+    public final phanphoi.common.security.ScrapingPolicy scraping;
     public final int banMinutes;
     /** Chặn IP vì CMD_FLOOD, FUZZING, PRELOGIN_IDLE (phút). */
     public final int shortBanMinutes;
@@ -37,6 +38,7 @@ public final class SecurityRules {
     public final List<String> allowedOrigins;
 
     public SecurityRules(Config cfg) {
+        scraping = phanphoi.common.security.ScrapingPolicy.from(cfg);
         banMinutes = cfg.getInt("security.ban.minutes", 10);
         shortBanMinutes = cfg.getInt("security.short.ban.minutes", 5);
         loginFailMax = cfg.getInt("security.login.fail.max", 5);

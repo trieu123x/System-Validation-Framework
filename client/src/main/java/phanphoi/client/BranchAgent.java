@@ -88,6 +88,12 @@ final class BranchAgent implements ServerLink.Handler {
         return serverSetting;
     }
 
+    String branchIdentity() { synchronized (lock) { return state.maCn; } }
+    Map<String, Object> publicSnapshot() {
+        return Map.of("status", "DISCONNECTED", "statusDetail", "Dang nhap de xem du lieu", "server", serverSetting);
+    }
+    void scrapingReport(String detail) { security.scrapingReport(detail, System.currentTimeMillis()); }
+
     Map<String, Object> snapshot() {
         synchronized (lock) {
             return snap();
@@ -205,7 +211,8 @@ final class BranchAgent implements ServerLink.Handler {
         }
         synchronized (lock) {
             if (state.status == Status.ONLINE) {
-                if (maCn.equals(state.maCn)) {
+                if (maCn.equals(state.maCn) && credPw != null && java.security.MessageDigest.isEqual(
+                        matKhau.getBytes(java.nio.charset.StandardCharsets.UTF_8), credPw.getBytes(java.nio.charset.StandardCharsets.UTF_8))) {
                     return snap();
                 }
                 throw new Http.ApiException(409, "Dang dang nhap " + state.maCn + ", hay dang xuat truoc");

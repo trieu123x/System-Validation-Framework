@@ -47,13 +47,37 @@ public final class ClientMain {
             t.setDaemon(true);
             return t;
         }));
-        Router api = routes(agent);
+        var browserSessions = new phanphoi.common.web.BrowserSessions(httpPort);
+        var scraping = new phanphoi.common.security.ScrapingGuard(phanphoi.common.security.ScrapingPolicy.from(cfg));
+        Object loginLock = new Object();
+        Router api = routes(agent, browserSessions, loginLock, cfg.getBool("http.allow.server.override", false));
         // API chỉ nghe localhost nhưng trang web lạ trong trình duyệt vẫn gọi được: chặn Origin/Host lạ (CSRF, DNS rebinding)
         http.createContext("/api/", ex -> {
             if (!agent.allowHttp(ex.getRequestMethod(), ex.getRequestURI().getPath(),
                     ex.getRequestHeaders().getFirst("Origin"), ex.getRequestHeaders().getFirst("Host"))) {
                 Http.error(ex, 403, "Origin/Host khong hop le");
                 return;
+            }
+            String path = ex.getRequestURI().getPath().replaceAll("/+$", "");
+            long now = System.currentTimeMillis();
+            boolean authenticated = browserSessions.valid(ex, now, agent.branchIdentity());
+            if (!authenticated && path.equals("/api/state") && ex.getRequestMethod().equals("GET")) {
+                Http.ok(ex, agent.publicSnapshot()); return;
+            }
+            if (!authenticated && !Set.of("/api/role", "/api/config", "/api/login").contains(path)) {
+                Http.error(ex, 401, "Chua dang nhap trinh duyet"); return;
+            }
+            boolean read = Set.of("/api/state", "/api/events", "/api/debt", "/api/history", "/api/inventory/refresh").contains(path);
+            if (read || path.equals("/api/login")) {
+                String ip = ex.getRemoteAddress().getAddress().getHostAddress();
+                String branch = agent.branchIdentity();
+                String subject = authenticated && branch != null ? "branch:" + branch : "unauth:" + ip;
+                var d = scraping.evaluate(subject, ip, "HTTP", path, 0, now);
+                if (d.emit() && authenticated && (d.denied() || d.risk() >= scraping.policy().blockRisk())) agent.scrapingReport(phanphoi.common.web.Http.GSON.toJson(d.metadata()));
+                if (d.denied()) {
+                    ex.getResponseHeaders().set("Retry-After", Integer.toString(d.retryAfter()));
+                    Http.error(ex, 429, "Truy xuat qua muc. Thu lai sau " + d.retryAfter() + " giay"); return;
+                }
             }
             api.handle(ex);
         });
@@ -89,13 +113,13 @@ public final class ClientMain {
         }, "shutdown"));
     }
 
-    private static Router routes(BranchAgent agent) {
+    private static Router routes(BranchAgent agent, phanphoi.common.web.BrowserSessions browserSessions, Object loginLock, boolean allowServerOverride) {
         Router r = new Router();
         Map<String, Object> ok = Map.of("ok", true);
         r.get("/api/role", (ex, p) -> Http.ok(ex, Map.of("role", "branch")));
         r.get("/api/state", (ex, p) -> Http.ok(ex, agent.snapshot()));
         r.get("/api/events", (ex, p) -> agent.hub().open(ex,
-                () -> new String[]{"state", Http.GSON.toJson(agent.snapshot())}));
+                () -> new String[]{"state", Http.GSON.toJson(agent.snapshot())}, () -> browserSessions.valid(ex, System.currentTimeMillis(), agent.branchIdentity())));
         r.get("/api/config", (ex, p) -> Http.ok(ex, Map.of("server", agent.serverSetting())));
         r.get("/api/security", (ex, p) -> Http.ok(ex, agent.securitySnapshot()));
         r.get("/api/debt", (ex, p) -> {
@@ -104,10 +128,23 @@ public final class ClientMain {
         });
         r.post("/api/login", (ex, p) -> {
             JsonObject b = Http.body(ex);
-            Http.ok(ex, agent.login(Http.str(b, "maCn"), Http.str(b, "matKhau"), Http.str(b, "server")));
+            synchronized (loginLock) {
+                String requestedServer = Http.str(b, "server");
+                if (!allowServerOverride && !requestedServer.isBlank() && !requestedServer.equals(agent.serverSetting()))
+                    throw new Http.ApiException(400, "Dia chi server duoc quan tri cau hinh; khong doi qua HTTP");
+                String previous = agent.branchIdentity();
+                var snapshot = agent.login(Http.str(b, "maCn"), Http.str(b, "matKhau"), Http.str(b, "server"));
+                if (!java.util.Objects.equals(previous, agent.branchIdentity())) { browserSessions.clear(ex); agent.hub().closeAll(); }
+                browserSessions.issue(ex, System.currentTimeMillis(), agent.branchIdentity());
+                Http.ok(ex, snapshot);
+            }
         });
         r.post("/api/logout", (ex, p) -> {
-            agent.logout();
+            synchronized (loginLock) {
+                browserSessions.clear(ex);
+                agent.hub().closeAll();
+                agent.logout();
+            }
             Http.ok(ex, ok);
         });
         r.post("/api/inventory/refresh", (ex, p) -> {

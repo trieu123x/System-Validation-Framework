@@ -78,11 +78,13 @@ public final class ServerMain {
             try {
                 tcp.close();
                 ctx.log().close();
+                ctx.events().hub().closeAll();
                 ctx.securityLog().close();
             } catch (Exception ignored) {
                 // đang tắt
             }
             ctx.email().close();
+            ctx.scrapingStore().close();
             db.close();
         }, "shutdown"));
 

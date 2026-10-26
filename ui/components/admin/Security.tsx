@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { api, fmtNumber } from "@/lib/api";
-import type { Branch, IpRow, LogRow, SecurityEventRow, SecurityOverview, SessionRow } from "@/lib/types";
+import type { Branch, IpRow, LogRow, SecurityEventRow, SecurityOverview, SessionRow, ScrapingMetadata, ScrapingBlock } from "@/lib/types";
 import { Badge, Card, Empty, Stat, useAction } from "@/components/ui";
 import { Monitor } from "@/components/admin/Comms";
 
@@ -59,7 +59,18 @@ function SecurityPanel({ version, branches, push }: { version: number; branches:
         <Stat label="security.mode" value={ov ? MODE_TEXT[ov.mode] : "—"} tone={ov?.mode === "BLOCK" ? "success" : "warn"}
           hint={ov?.suKienBiBo ? `bỏ ${ov.suKienBiBo} sự kiện vì hàng đợi đầy` : undefined} />
       </div>
-      <Events version={version} branches={branches} />
+      <div className="kpis">
+        <Stat label="Anti-scraping" value={ov?.scraping?.mode ?? "—"} hint="Quy tắc mới; TCP cũ vẫn theo security.mode" />
+        <Stat label="Đã giới hạn (từ lúc chạy)" value={fmtNumber(ov?.scraping?.limited)} />
+        <Stat label="Tài khoản tạm khóa" value={fmtNumber(ov?.scraping?.activeBlocks)} />
+        <Stat label="Email đã gửi / lỗi" value={ov?.mail ? `${ov.mail.sent} / ${ov.mail.failed}` : "—"}
+          tone={ov?.mail?.failed ? "danger" : undefined}
+          hint={ov?.mail ? `${ov.mail.enabled ? "SMTP bật" : "SMTP tắt"} · ${ov.mail.pending} đang chờ · ${ov.mail.skipped} bỏ trùng/giới hạn · ${ov.mail.rejected} bị từ chối` : undefined} />
+      </div>
+      {!!ov?.scrapingPersistence?.failures && <p role="alert" className="muted">Có {ov.scrapingPersistence.failures} lỗi lưu audit/khóa. Trạng thái chưa lưu có thể mất khi khởi động lại.</p>}
+      {!!ov?.scraping?.capacityMisses && <p role="alert">Bộ đếm đã đầy: {ov.scraping.capacityMisses} yêu cầu chưa được theo dõi.</p>}
+      <ScrapingBlocks tick={tick + version} push={push} />
+      <Events version={tick + version} branches={branches} push={push} />
       <div className="grid grid-2" style={{ marginTop: 12 }}>
         <IpTable tick={tick + version} push={push} />
         <Sessions tick={tick + version} push={push} />
@@ -68,20 +79,41 @@ function SecurityPanel({ version, branches, push }: { version: number; branches:
   );
 }
 
-function Events({ version, branches }: { version: number; branches: Branch[] }) {
+function Events({ version, branches, push }: { version: number; branches: Branch[]; push: Push }) {
+  const [offset, setOffset] = useState(0);
+  const [refresh, setRefresh] = useState(0);
+  const { run } = useAction(push);
   const [rows, setRows] = useState<SecurityEventRow[]>([]);
   const [f, setF] = useState({ muc: "", loai: "", nguon: "", ip: "", maCn: "" });
 
   useEffect(() => {
-    const q = new URLSearchParams({ ...f, limit: "300" }).toString();
+    const q = new URLSearchParams({ ...f, limit: "100", offset: String(offset) }).toString();
     api<SecurityEventRow[]>(`/api/security/events?${q}`).then(setRows).catch(() => {});
-  }, [version, f]);
+  }, [version, f, offset, refresh]);
 
-  const set = (k: keyof typeof f) => (e: { target: { value: string } }) => setF({ ...f, [k]: e.target.value.trim() });
-  const types = [...new Set(rows.map((r) => r.loai))].sort();
+  const set = (k: keyof typeof f) => (e: { target: { value: string } }) => { setOffset(0); setF({ ...f, [k]: e.target.value.trim() }); };
+  const types = [...new Set(["SCRAPING", "CLIENT_SCRAPING", ...rows.map((r) => r.loai)])].sort();
+  const review = async (row: SecurityEventRow, verdict: string) => {
+    const reason = window.prompt("Lý do đánh giá sự kiện:");
+    if (!reason?.trim()) return;
+    if (await run(() => api(`/api/security/scraping/events/${row.id}/review`, { verdict, reason }), "Đã lưu đánh giá")) setRefresh(x => x + 1);
+  };
+  const exportReport = () => {
+    const safe = rows.map(({ ip, maCn, eventKey, thoiGian, loai, muc, hanhDong, metadata, review, emailStatus }) =>
+      ({ ip: maskIp(ip), maCn, eventKey, thoiGian, loai, muc, hanhDong, metadata: parseMetadata(metadata), review, emailStatus }));
+    const url = URL.createObjectURL(new Blob([JSON.stringify(safe, null, 2)], { type: "application/json" }));
+    const a = document.createElement("a"); a.href = url; a.download = "security-events.json"; a.click(); URL.revokeObjectURL(url);
+  };
 
   return (
     <Card title={<>Sự kiện an ninh <span className="muted">· {rows.length} gần nhất, cập nhật realtime</span></>}>
+      <div className="row" style={{ gap: 8, marginBottom: 10 }}>
+        <button className="btn" onClick={() => { setOffset(0); setF({ ...f, loai: "SCRAPING" }); }}>Chỉ scraping server</button>
+        <button className="btn" onClick={exportReport}>Xuất trang hiện tại (ẩn IP)</button>
+        <button className="btn" disabled={!offset} onClick={() => setOffset(x => Math.max(0, x - 100))}>Trước</button>
+        <span>{offset + 1}–{offset + rows.length}</span>
+        <button className="btn" disabled={rows.length < 100} onClick={() => setOffset(x => x + 100)}>Sau</button>
+      </div>
       <div className="filterbar">
         <label className="field">Mức
           <select value={f.muc} onChange={set("muc")}>
@@ -109,7 +141,7 @@ function Events({ version, branches }: { version: number; branches: Branch[] }) 
         <div className="table-wrap scroll" style={{ maxHeight: 420 }}>
           <table>
             <thead>
-              <tr><th>Thời gian</th><th>Mức</th><th>Mã</th><th>Nguồn</th><th>IP</th><th>CN</th><th>Chi tiết</th><th>Xử lý</th></tr>
+              <tr><th>Thời gian</th><th>Mức</th><th>Mã</th><th>Nguồn</th><th>IP</th><th>CN</th><th>Chi tiết / Risk</th><th>Xử lý</th><th>Email</th><th>Đánh giá</th></tr>
             </thead>
             <tbody>
               {rows.map((r, i) => (
@@ -118,11 +150,25 @@ function Events({ version, branches }: { version: number; branches: Branch[] }) 
                   <td><Badge tone={LEVEL_TONE[r.muc]}>{r.muc}</Badge></td>
                   <td className="code">{r.loai}</td>
                   <td>{r.nguon}</td>
-                  <td className="nowrap">{r.ip ?? "—"}</td>
+                  <td className="nowrap">{maskIp(r.ip)}</td>
                   <td>{r.maCn ?? ""}</td>
                   {/* chi tiết có thể do client gửi lên: React tự escape, chỉ hiển thị dạng chữ */}
-                  <td style={{ maxWidth: 420, wordBreak: "break-word" }}>{r.chiTiet}</td>
+                  <td style={{ maxWidth: 420, wordBreak: "break-word" }}>
+                    <details><summary>{r.chiTiet}<br /><b>{parseMetadata(r.metadata).channel ?? ""} · Risk {parseMetadata(r.metadata).riskScore ?? "—"}</b></summary>
+                      <div className="muted">Event: {r.eventKey ?? r.id}</div>
+                      <div>{parseMetadata(r.metadata).requestCount ?? "—"} yêu cầu / {parseMetadata(r.metadata).windowSeconds ?? "—"} giây</div>
+                      <div>{parseMetadata(r.metadata).resource} · {parseMetadata(r.metadata).action}</div>
+                      <div>Thử lại: {parseMetadata(r.metadata).retryAfter ?? 0}s</div>
+                    </details>
+                  </td>
                   <td className="nowrap">{ACTION_TEXT[r.hanhDong] ?? r.hanhDong}</td>
+                  <td>{r.emailStatus ?? "Không xếp mail"}</td>
+                  <td>{r.review && <small title={r.reviewReason ?? ""}>{r.review}</small>}
+                    {r.id && ["SCRAPING", "CLIENT_SCRAPING"].includes(r.loai) && <div className="row">
+                      <button className="btn btn-sm" onClick={() => review(r, "TRUE_POSITIVE")}>Đúng</button>
+                      <button className="btn btn-sm" onClick={() => review(r, "FALSE_POSITIVE")}>Nhầm</button>
+                    </div>}
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -248,4 +294,30 @@ function Sessions({ tick, push }: { tick: number; push: Push }) {
       )}
     </Card>
   );
+}
+
+function maskIp(ip: string | null): string {
+  if (!ip) return "—";
+  return ip.includes(":") ? `${ip.split(":").slice(0, 2).join(":")}:…` : ip.replace(/\.[^.]+$/, ".x");
+}
+function parseMetadata(value: SecurityEventRow["metadata"]): ScrapingMetadata {
+  try { return typeof value === "string" ? JSON.parse(value) : value ?? {}; } catch { return {}; }
+}
+function ScrapingBlocks({ tick, push }: { tick: number; push: Push }) {
+  const [rows, setRows] = useState<ScrapingBlock[]>([]);
+  const [refresh, setRefresh] = useState(0);
+  const { run, busy } = useAction(push);
+  useEffect(() => { api<ScrapingBlock[]>("/api/security/scraping/blocks").then(setRows).catch(() => {}); }, [tick, refresh]);
+  const revoke = async (subject: string) => {
+    const reason = window.prompt("Lý do bỏ chặn:");
+    if (!reason?.trim()) return;
+    if (await run(() => api("/api/security/scraping/blocks/revoke", { subject, reason }), "Đã bỏ chặn và đặt lại bộ đếm")) setRefresh(x => x + 1);
+  };
+  return <Card title="Tạm khóa đọc dữ liệu (không chặn IP chung)">
+    {!rows.length ? <Empty>Chưa có tài khoản tạm khóa trên server.</Empty> : <div className="table-wrap"><table>
+      <thead><tr><th>Tài khoản</th><th>Hết hạn</th><th>Lý do</th><th>Thao tác</th></tr></thead>
+      <tbody>{rows.map(b => <tr key={b.subject}><td>{b.subject}</td><td>{new Date(b.expiresAt).toLocaleString("vi-VN")}</td><td>{b.reason}</td>
+        <td><button disabled={busy} className="btn btn-sm" onClick={() => revoke(b.subject)}>Bỏ chặn</button></td></tr>)}</tbody>
+    </table></div>}
+  </Card>;
 }

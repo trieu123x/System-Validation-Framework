@@ -66,6 +66,8 @@ public final class SecurityMonitor {
     private final SecurityRules rules;
     private final Supplier<Mode> mode;
     private final EventSink sink;
+    private final phanphoi.common.security.ScrapingGuard scraping;
+    public phanphoi.common.security.ScrapingGuard scraping() { return scraping; }
     private final BanList bans = new BanList();
     private final Map<String, IpStats> ips = new ConcurrentHashMap<>();
     /** maCn → (ip → lần đăng nhập sai cuối) cho CRED_STUFFING. */
@@ -81,6 +83,7 @@ public final class SecurityMonitor {
 
     public SecurityMonitor(SecurityRules rules, Supplier<Mode> mode, EventSink sink) {
         this.rules = rules;
+        this.scraping = new phanphoi.common.security.ScrapingGuard(rules.scraping);
         this.mode = mode;
         this.sink = sink;
         for (int i = 0; i < discoveryBuckets.length; i++) {
@@ -375,24 +378,31 @@ public final class SecurityMonitor {
      * xin khoảng dài hơn scrapeHistoryMaxDays ngày. @return REJECT (trả E06) khi block.
      */
     public Action onRead(SessionStats st, String ip, String maCn, Command cmd, long historyDays, long now) {
-        if (off()) {
-            return Action.NONE;
-        }
         st.reads.add(now);
         long n = st.reads.sum(now, 60);
-        String why = null;
-        if (n > rules.scrapeMaxPerMinute) {
-            why = n + " lenh doc du lieu trong 60 s";
-        } else if (cmd == Command.HISTORY_GET && historyDays > rules.scrapeHistoryMaxDays) {
-            why = "HISTORY_GET khoang " + (historyDays == Long.MAX_VALUE ? "khong gioi han" : historyDays + " ngay");
+        boolean legacy = !off() && (n > rules.scrapeMaxPerMinute || cmd == Command.HISTORY_GET && historyDays > rules.scrapeHistoryMaxDays);
+        var d = scraping.evaluate("branch:" + maCn, ip, "TCP", cmd.name(), historyDays, now, legacy && blocking());
+        if (d.emit()) recordScraping(d, ip, maCn, now);
+        else if (legacy && !d.denied()) {
+            emit("scrape:" + maCn, now, SERVER, "SCRAPING", MEDIUM, ip, maCn,
+                    "TCP " + cmd + ": legacy quota/history exceeded; requests=" + n, GHI_NHAN);
         }
-        if (why == null) {
-            return Action.NONE;
-        }
-        boolean block = blocking();
-        emit(ip + "|" + maCn, now, SERVER, "SCRAPING", MEDIUM, ip, maCn, why + (block ? "; tu choi tin vuot muc" : ""),
-                block ? GIOI_HAN : GHI_NHAN);
-        return block ? Action.REJECT : Action.NONE;
+        return d.denied() ? Action.REJECT : Action.NONE;
+    }
+
+    public phanphoi.common.security.ScrapingGuard.Decision onHttpRead(String account, String ip, String resource, long now) {
+        var d = scraping.evaluate("admin:" + account, ip, "HTTP", resource, 0, now);
+        if (d.emit()) recordScraping(d, ip, null, now);
+        return d;
+    }
+
+    private void recordScraping(phanphoi.common.security.ScrapingGuard.Decision d, String ip, String branch, long now) {
+        sink.emit(new SecurityEvent(LocalDateTime.ofInstant(Instant.ofEpochMilli(now), ZoneId.systemDefault()),
+                d.channel().equals("TCP") ? SERVER : ADMIN, "SCRAPING",
+                d.risk() >= rules.scraping.blockRisk() ? HIGH : (d.risk() >= rules.scraping.warningRisk() || d.denied() ? MEDIUM : LOW), ip, branch,
+                d.channel() + " " + d.resource() + ": " + String.join(", ", d.signals()),
+                d.action().equals("TEMP_BLOCK") ? KHOA_TK : d.denied() ? GIOI_HAN : GHI_NHAN,
+                java.util.UUID.randomUUID().toString(), d.metadata()));
     }
 
     /**
@@ -481,6 +491,7 @@ public final class SecurityMonitor {
 
     static String clientLevel(String type) {
         return switch (type) {
+            case "CLIENT_SCRAPING" -> MEDIUM;
             case "CLIENT_CSRF", "CLIENT_DNS_REBIND", "CLIENT_DISCOVERY_SPOOF" -> HIGH;
             case "CLIENT_SERVER_CHANGED", "CLIENT_BAD_SERVER_MSG", "CLIENT_API_FLOOD" -> MEDIUM;
             default -> LOW;

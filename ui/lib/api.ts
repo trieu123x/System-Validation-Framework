@@ -24,13 +24,14 @@ export async function api<T = unknown>(path: string, body?: unknown, method?: st
 }
 
 /** Đăng ký Server-Sent Events /api/events. Trả về trạng thái kết nối tới tiến trình Java. */
-export function useEvents(handlers: Record<string, (data: any) => void>): boolean {
+export function useEvents(handlers: Record<string, (data: any) => void>, enabled = true): boolean {
   const ref = useRef(handlers);
   ref.current = handlers;
   const [connected, setConnected] = useState(false);
   const names = Object.keys(handlers).sort().join(",");
 
   useEffect(() => {
+    if (!enabled) { setConnected(false); return; }
     const es = new EventSource("/api/events");
     es.onopen = () => setConnected(true);
     es.onerror = () => setConnected(false);
@@ -45,7 +46,7 @@ export function useEvents(handlers: Record<string, (data: any) => void>): boolea
       });
     }
     return () => es.close();
-  }, [names]);
+  }, [names, enabled]);
 
   return connected;
 }

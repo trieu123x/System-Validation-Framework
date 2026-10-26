@@ -14,6 +14,7 @@ case "$1" in
       # trong container phải nghe mọi địa chỉ; compose chỉ mở cổng 8080 ra 127.0.0.1 của máy host
       echo "admin.http.host=0.0.0.0"
       echo "open.browser=false"
+      echo "scraping.mode=${SCRAPING_MODE:-detect}"
       if [ -n "${ADMIN_PASSWORD_HASH:-}" ]; then
         echo "admin.password.hash=${ADMIN_PASSWORD_HASH}"
       fi
@@ -22,11 +23,11 @@ case "$1" in
     ;;
   client)
     shift
-    exec java $JAVA_OPTS -jar client.jar http.host=0.0.0.0 open.browser=false "server=${SERVER:-server:5000}" "$@"
+    exec java $JAVA_OPTS -jar client.jar http.host=0.0.0.0 open.browser=false "server=${SERVER:-server:5000}" "scraping.mode=${SCRAPING_MODE:-detect}" "$@"
     ;;
   loadsim)
     shift
-    exec java $JAVA_OPTS -jar loadsim.jar "server=${SERVER:-server:5000}" "$@"
+    exec java $JAVA_OPTS -jar loadsim.jar "server=${SERVER:-server:5000}" "scraping.mode=${SCRAPING_MODE:-detect}" "$@"
     ;;
   *)
     exec "$@"
