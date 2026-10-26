@@ -3,9 +3,9 @@ setlocal EnableExtensions
 title System Validation Framework - Public Deploy
 cd /d "%~dp0" || goto FAILED
 
-echo ===============================================================
-echo   SYSTEM VALIDATION FRAMEWORK - ONE CLICK PUBLIC DEPLOY
-echo ===============================================================
+echo ================================
+echo   SYSTEM VALIDATION FRAMEWORK
+echo ================================
 echo.
 
 rem Check Tailscale before building images.

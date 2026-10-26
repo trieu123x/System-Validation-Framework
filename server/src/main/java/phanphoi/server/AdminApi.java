@@ -127,7 +127,7 @@ public final class AdminApi implements AutoCloseable {
         });
         r.post("/api/auth/login", (ex, p) -> {
             JsonObject b = Http.body(ex);
-            String token;
+            AdminAuth.LoginResult login;
             // ADMIN_BRUTE_FORCE: sai admin.lock.fails lần thì khóa đăng nhập, kể cả khi sau đó nhập đúng.
             // Tuần tự hoá kiểm tra khóa → xác thực → đếm lần sai, để nhiều request song song không vượt quá số lần thử.
             synchronized (loginLock) {
@@ -137,14 +137,19 @@ public final class AdminApi implements AutoCloseable {
                             + java.time.LocalTime.ofInstant(java.time.Instant.ofEpochMilli(locked), java.time.ZoneId.systemDefault())
                             .withNano(0) + " vi sai mat khau nhieu lan");
                 }
-                token = auth.login(Http.str(b, "user"), Http.str(b, "matKhau"));
-                if (token == null) {
+                login = auth.login(Http.str(b, "user"), Http.str(b, "matKhau"), AdminAuth.token(ex));
+                if (login.status() == AdminAuth.LoginStatus.INVALID_CREDENTIALS) {
                     ctx.security().onAdminLoginFail(clientIp(ex), System.currentTimeMillis());
                     throw new Http.ApiException(401, "Sai ten dang nhap/email hoac mat khau");
                 }
             }
+            if (login.status() == AdminAuth.LoginStatus.ALREADY_ACTIVE) {
+                ctx.security().record("ADMIN", "DUPLICATE_LOGIN", "HIGH", clientIp(ex), null,
+                        "Da tu choi phien Admin thu hai; phien dang hoat dong duoc giu nguyen", "NGAT", System.currentTimeMillis());
+                throw new Http.ApiException(409, "Admin dang dang nhap tren thiet bi khac. Vui long dang xuat thiet bi do hoac thu lai sau 5 phut khong hoat dong.");
+            }
             ctx.security().onSuccessfulLogin(null, clientIp(ex), System.currentTimeMillis());
-            ex.getResponseHeaders().add("Set-Cookie", AdminAuth.setCookie(token));
+            ex.getResponseHeaders().add("Set-Cookie", AdminAuth.setCookie(login.token()));
             Http.ok(ex, Map.of("loggedIn", true, "user", auth.user()));
         });
         r.post("/api/auth/logout", (ex, p) -> {
@@ -153,7 +158,7 @@ public final class AdminApi implements AutoCloseable {
             Http.ok(ex, Map.of("loggedIn", false));
         });
         r.get("/api/events", (ex, p) -> ctx.events().hub().open(ex,
-                () -> new String[]{Events.BRANCHES, Http.GSON.toJson(Map.of("online", ctx.registry().onlineIds()))}, () -> auth.valid(ex)));
+                () -> new String[]{Events.BRANCHES, Http.GSON.toJson(Map.of("online", ctx.registry().onlineIds()))}, () -> auth.isCurrent(ex)));
 
         // ---- chi nhánh (FR-03) ----
         r.get("/api/branches", (ex, p) -> Http.ok(ex, ctx.stock().branches(ctx.registry().onlineIds())));

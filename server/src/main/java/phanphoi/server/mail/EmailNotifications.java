@@ -110,8 +110,9 @@ public final class EmailNotifications implements AutoCloseable {
         String branchEmail = event.maCn() == null ? null : branchRecipient(event.maCn());
         if (branchEmail != null) recipients.add(branchEmail);
         String body = (event.loai().equals("DUPLICATE_LOGIN")
-                ? "Cảnh báo: một thiết bị khác đã thử đăng nhập vào chi nhánh đang hoạt động.\n" +
-                  "Đăng nhập thứ hai đã bị từ chối. Phiên hiện tại không bị đăng xuất.\n\n"
+                ? "Cảnh báo: một thiết bị khác đã thử đăng nhập vào "
+                  + (event.maCn() == null ? "Admin" : "chi nhánh " + event.maCn()) + ".\n"
+                  + "Đăng nhập thứ hai đã bị từ chối. Phiên hiện tại không bị đăng xuất.\n\n"
                 : "Ghi nhận hoạt động đăng nhập cần kiểm tra.\n\n")
                 + "Loại: " + event.loai() + "\nThời điểm (giờ server): " + event.thoiGian()
                 + "\nNguồn: " + event.nguon() + "\nChi nhánh: " + (event.maCn() == null ? "Quản trị" : event.maCn())

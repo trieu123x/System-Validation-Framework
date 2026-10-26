@@ -9,18 +9,18 @@ import java.security.MessageDigest;
 import java.security.SecureRandom;
 import java.util.HexFormat;
 import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.LongSupplier;
 
 /**
  * Đăng nhập giao diện công ty. Một tài khoản quản trị trong server.properties
  * (admin.password.hash = hex SHA-256(admin.salt + mật khẩu), cùng quy tắc với chi nhánh);
- * phiên là token ngẫu nhiên trong cookie HttpOnly, hết hạn sau 12 giờ không dùng.
+ * phiên là token ngẫu nhiên trong cookie HttpOnly, tối đa một phiên Admin hoạt động.
+ * Phiên tự giải phóng nếu trình duyệt không gửi heartbeat trong khoảng thời gian cấu hình.
  */
 public final class AdminAuth {
 
     static final String COOKIE = "pp_admin";
-    private static final long TTL_MS = 12 * 60 * 60 * 1000L;
+    private static final int DEFAULT_IDLE_SECONDS = 300;
     private static final String DEFAULT_SALT = "pp-admin-2026";
     private static final String DEFAULT_PASSWORD = "admin123";
 
@@ -29,13 +29,25 @@ public final class AdminAuth {
     private final String salt;
     private final String hash;
     private final boolean defaultPassword;
-    private final Map<String, Long> sessions = new ConcurrentHashMap<>();
     private final SecureRandom random = new SecureRandom();
+    private final LongSupplier clock;
+    private final long idleMs;
+    private String activeToken;
+    private long activeUntil;
+
+    public enum LoginStatus { SUCCESS, INVALID_CREDENTIALS, ALREADY_ACTIVE }
+    public record LoginResult(LoginStatus status, String token) {}
 
     public AdminAuth(Config cfg) { this(cfg, null); }
 
     public AdminAuth(Config cfg, phanphoi.server.db.Db db) {
+        this(cfg, db, System::currentTimeMillis);
+    }
+
+    AdminAuth(Config cfg, phanphoi.server.db.Db db, LongSupplier clock) {
         this.db = db;
+        this.clock = clock;
+        this.idleMs = Math.max(60, cfg.getInt("admin.session.idle.seconds", DEFAULT_IDLE_SECONDS)) * 1000L;
         this.user = cfg.get("admin.user", "admin");
         this.salt = cfg.get("admin.salt", DEFAULT_SALT);
         String h = cfg.get("admin.password.hash", "");
@@ -59,8 +71,8 @@ public final class AdminAuth {
         }
     }
 
-    /** @return token phiên mới, hoặc null nếu sai username/email Admin hoặc mật khẩu. */
-    String login(String u, String password) {
+    /** Only one active Admin cookie can exist at once. Same-browser logins reuse their token. */
+    synchronized LoginResult login(String u, String password, String browserToken) {
         String identifier = u == null ? "" : u.trim();
         String effectiveSalt = salt;
         String effectiveHash = hash;
@@ -72,7 +84,7 @@ public final class AdminAuth {
                 if (current != null) { effectiveSalt = current[0]; effectiveHash = current[1]; }
             } catch (java.sql.SQLException e) {
                 // A database error must not silently enable the fallback password.
-                return null;
+                return new LoginResult(LoginStatus.INVALID_CREDENTIALS, null);
             }
         }
         byte[] expected = effectiveHash.getBytes(StandardCharsets.US_ASCII);
@@ -92,38 +104,51 @@ public final class AdminAuth {
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
             }
-            return null;
+            return new LoginResult(LoginStatus.INVALID_CREDENTIALS, null);
+        }
+        long now = clock.getAsLong();
+        if (activeToken != null && activeUntil <= now) activeToken = null;
+        if (activeToken != null) {
+            if (!activeToken.equals(browserToken)) {
+                return new LoginResult(LoginStatus.ALREADY_ACTIVE, null);
+            }
+            activeUntil = now + idleMs;
+            return new LoginResult(LoginStatus.SUCCESS, activeToken);
         }
         byte[] b = new byte[24];
         random.nextBytes(b);
         String token = HexFormat.of().formatHex(b);
-        sessions.put(token, System.currentTimeMillis() + TTL_MS);
-        return token;
+        activeToken = token;
+        activeUntil = now + idleMs;
+        return new LoginResult(LoginStatus.SUCCESS, token);
     }
 
-    public void invalidateAll() { sessions.clear(); }
+    public synchronized void invalidateAll() {
+        activeToken = null;
+        activeUntil = 0;
+    }
 
-    /** Phiên còn hạn thì gia hạn thêm 12 giờ. */
-    boolean valid(HttpExchange ex) {
-        String token = token(ex);
-        if (token == null) {
+    /** HTTP requests and /api/auth/me heartbeat refresh this session's lease. */
+    synchronized boolean valid(HttpExchange ex) { return validToken(token(ex), true); }
+
+    /** SSE needs to verify the session but must never keep an abandoned browser alive. */
+    synchronized boolean isCurrent(HttpExchange ex) { return validToken(token(ex), false); }
+
+    synchronized boolean validToken(String token, boolean refresh) {
+        long now = clock.getAsLong();
+        if (activeToken == null || activeUntil <= now) {
+            activeToken = null;
             return false;
         }
-        long now = System.currentTimeMillis();
-        Long exp = sessions.get(token);
-        if (exp == null || exp < now) {
-            sessions.remove(token);
-            return false;
-        }
-        sessions.put(token, now + TTL_MS);
+        if (token == null || !activeToken.equals(token)) return false;
+        if (refresh) activeUntil = now + idleMs;
         return true;
     }
 
-    void logout(HttpExchange ex) {
-        String token = token(ex);
-        if (token != null) {
-            sessions.remove(token);
-        }
+    void logout(HttpExchange ex) { logoutToken(token(ex)); }
+
+    synchronized void logoutToken(String token) {
+        if (token != null && token.equals(activeToken)) invalidateAll();
     }
 
     static String setCookie(String token) {
@@ -134,7 +159,7 @@ public final class AdminAuth {
         return COOKIE + "=; Path=/; HttpOnly; SameSite=Strict; Max-Age=0";
     }
 
-    private static String token(HttpExchange ex) {
+    static String token(HttpExchange ex) {
         List<String> headers = ex.getRequestHeaders().get("Cookie");
         if (headers == null) {
             return null;

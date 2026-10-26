@@ -27,7 +27,14 @@ export default function AdminPage() {
       .catch(() => setUser(null));
     const expired = () => setUser(null);
     window.addEventListener(UNAUTHORIZED, expired);
-    return () => window.removeEventListener(UNAUTHORIZED, expired);
+    // Keep the active Admin lease alive while this browser is open.
+    // A closed browser stops heartbeats; the server releases the session automatically.
+    const heartbeat = window.setInterval(() => {
+      api<{ loggedIn: boolean; user: string }>("/api/auth/me")
+        .then((r) => { if (!r.loggedIn) setUser(null); })
+        .catch(() => {});
+    }, 30_000);
+    return () => { window.clearInterval(heartbeat); window.removeEventListener(UNAUTHORIZED, expired); };
   }, []);
 
   if (user === undefined) {
@@ -159,7 +166,7 @@ function AdminApp({ user, onLogout }: { user: string; onLogout: () => void }) {
         )}>
         {duplicateAlert && (
           <div className="banner banner-danger" role="alert" style={{ marginBottom: 16 }}>
-            <strong>Cảnh báo đăng nhập trùng: {duplicateAlert.maCn || "Chi nhánh"}</strong>
+            <strong>Cảnh báo đăng nhập trùng: {duplicateAlert.maCn || "Admin"}</strong>
             {" — "}Thiết bị khác đã thử đăng nhập nhưng bị từ chối. Phiên đang sử dụng vẫn được giữ nguyên.
             <div className="row" style={{ marginTop: 8, gap: 8 }}>
               <button type="button" className="btn btn-sm" onClick={() => { setTab("monitor"); setHighCount(0); }}>Xem sự kiện</button>
