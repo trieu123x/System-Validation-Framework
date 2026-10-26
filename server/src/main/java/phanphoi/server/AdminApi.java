@@ -33,17 +33,19 @@ public final class AdminApi implements AutoCloseable {
     private final HttpServer http;
     private final Map<String, Object> info;
     private final AdminAuth auth;
+    private final phanphoi.server.mail.PasswordRecovery recovery;
     private final phanphoi.server.security.RateCounter monitoringReads = new phanphoi.server.security.RateCounter(60);
     private final Object loginLock = new Object();
 
     /** Không cần đăng nhập: trang đăng nhập cần biết vai trò và trạng thái phiên. */
-    private static final Set<String> PUBLIC = Set.of("/api/role", "/api/auth/login", "/api/auth/me", "/api/auth/logout");
+    private static final Set<String> PUBLIC = Set.of("/api/role", "/api/auth/login", "/api/auth/me", "/api/auth/logout", "/api/auth/recovery/request", "/api/auth/recovery/confirm");
 
     public AdminApi(ServerContext ctx, String host, int port, Path uiDir, Map<String, Object> info,
-                    boolean experimentApi, AdminAuth auth) throws IOException {
+                    boolean experimentApi, AdminAuth auth, phanphoi.server.mail.PasswordRecovery recovery) throws IOException {
         this.ctx = ctx;
         this.info = info;
         this.auth = auth;
+        this.recovery = recovery;
         this.http = HttpServer.create(new InetSocketAddress(host, port), 50);
         http.setExecutor(Executors.newCachedThreadPool(r -> {
             Thread t = new Thread(r, "admin-http");
@@ -100,6 +102,24 @@ public final class AdminApi implements AutoCloseable {
         r.get("/api/info", (ex, p) -> Http.ok(ex, info));
         r.get("/api/mail/status", (ex, p) -> Http.ok(ex, ctx.email().status()));
 
+        // Public password recovery. All request responses are identical to avoid account enumeration.
+        r.post("/api/auth/recovery/request", (ex,p) -> {
+            JsonObject b = Http.body(ex);
+            recovery.request(Http.str(b,"scope"), Http.str(b,"email"), Http.str(b,"branchHint"), clientIp(ex));
+            Http.ok(ex, Map.of("ok",true,"message","Neu email hop le, ban se nhan duoc lien ket dat lai mat khau."));
+        });
+        r.post("/api/auth/recovery/confirm", (ex,p) -> {
+            JsonObject b = Http.body(ex);
+            try {
+                if (!recovery.confirm(Http.str(b,"scope"),Http.str(b,"token"),Http.str(b,"password")))
+                    throw new Http.ApiException(400,"Lien ket khong hop le, da dung hoac het han");
+                Http.ok(ex,Map.of("ok",true));
+            } catch (IllegalArgumentException bad) {
+                throw new Http.ApiException(400,bad.getMessage());
+            } catch (java.sql.SQLException err) {
+                throw new Http.ApiException(503,"Khong the dat lai mat khau luc nay");
+            }
+        });
         // ---- đăng nhập công ty ----
         r.get("/api/auth/me", (ex, p) -> {
             boolean in = auth.valid(ex);
@@ -120,7 +140,7 @@ public final class AdminApi implements AutoCloseable {
                 token = auth.login(Http.str(b, "user"), Http.str(b, "matKhau"));
                 if (token == null) {
                     ctx.security().onAdminLoginFail(clientIp(ex), System.currentTimeMillis());
-                    throw new Http.ApiException(401, "Sai ten dang nhap hoac mat khau");
+                    throw new Http.ApiException(401, "Sai ten dang nhap/email hoac mat khau");
                 }
             }
             ctx.security().onSuccessfulLogin(null, clientIp(ex), System.currentTimeMillis());

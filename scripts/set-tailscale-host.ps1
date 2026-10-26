@@ -10,13 +10,15 @@ try {
   $values = @{
     TAILSCALE_ADMIN_ORIGIN = "https://$dns"
     TAILSCALE_CLIENT_ORIGIN = "https://${dns}:8443"
+    PASSWORD_RESET_ADMIN_URL = "https://$dns/admin/"
+    PASSWORD_RESET_CLIENT_URL = "https://${dns}:8443/branch/"
   }
   $lines = [System.Collections.Generic.List[string]]::new()
   foreach ($line in [System.IO.File]::ReadAllLines($envFile)) {
-    if ($line -match '^(TAILSCALE_ADMIN_ORIGIN|TAILSCALE_CLIENT_ORIGIN)=') { continue }
+    if ($line -match '^(TAILSCALE_ADMIN_ORIGIN|TAILSCALE_CLIENT_ORIGIN|PASSWORD_RESET_ADMIN_URL|PASSWORD_RESET_CLIENT_URL)=') { continue }
     $lines.Add($line)
   }
-  foreach ($k in @('TAILSCALE_ADMIN_ORIGIN','TAILSCALE_CLIENT_ORIGIN')) { $lines.Add("$k=$($values[$k])") }
+  foreach ($k in @('TAILSCALE_ADMIN_ORIGIN','TAILSCALE_CLIENT_ORIGIN','PASSWORD_RESET_ADMIN_URL','PASSWORD_RESET_CLIENT_URL')) { $lines.Add("$k=$($values[$k])") }
   [System.IO.File]::WriteAllLines($envFile, $lines, (New-Object System.Text.UTF8Encoding($false)))
   Write-Host "Admin : https://$dns/admin/"
   Write-Host "Client: https://${dns}:8443/branch/"

@@ -66,8 +66,9 @@ public final class ServerMain {
             System.out.println("[server] dang nhap cong ty: " + auth.user() + " / mat khau mac dinh admin123"
                     + " (doi bang admin.password.hash trong server.properties)");
         }
+        var recovery = new phanphoi.server.mail.PasswordRecovery(db, auth, ctx.registry(), mailSettings);
         AdminApi admin = new AdminApi(ctx, adminHost, adminPort, Path.of(cfg.get("ui.dir", "ui/out")), info,
-                cfg.getBool("experiment.api", true), auth);
+                cfg.getBool("experiment.api", true), auth, recovery);
         admin.start();
         String url = "http://" + ("0.0.0.0".equals(adminHost) ? "localhost" : adminHost) + ":" + adminPort + "/admin/";
         System.out.println("[server] giao dien admin: " + url);
@@ -85,6 +86,7 @@ public final class ServerMain {
             } catch (Exception ignored) {
                 // đang tắt
             }
+            recovery.close();
             ctx.email().close();
             ctx.scrapingStore().close();
             db.close();

@@ -617,10 +617,9 @@ final class BranchAgent implements ServerLink.Handler {
             state.statusDetail = "Server con giu phien cu, thu lai sau 5 giay";
             l.close();
         } else {
-            wantOnline = false;
-            state.status = Status.DISCONNECTED;
-            state.statusDetail = "Tu dang nhap lai that bai: " + reason;
+            // A password reset (or revoked credentials) must clear cached branch data and identity.
             l.close();
+            logout();
         }
     }
 

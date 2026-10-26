@@ -48,19 +48,41 @@ public final class AdminAuth {
     }
 
     public boolean usesDefaultPassword() {
-        return defaultPassword;
+        if (!defaultPassword) return false;
+        if (db == null) return true;
+        try {
+            return db.read(c -> phanphoi.server.db.Db.one(c,
+                    "SELECT NOT EXISTS(SELECT 1 FROM admin_password_override WHERE singleton=TRUE)",
+                    rs -> rs.getBoolean(1)));
+        } catch (java.sql.SQLException e) {
+            return false;
+        }
     }
 
-    /** @return token phiên mới, hoặc null nếu sai tài khoản/mật khẩu. */
+    /** @return token phiên mới, hoặc null nếu sai username/email Admin hoặc mật khẩu. */
     String login(String u, String password) {
-        byte[] expected = hash.getBytes(StandardCharsets.US_ASCII);
-        byte[] actual = AuthService.hash(salt, password).getBytes(StandardCharsets.US_ASCII);
-        boolean allowed = user.equalsIgnoreCase(u);
+        String identifier = u == null ? "" : u.trim();
+        String effectiveSalt = salt;
+        String effectiveHash = hash;
+        if (db != null) {
+            try {
+                String[] current = db.read(c -> phanphoi.server.db.Db.one(c,
+                        "SELECT salt,password_hash FROM admin_password_override WHERE singleton=TRUE",
+                        rs -> new String[]{rs.getString(1),rs.getString(2)}));
+                if (current != null) { effectiveSalt = current[0]; effectiveHash = current[1]; }
+            } catch (java.sql.SQLException e) {
+                // A database error must not silently enable the fallback password.
+                return null;
+            }
+        }
+        byte[] expected = effectiveHash.getBytes(StandardCharsets.US_ASCII);
+        byte[] actual = AuthService.hash(effectiveSalt, password == null ? "" : password).getBytes(StandardCharsets.US_ASCII);
+        boolean allowed = user.equalsIgnoreCase(identifier);
         if (!allowed && db != null) {
             try {
                 String configured = db.read(c -> phanphoi.server.db.Db.one(c,
                         "SELECT email FROM mail_admin_config WHERE singleton = TRUE", rs -> rs.getString(1)));
-                allowed = configured != null && configured.equalsIgnoreCase(u.trim());
+                allowed = configured != null && configured.trim().equalsIgnoreCase(identifier);
             } catch (java.sql.SQLException ignored) { allowed = false; }
         }
         boolean ok = MessageDigest.isEqual(expected, actual) & allowed;
@@ -78,6 +100,8 @@ public final class AdminAuth {
         sessions.put(token, System.currentTimeMillis() + TTL_MS);
         return token;
     }
+
+    public void invalidateAll() { sessions.clear(); }
 
     /** Phiên còn hạn thì gia hạn thêm 12 giờ. */
     boolean valid(HttpExchange ex) {

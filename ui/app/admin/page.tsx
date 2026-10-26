@@ -21,6 +21,7 @@ export default function AdminPage() {
   const [user, setUser] = useState<string | null | undefined>(undefined);
 
   useEffect(() => {
+    if (/^#reset=[A-Za-z0-9_-]{43}$/.test(window.location.hash)) { setUser(null); return; }
     api<{ loggedIn: boolean; user: string }>("/api/auth/me")
       .then((r) => setUser(r.loggedIn ? r.user : null))
       .catch(() => setUser(null));

@@ -15,7 +15,7 @@ case "$1" in
       echo "admin.http.host=0.0.0.0"
       echo "open.browser=false"
       echo "scraping.mode=${SCRAPING_MODE:-block}"
-      if [ -n "${ADMIN_ORIGIN:-}" ]; then echo "security.allowed.origins=${ADMIN_ORIGIN}"; fi
+      echo "security.allowed.origins=http://localhost:3000,http://localhost:3001,http://server:8080${ADMIN_ORIGIN:+,$ADMIN_ORIGIN}"
       if [ -n "${ADMIN_PASSWORD_HASH:-}" ]; then
         echo "admin.password.hash=${ADMIN_PASSWORD_HASH}"
       fi

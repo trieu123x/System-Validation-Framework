@@ -17,3 +17,5 @@
 \i /db/seed_hang_moi.sql
 \i /db/seed_images.sql
 \i /db/migrate_branch_emails.sql
+
+\i /db/migrate_password_recovery.sql

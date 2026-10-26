@@ -60,6 +60,36 @@ public final class ClientMain {
                     != phanphoi.common.web.OriginGuard.Verdict.OK) {
                 Http.error(ex, 403, "Origin/Host khong hop le"); return;
             }
+            if (path.equals("/api/password/forgot") || path.equals("/api/password/reset")) {
+                if (!"POST".equals(ex.getRequestMethod())) { Http.error(ex, 405, "Method not allowed"); return; }
+                try {
+                    JsonObject b = Http.body(ex);
+                    JsonObject outgoing = new JsonObject();
+                    outgoing.addProperty("scope", "branch");
+                    if (path.endsWith("/forgot")) {
+                        outgoing.addProperty("email", Http.str(b, "email"));
+                        outgoing.addProperty("branchHint", Http.str(b, "branchHint"));
+                    } else {
+                        outgoing.addProperty("token", Http.str(b, "token"));
+                        outgoing.addProperty("password", Http.str(b, "password"));
+                    }
+                    String target = "http://" + System.getenv().getOrDefault("PASSWORD_RESET_BACKEND_HOST", serverSetting.startsWith("server:") ? "server" : "127.0.0.1") + ":8080"
+                            + (path.endsWith("/forgot") ? "/api/auth/recovery/request" : "/api/auth/recovery/confirm");
+                    var req = java.net.http.HttpRequest.newBuilder(java.net.URI.create(target))
+                            .timeout(java.time.Duration.ofSeconds(8)).header("Content-Type", "application/json")
+                            .POST(java.net.http.HttpRequest.BodyPublishers.ofString(Http.GSON.toJson(outgoing))).build();
+                    var res = java.net.http.HttpClient.newBuilder().connectTimeout(java.time.Duration.ofSeconds(3)).build()
+                            .send(req, java.net.http.HttpResponse.BodyHandlers.ofString());
+                    ex.getResponseHeaders().set("Content-Type", "application/json; charset=utf-8");
+                    ex.getResponseHeaders().set("Cache-Control", "no-store");
+                    byte[] response = res.body().getBytes(java.nio.charset.StandardCharsets.UTF_8);
+                    ex.sendResponseHeaders(res.statusCode(), response.length);
+                    try (var out = ex.getResponseBody()) { out.write(response); }
+                } catch (Exception err) {
+                    Http.error(ex, 503, "Khong ket noi duoc Server dat lai mat khau");
+                }
+                return;
+            }
             long now = System.currentTimeMillis();
             String token = browserSessions.sessionToken(ex);
             Session session = live.get(token);

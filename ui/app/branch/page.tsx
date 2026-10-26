@@ -1,4 +1,5 @@
 "use client";
+import { PasswordRecovery, useRecoveryToken } from "@/components/PasswordRecovery";
 
 import { FormEvent, useEffect, useState } from "react";
 import {
@@ -26,6 +27,7 @@ const STATUS_TEXT: Record<BranchSnapshot["status"], string> = {
 
 export default function BranchPage() {
   const [s, setS] = useState<BranchSnapshot | null>(null);
+  const [forceRecovery, setForceRecovery] = useState(false);
   const [tab, setTab] = useState<Tab>("stock");
   const { toasts, push, dismiss } = useToasts();
 
@@ -35,6 +37,7 @@ export default function BranchPage() {
   }, !!s?.maCn);
 
   useEffect(() => {
+    if (/^#reset=[A-Za-z0-9_-]{43}$/.test(window.location.hash)) setForceRecovery(true);
     api<BranchSnapshot>("/api/state").then(setS).catch(() => {});
   }, []);
 
@@ -49,7 +52,7 @@ export default function BranchPage() {
   if (!s) {
     return <main className="center"><p className="muted">Đang mở ứng dụng chi nhánh...</p></main>;
   }
-  if (!s.maCn) {
+  if (forceRecovery || !s.maCn) {
     return (
       <>
         <Login snapshot={s} />
@@ -123,6 +126,8 @@ export default function BranchPage() {
 function Login({ snapshot }: { snapshot: BranchSnapshot }) {
   const [maCn, setMaCn] = useState("");
   const [method, setMethod] = useState<"name" | "email">("name");
+  const [recoveryToken, setRecoveryToken] = useRecoveryToken();
+  const [forgot, setForgot] = useState(false);
   const [branchHint, setBranchHint] = useState("");
   const [matKhau, setMatKhau] = useState("");
   const [server, setServer] = useState("");
@@ -149,6 +154,8 @@ function Login({ snapshot }: { snapshot: BranchSnapshot }) {
 
   return (
     <LoginScreen side="branch">
+      {forgot || recoveryToken ? <PasswordRecovery scope="branch" token={recoveryToken}
+        onCancel={() => { setForgot(false); setRecoveryToken(""); }} onDone={() => {}} /> :
       <form className="form-stack" onSubmit={submit}>
         <label className="field">Hình thức đăng nhập
           <select value={method} onChange={(e) => { setMethod(e.target.value as "name" | "email"); setMaCn(""); setBranchHint(""); }}>
@@ -176,7 +183,8 @@ function Login({ snapshot }: { snapshot: BranchSnapshot }) {
         </span>
         {error && <p className="error">{error}</p>}
         <button className="btn btn-primary" disabled={busy}>{busy ? "Đang đăng nhập..." : "Đăng nhập"}</button>
-      </form>
+        <button type="button" className="btn" onClick={() => setForgot(true)}>Quên mật khẩu?</button>
+      </form>}
     </LoginScreen>
   );
 }
