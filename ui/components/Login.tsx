@@ -25,7 +25,7 @@ export function LoginScreen({ side, children }: { side: Side; children: ReactNod
   return (
     <div className="login-page">
       <header className="appbar">
-        <div className="appbar-brand"><b>{COMPANY.brand}</b><span>Đăng nhập hệ thống</span></div>
+        <div className="appbar-brand"><b>{COMPANY.brand}</b><span>Đăng nhập</span></div>
       </header>
       <main className="center">
         <section className="card login">
@@ -41,14 +41,14 @@ export function LoginScreen({ side, children }: { side: Side; children: ReactNod
             {other ? (
               <div className="form-stack">
                 <p style={{ margin: 0 }}>
-                  Trang {other.label.toLowerCase()} do <b>{other.app}</b> phục vụ ở cổng {other.port}.
+                  Mở trang đăng nhập {other.label.toLowerCase()} bằng đường dẫn riêng.
                 </p>
                 <a className="btn btn-primary btn-block" href={typeof window !== "undefined" && window.location.protocol === "https:"
                   ? `https://${host}${tab === "branch" ? ":8443" : ""}${other.path}`
                   : `http://${host}:${other.port}${other.path}`}>
                   Mở trang đăng nhập {other.label.toLowerCase()}
                 </a>
-                <span className="note">Nếu không mở được, hãy chạy {other.app} trên máy này trước.</span>
+                <span className="note">Nếu không mở được, vui lòng kiểm tra lại đường dẫn hoặc liên hệ quản trị viên.</span>
               </div>
             ) : children}
           </div>

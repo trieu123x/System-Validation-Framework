@@ -417,6 +417,16 @@ final class BranchAgent implements ServerLink.Handler {
             case PONG -> { }
             case LOGIN_OK -> onLoginOk(l, m.params().size() >= 2 ? m.param(0) : attemptId, m.params().size() >= 2 ? m.param(1) : m.param(0));
             case LOGIN_FAIL -> onLoginFail(l, m);
+            case DUPLICATE_LOGIN_ALERT -> {
+                String time = m.param(0);
+                String ip = m.param(1);
+                String message = "Có thiết bị khác vừa thử đăng nhập " + state.maCn
+                        + ". Yêu cầu đã bị từ chối; phiên của bạn vẫn hoạt động.";
+                state.notice("error", message);
+                hub.publish("duplicate-login", Map.of(
+                        "maCn", state.maCn == null ? "" : state.maCn,
+                        "ip", ip, "time", time, "message", message));
+            }
             case INVENTORY -> {
                 state.inventory.clear();
                 for (List<String> r : m.listParam(0)) {

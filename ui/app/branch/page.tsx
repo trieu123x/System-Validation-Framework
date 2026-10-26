@@ -30,10 +30,15 @@ export default function BranchPage() {
   const [forceRecovery, setForceRecovery] = useState(false);
   const [tab, setTab] = useState<Tab>("stock");
   const { toasts, push, dismiss } = useToasts();
+  const [duplicateAlert, setDuplicateAlert] = useState<{ maCn: string; time: string; message: string } | null>(null);
 
   const agentUp = useEvents({
     state: (snap: BranchSnapshot) => setS(snap),
     toast: (n: Notice) => push(n.level, n.text),
+    "duplicate-login": (alert: { maCn: string; time: string; message: string }) => {
+      setDuplicateAlert(alert);
+      push("error", alert.message);
+    },
   }, !!s?.maCn);
 
   useEffect(() => {
@@ -96,7 +101,14 @@ export default function BranchPage() {
             <button className="btn btn-sm" onClick={() => api("/api/logout", {}).then(() => window.location.reload()).catch(() => {})}>Đăng xuất</button>
           </>
         }>
-        {!agentUp && <div className="banner banner-danger">Không liên lạc được với client.jar trên máy này.</div>}
+        {duplicateAlert && (
+          <div className="banner banner-danger" role="alert" style={{ marginBottom: 16 }}>
+            <strong>Cảnh báo bảo mật — {duplicateAlert.maCn}</strong>
+            <p>{duplicateAlert.message}</p>
+            <button className="btn btn-sm" type="button" onClick={() => setDuplicateAlert(null)}>Đã hiểu</button>
+          </div>
+        )}
+        {!agentUp && <div className="banner banner-danger">Không kết nối được với dịch vụ chi nhánh.</div>}
         {agentUp && !online && (
           <div className="banner banner-warn">
             {s.statusDetail}. Dữ liệu bên dưới là bản cuối cùng nhận được; thao tác sẽ mở lại khi nối lại được server.
@@ -130,20 +142,15 @@ function Login({ snapshot }: { snapshot: BranchSnapshot }) {
   const [forgot, setForgot] = useState(false);
   const [branchHint, setBranchHint] = useState("");
   const [matKhau, setMatKhau] = useState("");
-  const [server, setServer] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
-
-  useEffect(() => {
-    api<{ server: string }>("/api/config").then((c) => setServer(c.server)).catch(() => {});
-  }, []);
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
     setBusy(true);
     setError("");
     try {
-      await api("/api/login", { maCn: method === "email" ? maCn.trim().toLowerCase() : maCn.trim(), branchHint: method === "email" ? branchHint.trim().toUpperCase() : "", matKhau, server });
+      await api("/api/login", { maCn: method === "email" ? maCn.trim().toLowerCase() : maCn.trim(), branchHint: method === "email" ? branchHint.trim().toUpperCase() : "", matKhau });
       window.location.reload();
     } catch (err) {
       setError((err as Error).message);
@@ -174,13 +181,7 @@ function Login({ snapshot }: { snapshot: BranchSnapshot }) {
         <label className="field">Mật khẩu
           <input type="password" value={matKhau} onChange={(e) => setMatKhau(e.target.value)} required />
         </label>
-        <label className="field">Địa chỉ server
-          <input value={server} onChange={(e) => setServer(e.target.value)} placeholder="auto hoặc 192.168.1.10:5000" />
-        </label>
-        <span className="note">
-          Để “auto” thì máy tự tìm server trong mạng LAN (UDP broadcast).
-          {snapshot.statusDetail && <> Trạng thái: {snapshot.statusDetail}</>}
-        </span>
+        {snapshot.statusDetail && <span className="note">{snapshot.statusDetail}</span>}
         {error && <p className="error">{error}</p>}
         <button className="btn btn-primary" disabled={busy}>{busy ? "Đang đăng nhập..." : "Đăng nhập"}</button>
         <button type="button" className="btn" onClick={() => setForgot(true)}>Quên mật khẩu?</button>
@@ -212,12 +213,11 @@ const SEC_TONE: Record<string, string> = { HIGH: "danger", MEDIUM: "warn", LOW: 
 
 /** Sự kiện an ninh client.jar phát hiện trên máy này; mỗi sự kiện cũng được báo lên công ty (SECURITY_REPORT). */
 function SecurityTab({ sec }: { sec: ClientSecurityInfo | undefined }) {
-  if (!sec) return <Card><Empty>client.jar này chưa hỗ trợ giám sát an ninh.</Empty></Card>;
+  if (!sec) return <Card><Empty>Chưa có dữ liệu giám sát an ninh.</Empty></Card>;
   return (
     <Card title={<>Sự kiện an ninh <span className="muted">· {sec.suKien.length} gần nhất{sec.choGui ? `, ${sec.choGui} chờ gửi lên công ty` : ""}</span></>}>
       <p className="note">
-        Ứng dụng chặn trang web lạ gọi API trên máy này (CSRF, DNS rebinding), cảnh báo khi nhiều server cùng trả lời
-        tìm server, server đổi địa chỉ, hoặc server gửi tin lạ.
+        Ứng dụng cảnh báo khi có truy cập bất thường, thay đổi kết nối hoặc nhận được dữ liệu không hợp lệ.
       </p>
       {sec.suKien.length === 0 ? <Empty>Chưa phát hiện gì bất thường.</Empty> : (
         <div className="table-wrap scroll" style={{ maxHeight: 520 }}>

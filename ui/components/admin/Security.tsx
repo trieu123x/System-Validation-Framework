@@ -60,7 +60,7 @@ function SecurityPanel({ version, branches, push }: { version: number; branches:
           hint={ov?.suKienBiBo ? `bỏ ${ov.suKienBiBo} sự kiện vì hàng đợi đầy` : undefined} />
       </div>
       <div className="kpis">
-        <Stat label="Anti-scraping" value={ov?.scraping?.mode ?? "—"} hint="Quy tắc mới; TCP cũ vẫn theo security.mode" />
+        <Stat label="Anti-scraping" value={ov?.scraping?.mode ?? "—"} hint="Theo dõi truy cập bất thường" />
         <Stat label="Đã giới hạn (từ lúc chạy)" value={fmtNumber(ov?.scraping?.limited)} />
         <Stat label="Tài khoản tạm khóa" value={fmtNumber(ov?.scraping?.activeBlocks)} />
         <Stat label="Email đã gửi / lỗi" value={ov?.mail ? `${ov.mail.sent} / ${ov.mail.failed}` : "—"}

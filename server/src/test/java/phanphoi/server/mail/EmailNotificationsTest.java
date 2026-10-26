@@ -58,6 +58,29 @@ class EmailNotificationsTest {
     }
 
     @Test
+    void duplicateLoginAlertsBothRecipientsAndKeepsEventAuditId() throws Exception {
+        List<EmailMessage> received = new CopyOnWriteArrayList<>();
+        List<String> audited = new CopyOnWriteArrayList<>();
+        AtomicLong time = new AtomicLong(1_000);
+        try (EmailNotifications mail = new EmailNotifications(MailSettingsTest.settings(
+                "mail.admin.recipients=admin@example.test",
+                "mail.branch.recipients=CN01=one@example.test;CN02=two@example.test",
+                "mail.alert.cooldown.seconds=60"), received::add, time::get)) {
+            mail.audit((id, to, status, attempts) -> audited.add(id + ":" + status));
+            var event = event("DUPLICATE_LOGIN", "CN01");
+            mail.onSecurityEvent(event);
+            mail.onSecurityEvent(event); // suppress repeated attempts in cooldown
+            assertEquals(2L, mail.status().get("queued"));
+            assertTrue(audited.stream().anyMatch(x -> x.startsWith(event.eventKey() + ":")));
+        }
+        assertEquals(2, received.size());
+        assertEquals(java.util.Set.of("admin@example.test", "one@example.test"),
+                received.stream().map(EmailMessage::to).collect(java.util.stream.Collectors.toSet()));
+        assertTrue(received.stream().allMatch(m -> m.subject().contains("DUPLICATE_LOGIN")));
+        assertTrue(received.stream().allMatch(m -> m.body().contains("bị từ chối")));
+    }
+
+    @Test
     void retriesTransientFailureOnWorkerAndCountsPermanentFailure() throws Exception {
         AtomicInteger tries = new AtomicInteger();
         CountDownLatch sent = new CountDownLatch(1);

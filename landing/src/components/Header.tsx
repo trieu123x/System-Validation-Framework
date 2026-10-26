@@ -16,7 +16,7 @@ export default function Header() {
 
   return (
     <>
-      <div className="announcement"><div className="page-width"><span>THIẾT BỊ & GIẢI PHÁP PHÂN PHỐI</span><span className="announcement-note">Bản demo · Lập trình mạng</span></div></div>
+      <div className="announcement"><div className="page-width"><span>THIẾT BỊ & GIẢI PHÁP PHÂN PHỐI</span><span className="announcement-note">THIẾT BỊ · DỊCH VỤ · CHI NHÁNH</span></div></div>
       <header className="site-header" onKeyDown={(event) => {
         if (event.key === 'Escape' && open) {
           setOpen(false)
@@ -28,7 +28,7 @@ export default function Header() {
           <button ref={menuButton} className="menu-toggle" type="button" aria-label={open ? 'Đóng menu' : 'Mở menu'} aria-expanded={open} aria-controls="main-navigation" onClick={() => setOpen(!open)}><Icon name={open ? 'close' : 'menu'} /><span>Menu</span></button>
           <nav id="main-navigation" aria-label="Điều hướng chính" className={`main-navigation ${open ? 'is-open' : ''}`}>
             {navigation.map((link) => <a key={link.href} href={link.href} onClick={() => setOpen(false)}>{link.label}</a>)}
-            {systemLinks.admin && <a className="button button-dark nav-login" href={systemLinks.admin}>Đăng nhập hệ thống <Icon name="arrow" size={16} /></a>}
+            {systemLinks.admin && <a className="button button-dark nav-login" href={systemLinks.admin}>Đăng nhập quản trị <Icon name="arrow" size={16} /></a>}
           </nav>
         </div>
       </header>

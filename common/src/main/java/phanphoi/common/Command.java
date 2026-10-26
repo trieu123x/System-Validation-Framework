@@ -11,6 +11,8 @@ public enum Command {
     LOGIN(2),
     LOGIN_OK(2),
     LOGIN_FAIL(1),
+    // Thông báo tới phiên đang hoạt động khi có thiết bị khác đăng nhập cùng chi nhánh.
+    DUPLICATE_LOGIN_ALERT(2),
     INVENTORY_GET(0),
     INVENTORY(1),
     SALE(2),

@@ -80,6 +80,7 @@ function AdminApp({ user, onLogout }: { user: string; onLogout: () => void }) {
   const refreshDebts = useDebounced(() => bump("debts"), 800);
   const refreshSecurity = useDebounced(() => bump("security"), 500);
   const [highCount, setHighCount] = useState(0);
+  const [duplicateAlert, setDuplicateAlert] = useState<SecurityEventRow | null>(null);
   const isSim = (maCn: string) => maCn.startsWith("SIM");
 
   const connected = useEvents({
@@ -106,6 +107,7 @@ function AdminApp({ user, onLogout }: { user: string; onLogout: () => void }) {
     debt: () => refreshDebts(),
     notice: () => bump("notices"),
     security: (e: SecurityEventRow) => {
+      if (e.loai === "DUPLICATE_LOGIN") setDuplicateAlert(e);
       if (e.muc === "HIGH") {
         push("error", `🛡 ${e.loai}${e.ip ? ` từ ${e.ip}` : ""}${e.maCn ? ` (${e.maCn})` : ""}: ${e.chiTiet ?? ""}`.slice(0, 220));
         if (tab !== "monitor") setHighCount((n) => n + 1);
@@ -143,7 +145,7 @@ function AdminApp({ user, onLogout }: { user: string; onLogout: () => void }) {
         status={
           <>
             <span>{online} chi nhánh online</span>
-            <span title={connected ? "Đang nhận sự kiện từ server.jar" : "Không nhận được sự kiện từ server.jar"}>
+            <span title={connected ? "Đang nhận thông báo trực tiếp" : "Không nhận được thông báo trực tiếp"}>
               <Dot on={connected} />{connected ? "Đã nối server" : "Mất kết nối server"}
             </span>
             <span>{user}</span>
@@ -152,9 +154,19 @@ function AdminApp({ user, onLogout }: { user: string; onLogout: () => void }) {
         }
         actions={(tab === "overview" || tab === "debts") && (
           <label className="row muted">
-            <input type="checkbox" checked={showSim} onChange={(e) => setShowSim(e.target.checked)} /> Hiện chi nhánh ảo (giả lập tải)
+            <input type="checkbox" checked={showSim} onChange={(e) => setShowSim(e.target.checked)} /> Hiện chi nhánh kiểm thử
           </label>
         )}>
+        {duplicateAlert && (
+          <div className="banner banner-danger" role="alert" style={{ marginBottom: 16 }}>
+            <strong>Cảnh báo đăng nhập trùng: {duplicateAlert.maCn || "Chi nhánh"}</strong>
+            {" — "}Thiết bị khác đã thử đăng nhập nhưng bị từ chối. Phiên đang sử dụng vẫn được giữ nguyên.
+            <div className="row" style={{ marginTop: 8, gap: 8 }}>
+              <button type="button" className="btn btn-sm" onClick={() => { setTab("monitor"); setHighCount(0); }}>Xem sự kiện</button>
+              <button type="button" className="btn btn-sm" onClick={() => setDuplicateAlert(null)}>Đóng</button>
+            </div>
+          </div>
+        )}
         {tab === "overview" && (
           <Overview branches={branches} products={products} alerts={shownAlerts} requests={requests} stats={stats}
             freshIds={fresh} showSim={showSim} push={push} live={live} go={setTab}

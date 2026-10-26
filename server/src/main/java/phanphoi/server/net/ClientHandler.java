@@ -241,8 +241,17 @@ public final class ClientHandler {
         }
         String canonical = branch.code();
         if (!ctx.registry().login(canonical, this)) {
-            ClientHandler old = ctx.registry().get(canonical);
-            if (old != null) old.probe();
+            // Thông tin đã xác thực đúng nhưng chi nhánh còn phiên hoạt động khác.
+            // Không đẩy phiên cũ ra, không gửi dữ liệu hay tạo phiên cho người đăng nhập sau.
+            long now = System.currentTimeMillis();
+            ClientHandler active = ctx.registry().get(canonical);
+            if (active != null) {
+                active.send(Message.of(Command.DUPLICATE_LOGIN_ALERT,
+                        java.time.LocalDateTime.ofInstant(java.time.Instant.ofEpochMilli(now),
+                                java.time.ZoneId.systemDefault()).toString(), ip()));
+            }
+            ctx.security().record("SERVER", "DUPLICATE_LOGIN", "HIGH", ip(), canonical,
+                    "Da tu choi ket noi dang nhap thu hai; phien dang hoat dong duoc giu nguyen", "NGAT", now);
             send(Message.of(Command.LOGIN_FAIL, Protocol.LOGIN_FAIL_ONLINE));
             return;
         }

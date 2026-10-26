@@ -24,7 +24,7 @@ export default function ProductCatalog({ selectedCategory, onSelect }: { selecte
       </div>
       <div className="product-grid">{visible.map((product) => <ProductCard key={product.id} product={product} />)}</div>
       {selectedCategory === 'all' && <div className="catalog-more"><button className="button button-outline" type="button" onClick={() => setShowAll(!showAll)}>{showAll ? 'Thu gọn về 12 sản phẩm' : `Xem toàn bộ ${products.length} sản phẩm`}<Icon name="arrow" size={18} /></button></div>}
-      <p className="catalog-note">Giá và thông tin lấy từ dữ liệu mẫu của nhóm, không phải báo giá hiện hành. Model và giá của TB29–TB31 là giả định; toàn bộ ảnh chỉ mang tính minh họa.</p>
+      <p className="catalog-note">Thông tin và mức giá mang tính tham khảo. Vui lòng liên hệ để nhận báo giá chính xác.</p>
     </div>
   </section>
 }

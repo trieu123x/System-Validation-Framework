@@ -74,7 +74,7 @@ export function PasswordRecovery({
             value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} />
         </label>
       </> : <>
-        <p className="note">Nhập email đã lưu trong hệ thống. Liên kết đặt lại mật khẩu sẽ gửi qua SMTP.</p>
+        <p className="note">Nhập email đã đăng ký để nhận liên kết đặt lại mật khẩu.</p>
         <label className="field">Email {scope === "admin" ? "Admin" : "chi nhánh"}
           <input type="email" autoComplete="email" required value={email}
             onChange={(e) => setEmail(e.target.value)} placeholder="email@example.com" />

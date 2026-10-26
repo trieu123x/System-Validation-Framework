@@ -16,7 +16,7 @@ import java.util.function.LongSupplier;
 
 /** Email bổ sung cho TCP/NOTICE: không gửi SMTP trên luồng Selector, HTTP hay transaction DB. */
 public final class EmailNotifications implements AutoCloseable {
-    private static final Set<String> LOGIN_ALERTS = Set.of("BRUTE_FORCE", "CRED_STUFFING", "ADMIN_BRUTE_FORCE", "LOGIN_NEW_IP");
+    private static final Set<String> LOGIN_ALERTS = Set.of("BRUTE_FORCE", "CRED_STUFFING", "ADMIN_BRUTE_FORCE", "LOGIN_NEW_IP", "DUPLICATE_LOGIN");
     private static final int MAX_DEDUPE = 10000;
     @FunctionalInterface public interface Audit { void record(String eventKey, String recipient, String status, int attempts); }
     private volatile Audit audit = (eventKey, recipient, status, attempts) -> {};
@@ -109,16 +109,20 @@ public final class EmailNotifications implements AutoCloseable {
         Set<String> recipients = new LinkedHashSet<>(admins());
         String branchEmail = event.maCn() == null ? null : branchRecipient(event.maCn());
         if (branchEmail != null) recipients.add(branchEmail);
-        String body = "Hệ thống phân phối ghi nhận đăng nhập cần kiểm tra.\n\n"
+        String body = (event.loai().equals("DUPLICATE_LOGIN")
+                ? "Cảnh báo: một thiết bị khác đã thử đăng nhập vào chi nhánh đang hoạt động.\n" +
+                  "Đăng nhập thứ hai đã bị từ chối. Phiên hiện tại không bị đăng xuất.\n\n"
+                : "Ghi nhận hoạt động đăng nhập cần kiểm tra.\n\n")
                 + "Loại: " + event.loai() + "\nThời điểm (giờ server): " + event.thoiGian()
                 + "\nNguồn: " + event.nguon() + "\nChi nhánh: " + (event.maCn() == null ? "Quản trị" : event.maCn())
                 + "\nIP ghi nhận: " + event.ip() + "\nChi tiết: " + event.chiTiet()
-                + "\nXử lý của hệ thống: " + event.hanhDong()
+                + "\nKết quả xử lý: " + event.hanhDong()
                 + "\n\nMở trang Giám sát an ninh để kiểm tra. Đổi Wi-Fi, VPN hoặc NAT cũng có thể làm IP thay đổi; cảnh báo không khẳng định tài khoản đã bị xâm nhập.\n";
         for (String recipient : recipients) {
             // Giới hạn theo loại + người nhận, không theo IP do kẻ tấn công có thể thay IP liên tục.
             enqueue("alert:" + event.loai() + ":" + recipient, settings.cooldownMs,
-                    new EmailMessage(recipient, "[TOBOKI] Cảnh báo đăng nhập: " + event.loai(), body));
+                    new EmailMessage(recipient, "[TOBOKI] Cảnh báo đăng nhập: " + event.loai(), body),
+                    event.loai().equals("DUPLICATE_LOGIN") ? event.eventKey() : null);
         }
     }
 
