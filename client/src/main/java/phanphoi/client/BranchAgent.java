@@ -263,6 +263,13 @@ final class BranchAgent implements ServerLink.Handler {
         return snapshot();
     }
 
+    void stop() {
+        logout();
+        timer.shutdownNow();
+        hub.closeAll();
+        hub.shutdown();
+    }
+
     void logout() {
         ServerLink l;
         synchronized (lock) {
@@ -408,7 +415,7 @@ final class BranchAgent implements ServerLink.Handler {
         switch (m.command()) {
             case PING -> l.send(Message.of(Command.PONG));
             case PONG -> { }
-            case LOGIN_OK -> onLoginOk(l, m.param(0));
+            case LOGIN_OK -> onLoginOk(l, m.params().size() >= 2 ? m.param(0) : attemptId, m.params().size() >= 2 ? m.param(1) : m.param(0));
             case LOGIN_FAIL -> onLoginFail(l, m);
             case INVENTORY -> {
                 state.inventory.clear();
@@ -572,15 +579,15 @@ final class BranchAgent implements ServerLink.Handler {
         }
     }
 
-    private void onLoginOk(ServerLink l, String tenCn) {
+    private void onLoginOk(ServerLink l, String canonicalId, String tenCn) {
         attempt = 0;
         loginOkAt = System.currentTimeMillis();
-        String id = attemptId;
+        String id = canonicalId;
         if (!id.equals(state.maCn)) {
             state.clearBranchData();
             alerted.clear();
         }
-        credId = id;
+        credId = attemptId;
         credPw = attemptPw;
         wantOnline = true;
         state.maCn = id;
@@ -592,7 +599,7 @@ final class BranchAgent implements ServerLink.Handler {
         // server chỉ đẩy DEBT khi chi nhánh đang online, nên sau mỗi lần đăng nhập tự xin lại
         l.send(Message.of(Command.DEBT_GET));
         if (pendingLogin != null) {
-            pendingLogin.complete(Message.of(Command.LOGIN_OK, tenCn));
+            pendingLogin.complete(Message.of(Command.LOGIN_OK, canonicalId, tenCn));
         }
     }
 

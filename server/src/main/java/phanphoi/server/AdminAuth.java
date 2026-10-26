@@ -25,13 +25,17 @@ public final class AdminAuth {
     private static final String DEFAULT_PASSWORD = "admin123";
 
     private final String user;
+    private final phanphoi.server.db.Db db;
     private final String salt;
     private final String hash;
     private final boolean defaultPassword;
     private final Map<String, Long> sessions = new ConcurrentHashMap<>();
     private final SecureRandom random = new SecureRandom();
 
-    public AdminAuth(Config cfg) {
+    public AdminAuth(Config cfg) { this(cfg, null); }
+
+    public AdminAuth(Config cfg, phanphoi.server.db.Db db) {
+        this.db = db;
         this.user = cfg.get("admin.user", "admin");
         this.salt = cfg.get("admin.salt", DEFAULT_SALT);
         String h = cfg.get("admin.password.hash", "");
@@ -51,7 +55,15 @@ public final class AdminAuth {
     String login(String u, String password) {
         byte[] expected = hash.getBytes(StandardCharsets.US_ASCII);
         byte[] actual = AuthService.hash(salt, password).getBytes(StandardCharsets.US_ASCII);
-        boolean ok = MessageDigest.isEqual(expected, actual) & user.equals(u);
+        boolean allowed = user.equalsIgnoreCase(u);
+        if (!allowed && db != null) {
+            try {
+                String configured = db.read(c -> phanphoi.server.db.Db.one(c,
+                        "SELECT email FROM mail_admin_config WHERE singleton = TRUE", rs -> rs.getString(1)));
+                allowed = configured != null && configured.equalsIgnoreCase(u.trim());
+            } catch (java.sql.SQLException ignored) { allowed = false; }
+        }
+        boolean ok = MessageDigest.isEqual(expected, actual) & allowed;
         if (!ok) {
             try {
                 Thread.sleep(400); // làm chậm dò mật khẩu

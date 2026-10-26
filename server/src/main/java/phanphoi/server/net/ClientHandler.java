@@ -227,33 +227,33 @@ public final class ClientHandler {
         if (maCn != null) {
             throw new ServiceException(ErrorCode.E03, "Da dang nhap voi ma " + maCn);
         }
-        String ten = ctx.auth().verify(id, password);
-        if (ten == null) {
+        var branch = ctx.auth().verify(id, password);
+        if (branch != null && branch.ambiguous()) {
+            send(Message.of(Command.LOGIN_FAIL, "Email dung chung. Hay nhap ma CN trong o xac dinh chi nhanh (CN01/CN02)."));
+            return;
+        }
+        if (branch == null) {
             send(Message.of(Command.LOGIN_FAIL, Protocol.LOGIN_FAIL_WRONG));
-            // BRUTE_FORCE / CRED_STUFFING; IP vừa bị chặn thì đóng luôn kết nối này
-            if (ctx.security().onLoginFail(ip(), id, System.currentTimeMillis())) {
-                sendError(ErrorCode.E06, "Dang nhap sai qua nhieu lan, IP bi chan");
-                close();
+            if (ctx.security().onLoginFail(ip(), id.substring(0, Math.min(id.length(), 10)), System.currentTimeMillis())) {
+                sendError(ErrorCode.E06, "Dang nhap sai qua nhieu lan, IP bi chan"); close();
             }
             return;
         }
-        if (!ctx.registry().login(id, this)) {
-            // Kết nối cũ có thể đã chết mà chưa phát hiện (rút dây mạng): kiểm tra sớm để lần thử sau vào được.
-            ClientHandler old = ctx.registry().get(id);
-            if (old != null) {
-                old.probe();
-            }
+        String canonical = branch.code();
+        if (!ctx.registry().login(canonical, this)) {
+            ClientHandler old = ctx.registry().get(canonical);
+            if (old != null) old.probe();
             send(Message.of(Command.LOGIN_FAIL, Protocol.LOGIN_FAIL_ONLINE));
             return;
         }
-        maCn = id;
+        maCn = canonical;
         ctx.security().onLogin(stats, ip(), System.currentTimeMillis());
-        ctx.security().onSuccessfulLogin(id, ip(), System.currentTimeMillis());
+        ctx.security().onSuccessfulLogin(canonical, ip(), System.currentTimeMillis());
         if (!ctx.quiet()) {
-            System.out.println("[server] " + id + " dang nhap tu " + remote());
+            System.out.println("[server] " + canonical + " dang nhap tu " + remote());
         }
-        send(Message.of(Command.LOGIN_OK, ten));
-        ctx.outbox().deliverOnLogin(id, this);
+        send(Message.of(Command.LOGIN_OK, canonical, branch.name()));
+        ctx.outbox().deliverOnLogin(canonical, this);
     }
 
     private void logout() {

@@ -1,3 +1,9 @@
+> **Cập nhật 26/10/2026:** hướng dẫn này mô tả cấu hình EMAIL cũ. Từ bản mới,
+> email nhận cảnh báo được quản lý trực tiếp trong `chi_nhanh.email` và
+> `mail_admin_config.email` của PostgreSQL; các biến `MAIL_ADMIN_RECIPIENTS` /
+> `MAIL_BRANCH_RECIPIENTS` không còn là nguồn nhận khi Server chạy bình thường.
+> Xem [hướng dẫn cập nhật](../QUICKSTART_BRANCH_EMAIL_SMTP_TAILSCALE.md).
+
 # Email cảnh báo đăng nhập và thông báo chi nhánh
 
 ## Tại sao cần email?

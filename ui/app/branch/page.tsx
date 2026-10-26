@@ -44,15 +44,7 @@ export default function BranchPage() {
     return () => window.removeEventListener(UNAUTHORIZED, reset);
   }, []);
 
-  // URL theo tên chi nhánh: /da-nang/ khi đã đăng nhập, /branch/ khi đăng xuất (client.jar phục vụ cùng một trang)
-  const slug = s?.maCn ? s.slug : null;
-  useEffect(() => {
-    if (s === null) return;
-    const want = `/${slug ?? "branch"}/`;
-    if (window.location.pathname !== want) {
-      window.history.replaceState(window.history.state, "", want + window.location.search + window.location.hash);
-    }
-  }, [s === null, slug]);
+  // All branches use the same public URL /branch/; identity lives in the secure cookie.
 
   if (!s) {
     return <main className="center"><p className="muted">Đang mở ứng dụng chi nhánh...</p></main>;
@@ -130,6 +122,8 @@ export default function BranchPage() {
 
 function Login({ snapshot }: { snapshot: BranchSnapshot }) {
   const [maCn, setMaCn] = useState("");
+  const [method, setMethod] = useState<"name" | "email">("name");
+  const [branchHint, setBranchHint] = useState("");
   const [matKhau, setMatKhau] = useState("");
   const [server, setServer] = useState("");
   const [error, setError] = useState("");
@@ -144,7 +138,7 @@ function Login({ snapshot }: { snapshot: BranchSnapshot }) {
     setBusy(true);
     setError("");
     try {
-      await api("/api/login", { maCn: maCn.trim().toUpperCase(), matKhau, server });
+      await api("/api/login", { maCn: method === "email" ? maCn.trim().toLowerCase() : maCn.trim(), branchHint: method === "email" ? branchHint.trim().toUpperCase() : "", matKhau, server });
       window.location.reload();
     } catch (err) {
       setError((err as Error).message);
@@ -156,9 +150,20 @@ function Login({ snapshot }: { snapshot: BranchSnapshot }) {
   return (
     <LoginScreen side="branch">
       <form className="form-stack" onSubmit={submit}>
-        <label className="field">Mã chi nhánh
-          <input value={maCn} onChange={(e) => setMaCn(e.target.value)} placeholder="VD: CN01" autoFocus required />
+        <label className="field">Hình thức đăng nhập
+          <select value={method} onChange={(e) => { setMethod(e.target.value as "name" | "email"); setMaCn(""); setBranchHint(""); }}>
+            <option value="name">Tên hoặc mã chi nhánh</option>
+            <option value="email">Email chi nhánh</option>
+          </select>
         </label>
+        <label className="field">{method === "email" ? "Email" : "Tên hoặc mã chi nhánh"}
+          <input type={method === "email" ? "email" : "text"} value={maCn} onChange={(e) => setMaCn(e.target.value)}
+            placeholder={method === "email" ? "VD: test0003@gmail.com" : "VD: CN03 hoặc Chi nhánh TP.HCM"} autoFocus required />
+        </label>
+        {method === "email" && <label className="field">Mã chi nhánh (nếu email dùng chung)
+          <input value={branchHint} onChange={(e) => setBranchHint(e.target.value)} placeholder="VD: CN01 hoặc CN02" />
+          <span className="note">CN01 và CN02 dùng chung email nên cần điền mã chi nhánh này.</span>
+        </label>}
         <label className="field">Mật khẩu
           <input type="password" value={matKhau} onChange={(e) => setMatKhau(e.target.value)} required />
         </label>

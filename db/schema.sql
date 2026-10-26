@@ -8,6 +8,7 @@ BEGIN;
 CREATE TABLE chi_nhanh (
     ma_cn          VARCHAR(10)  PRIMARY KEY,
     ten            VARCHAR(100) NOT NULL,
+    email          VARCHAR(254),
     dia_chi        VARCHAR(255),
     mat_khau_hash  VARCHAR(128) NOT NULL,
     salt           VARCHAR(64)  NOT NULL,

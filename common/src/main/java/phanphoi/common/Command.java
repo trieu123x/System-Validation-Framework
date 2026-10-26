@@ -9,7 +9,7 @@ import java.util.Map;
  */
 public enum Command {
     LOGIN(2),
-    LOGIN_OK(1),
+    LOGIN_OK(2),
     LOGIN_FAIL(1),
     INVENTORY_GET(0),
     INVENTORY(1),

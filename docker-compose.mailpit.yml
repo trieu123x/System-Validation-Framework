@@ -17,8 +17,6 @@ services:
       MAIL_SMTP_USERNAME: ""
       MAIL_SMTP_PASSWORD: ""
       MAIL_FROM: noreply@phanphoi.test
-      MAIL_ADMIN_RECIPIENTS: admin@phanphoi.test
-      MAIL_BRANCH_RECIPIENTS: CN01=cn01@phanphoi.test;CN02=cn02@phanphoi.test
     depends_on:
       mailpit:
         condition: service_started

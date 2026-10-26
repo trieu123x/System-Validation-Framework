@@ -39,7 +39,9 @@ public final class ServerMain {
         System.out.println("[server] da ket noi CSDL");
 
         ServerSettings settings = new ServerSettings(cfg);
-        ServerContext ctx = new ServerContext(db, settings, cfg.getBool("log.quiet", false), new EmailNotifications(mailSettings));
+        EmailNotifications email = new EmailNotifications(mailSettings);
+        email.useDatabaseRecipients(db);
+        ServerContext ctx = new ServerContext(db, settings, cfg.getBool("log.quiet", false), email);
         System.out.println("[server] email: " + (ctx.email().enabled() ? "SMTP bat" : "tat"));
         long idleMs = cfg.getInt("heartbeat.idle.seconds", 30) * 1000L;
         long pongMs = cfg.getInt("heartbeat.pong.timeout.seconds", 10) * 1000L;
@@ -59,7 +61,7 @@ public final class ServerMain {
         info.put("tcpPort", tcpPort);
         info.put("discoveryPort", udpPort);
         info.put("maxClients", maxClients);
-        AdminAuth auth = new AdminAuth(cfg);
+        AdminAuth auth = new AdminAuth(cfg, db);
         if (auth.usesDefaultPassword()) {
             System.out.println("[server] dang nhap cong ty: " + auth.user() + " / mat khau mac dinh admin123"
                     + " (doi bang admin.password.hash trong server.properties)");

@@ -56,6 +56,8 @@ public final class SseHub {
 
     public void closeAll() { for (HttpExchange ex : clients) ex.close(); clients.clear(); validity.clear(); }
 
+    public void shutdown() { closeAll(); keepAlive.shutdownNow(); }
+
     public int size() {
         return clients.size();
     }

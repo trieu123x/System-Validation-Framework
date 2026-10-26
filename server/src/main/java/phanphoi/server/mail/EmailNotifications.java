@@ -22,6 +22,48 @@ public final class EmailNotifications implements AutoCloseable {
     private volatile Audit audit = (eventKey, recipient, status, attempts) -> {};
     public void audit(Audit audit) { this.audit = audit; }
     private final Map<String, java.util.ArrayDeque<Long>> recipientHours = new LinkedHashMap<>();
+    private volatile Map<String, String> dbBranchRecipients;
+    private volatile List<String> dbAdminRecipients;
+    private java.util.concurrent.ScheduledExecutorService refresh;
+
+    /** DB is source of truth for recipient addresses; refresh without blocking TCP/HTTP traffic. */
+    public synchronized void useDatabaseRecipients(phanphoi.server.db.Db db) throws java.sql.SQLException {
+        refreshRecipients(db); // fail fast if migration was not applied
+        refresh = java.util.concurrent.Executors.newSingleThreadScheduledExecutor(r -> {
+            Thread th = new Thread(r, "mail-recipient-refresh"); th.setDaemon(true); return th;
+        });
+        refresh.scheduleWithFixedDelay(() -> {
+            try { refreshRecipients(db); }
+            catch (Exception e) { System.err.println("[mail] DB recipients refresh failed: " + e.getMessage()); }
+        }, 30, 30, TimeUnit.SECONDS);
+    }
+
+    private void refreshRecipients(phanphoi.server.db.Db db) throws java.sql.SQLException {
+        Map<String, String> branches = new LinkedHashMap<>();
+        List<String> admins = new java.util.ArrayList<>();
+        db.read(c -> {
+            for (String[] r : phanphoi.server.db.Db.list(c,
+                    "SELECT ma_cn,email FROM chi_nhanh WHERE NOT gia_lap AND email IS NOT NULL",
+                    rs -> new String[]{rs.getString(1), rs.getString(2)})) {
+                try { branches.put(r[0], MailSettings.mailbox(r[1])); }
+                catch (IllegalArgumentException ignored) { System.err.println("[mail] Bad email for " + r[0]); }
+            }
+            for (String s : phanphoi.server.db.Db.list(c,
+                    "SELECT email FROM mail_admin_config WHERE singleton = TRUE", rs -> rs.getString(1))) {
+                try { admins.add(MailSettings.mailbox(s)); }
+                catch (IllegalArgumentException ignored) { System.err.println("[mail] Bad admin email"); }
+            }
+            return null;
+        });
+        dbBranchRecipients = Map.copyOf(branches);
+        dbAdminRecipients = List.copyOf(admins);
+    }
+
+    private List<String> admins() { return dbAdminRecipients != null ? dbAdminRecipients : settings.admins; }
+    private String branchRecipient(String code) {
+        return (dbBranchRecipients != null ? dbBranchRecipients : settings.branches).get(code);
+    }
+
     private final MailSettings settings;
     private final EmailSender sender;
     private final LongSupplier clock;
@@ -64,8 +106,8 @@ public final class EmailNotifications implements AutoCloseable {
             return;
         }
         if (!LOGIN_ALERTS.contains(event.loai())) return;
-        Set<String> recipients = new LinkedHashSet<>(settings.admins);
-        String branchEmail = event.maCn() == null ? null : settings.branches.get(event.maCn());
+        Set<String> recipients = new LinkedHashSet<>(admins());
+        String branchEmail = event.maCn() == null ? null : branchRecipient(event.maCn());
         if (branchEmail != null) recipients.add(branchEmail);
         String body = "Hệ thống phân phối ghi nhận đăng nhập cần kiểm tra.\n\n"
                 + "Loại: " + event.loai() + "\nThời điểm (giờ server): " + event.thoiGian()
@@ -84,8 +126,8 @@ public final class EmailNotifications implements AutoCloseable {
         if (!settings.scrapingEnabled) return;
         boolean clientReport = e.loai().equals("CLIENT_SCRAPING");
         if (!clientReport && !e.muc().equals("HIGH") && !e.hanhDong().equals("GIOI_HAN") && !e.hanhDong().equals("KHOA_TK")) return;
-        Set<String> recipients = new LinkedHashSet<>(settings.admins);
-        String branchEmail = e.maCn() == null ? null : settings.branches.get(e.maCn());
+        Set<String> recipients = new LinkedHashSet<>(admins());
+        String branchEmail = e.maCn() == null ? null : branchRecipient(e.maCn());
         if (branchEmail != null) recipients.add(branchEmail);
         String subject = "[TOBOKI SECURITY] Truy xuất bất thường - " + (e.maCn() == null ? "Admin" : e.maCn());
         // Never include client-supplied detail in email. Only server-normalized values or trusted metadata.
@@ -109,7 +151,7 @@ public final class EmailNotifications implements AutoCloseable {
     public int noticeCreated(long id, String type, String title, String body, List<String> branches) {
         int count = 0;
         for (String branch : new LinkedHashSet<>(branches)) {
-            String recipient = settings.branches.get(branch);
+            String recipient = branchRecipient(branch);
             if (!enabled() || recipient == null) {
                 skipped.incrementAndGet();
                 continue;
@@ -205,6 +247,7 @@ public final class EmailNotifications implements AutoCloseable {
 
     @Override
     public void close() {
+        if (refresh != null) refresh.shutdownNow();
         if (worker == null) return;
         worker.shutdown();
         try {

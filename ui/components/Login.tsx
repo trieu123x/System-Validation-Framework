@@ -42,7 +42,9 @@ export function LoginScreen({ side, children }: { side: Side; children: ReactNod
                 <p style={{ margin: 0 }}>
                   Trang {other.label.toLowerCase()} do <b>{other.app}</b> phục vụ ở cổng {other.port}.
                 </p>
-                <a className="btn btn-primary btn-block" href={`http://${host}:${other.port}${other.path}`}>
+                <a className="btn btn-primary btn-block" href={typeof window !== "undefined" && window.location.protocol === "https:"
+                  ? `https://${host}${tab === "branch" ? ":8443" : ""}${other.path}`
+                  : `http://${host}:${other.port}${other.path}`}>
                   Mở trang đăng nhập {other.label.toLowerCase()}
                 </a>
                 <span className="note">Nếu không mở được, hãy chạy {other.app} trên máy này trước.</span>
