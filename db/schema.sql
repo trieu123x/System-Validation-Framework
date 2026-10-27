@@ -96,6 +96,22 @@ CREATE TABLE nhat_ky (
 
 CREATE INDEX idx_nhat_ky_cn_thoi_gian ON nhat_ky (ma_cn, thoi_gian);
 
+
+-- Operational audit (TCP branch operations + Admin HTTP API).
+-- Safe for existing volumes; server also creates this table automatically on startup.
+CREATE TABLE IF NOT EXISTS audit_log (
+    id BIGSERIAL PRIMARY KEY,
+    thoi_gian TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    nguon VARCHAR(12) NOT NULL,
+    actor VARCHAR(80) NOT NULL,
+    hanh_dong VARCHAR(80) NOT NULL,
+    chi_tiet VARCHAR(500) NOT NULL,
+    ket_qua VARCHAR(20) NOT NULL,
+    ip VARCHAR(64)
+);
+CREATE INDEX IF NOT EXISTS idx_audit_log_time ON audit_log(thoi_gian DESC);
+CREATE INDEX IF NOT EXISTS idx_audit_log_actor_time ON audit_log(actor, thoi_gian DESC);
+
 -- UNIQUE ma_yc chặn xuất hai lần cho một YC (FR-18, TC-12).
 -- don_gia = san_pham.gia_xuat lúc gửi hàng; đổi giá sau đó không làm đổi nợ của YC này.
 CREATE TABLE phieu_xuat (

@@ -7,6 +7,7 @@ import phanphoi.common.Message;
 import phanphoi.common.Protocol;
 import phanphoi.common.ProtocolException;
 import phanphoi.server.MessageLog;
+import phanphoi.server.AuditLog;
 import phanphoi.server.ServerContext;
 import phanphoi.server.ServiceException;
 import phanphoi.server.security.SecurityMonitor;
@@ -111,20 +112,24 @@ public final class ClientHandler {
         try {
             msg = Protocol.decode(line);
         } catch (ProtocolException e) {
-            ctx.log().log(maCn, MessageLog.IN, firstToken(line), line);
+            ctx.log().log(maCn, MessageLog.IN, firstToken(line), "<invalid protocol line redacted>");
             sendError(ErrorCode.E01, e.getMessage());
             malformed(line, now);
             return;
         }
-        ctx.log().log(maCn, MessageLog.IN, msg.command().name(), line);
+        ctx.log().log(maCn, MessageLog.IN, msg.command().name(),
+                msg.command() == Command.LOGIN ? "LOGIN|[identifier redacted]|[password redacted]" : line);
         if (ctx.security().onMessage(stats, ip(), maCn, msg.command(), now) == SecurityMonitor.Action.KICK) {
+            audit(msg, "BLOCKED");
             sendError(ErrorCode.E06, "Gui lenh don dap, ngat phien");
             close();
             return;
         }
         try {
             dispatch(msg);
+            audit(msg, "SUCCESS");
         } catch (ServiceException e) {
+            audit(msg, e.code().name());
             sendError(e.code(), e.getMessage());
             if (e.code() == ErrorCode.E01) {
                 malformed(line, now);
@@ -134,15 +139,27 @@ public final class ClientHandler {
                 close();
             }
         } catch (ProtocolException e) {
+            audit(msg, "E01");
             sendError(ErrorCode.E01, e.getMessage());
             malformed(line, now);
         } catch (SQLException e) {
+            audit(msg, "DB_ERROR");
             System.err.println("[" + who() + "] loi CSDL: " + e.getMessage());
             sendError(ErrorCode.E03, "Loi CSDL, thu lai sau");
         } catch (RuntimeException e) {
+            audit(msg, "SERVER_ERROR");
             e.printStackTrace();
             sendError(ErrorCode.E03, "Loi server: " + e.getMessage());
         }
+    }
+
+    private void audit(Message msg, String result) {
+        Command cmd = msg.command();
+        // LOGIN is handled where authentication result is known; never log credentials.
+        if (cmd == Command.LOGIN || cmd == Command.PING || cmd == Command.PONG
+                || cmd == Command.SECURITY_REPORT) return;
+        ctx.audit().record("BRANCH", maCn == null ? "UNAUTHENTICATED" : maCn,
+                cmd.name(), AuditLog.tcpDetail(msg), result, ip());
     }
 
     /** E01 / dòng quá dài: FUZZING theo IP; IP vừa bị chặn thì đóng kết nối. */
@@ -228,10 +245,12 @@ public final class ClientHandler {
         }
         var branch = ctx.auth().verify(id, password);
         if (branch != null && branch.ambiguous()) {
+            ctx.audit().record("BRANCH", "UNAUTHENTICATED", "LOGIN", "ambiguous email", "REJECTED", ip());
             send(Message.of(Command.LOGIN_FAIL, "Email dung chung. Hay nhap ma CN trong o xac dinh chi nhanh (CN01/CN02)."));
             return;
         }
         if (branch == null) {
+            ctx.audit().record("BRANCH", "UNAUTHENTICATED", "LOGIN", "invalid credentials", "FAILED", ip());
             send(Message.of(Command.LOGIN_FAIL, Protocol.LOGIN_FAIL_WRONG));
             if (ctx.security().onLoginFail(ip(), id.substring(0, Math.min(id.length(), 10)), System.currentTimeMillis())) {
                 sendError(ErrorCode.E06, "Dang nhap sai qua nhieu lan, IP bi chan"); close();
@@ -251,10 +270,12 @@ public final class ClientHandler {
             }
             ctx.security().record("SERVER", "DUPLICATE_LOGIN", "HIGH", ip(), canonical,
                     "Da tu choi ket noi dang nhap thu hai; phien dang hoat dong duoc giu nguyen", "NGAT", now);
+            ctx.audit().record("BRANCH", canonical, "LOGIN", "duplicate session", "REJECTED", ip());
             send(Message.of(Command.LOGIN_FAIL, Protocol.LOGIN_FAIL_ONLINE));
             return;
         }
         maCn = canonical;
+        ctx.audit().record("BRANCH", canonical, "LOGIN", "", "SUCCESS", ip());
         ctx.security().onLogin(stats, ip(), System.currentTimeMillis());
         ctx.security().onSuccessfulLogin(canonical, ip(), System.currentTimeMillis());
         if (!ctx.quiet()) {

@@ -53,6 +53,7 @@ public final class AdminApi implements AutoCloseable {
             return t;
         }));
         Router r = routes();
+        r.observer(this::auditHttp);
         if (experimentApi) {
             ExperimentApi.register(r, ctx);
         }
@@ -133,6 +134,7 @@ public final class AdminApi implements AutoCloseable {
             synchronized (loginLock) {
                 long locked = ctx.security().adminLockedUntil(System.currentTimeMillis());
                 if (locked > 0) {
+                    ctx.audit().record("ADMIN", "UNAUTHENTICATED", "LOGIN", "rate limited", "HTTP_429", clientIp(ex));
                     throw new Http.ApiException(429, "Dang nhap bi khoa den "
                             + java.time.LocalTime.ofInstant(java.time.Instant.ofEpochMilli(locked), java.time.ZoneId.systemDefault())
                             .withNano(0) + " vi sai mat khau nhieu lan");
@@ -140,19 +142,23 @@ public final class AdminApi implements AutoCloseable {
                 login = auth.login(Http.str(b, "user"), Http.str(b, "matKhau"), AdminAuth.token(ex));
                 if (login.status() == AdminAuth.LoginStatus.INVALID_CREDENTIALS) {
                     ctx.security().onAdminLoginFail(clientIp(ex), System.currentTimeMillis());
+                    ctx.audit().record("ADMIN", "UNAUTHENTICATED", "LOGIN", "invalid credentials", "FAILED", clientIp(ex));
                     throw new Http.ApiException(401, "Sai ten dang nhap/email hoac mat khau");
                 }
             }
             if (login.status() == AdminAuth.LoginStatus.ALREADY_ACTIVE) {
                 ctx.security().record("ADMIN", "DUPLICATE_LOGIN", "HIGH", clientIp(ex), null,
                         "Da tu choi phien Admin thu hai; phien dang hoat dong duoc giu nguyen", "NGAT", System.currentTimeMillis());
+                ctx.audit().record("ADMIN", auth.user(), "LOGIN", "duplicate session", "REJECTED", clientIp(ex));
                 throw new Http.ApiException(409, "Admin dang dang nhap tren thiet bi khac. Vui long dang xuat thiet bi do hoac thu lai sau 5 phut khong hoat dong.");
             }
             ctx.security().onSuccessfulLogin(null, clientIp(ex), System.currentTimeMillis());
+            ctx.audit().record("ADMIN", auth.user(), "LOGIN", "", "SUCCESS", clientIp(ex));
             ex.getResponseHeaders().add("Set-Cookie", AdminAuth.setCookie(login.token()));
             Http.ok(ex, Map.of("loggedIn", true, "user", auth.user()));
         });
         r.post("/api/auth/logout", (ex, p) -> {
+            ctx.audit().record("ADMIN", auth.user(), "LOGOUT", "", "SUCCESS", clientIp(ex));
             auth.logout(ex);
             ex.getResponseHeaders().add("Set-Cookie", AdminAuth.clearCookie());
             Http.ok(ex, Map.of("loggedIn", false));
@@ -184,6 +190,7 @@ public final class AdminApi implements AutoCloseable {
             JsonObject b = Http.body(ex);
             Long donGia = Http.str(b, "donGia").isEmpty() ? null : money(b, "donGia");
             int ton = ctx.stock().importStock(Http.str(b, "maSp"), Http.integer(b, "soLuong"), Http.str(b, "maNcc"), donGia);
+            ex.setAttribute("audit.detail", "maSp=" + safeCode(Http.str(b, "maSp")) + "; maNcc=" + safeCode(Http.str(b, "maNcc")) + "; soLuong=" + Http.integer(b, "soLuong"));
             Http.ok(ex, Map.of("tonTong", ton));
         });
         r.get("/api/suppliers", (ex, p) -> Http.ok(ex, ctx.stock().suppliers()));
@@ -204,6 +211,7 @@ public final class AdminApi implements AutoCloseable {
         r.post("/api/warehouses/{maCn}/replenish", (ex, p) -> {
             JsonObject b = Http.body(ex);
             int maYc = ctx.requests().replenish(p.get(0), Http.str(b, "maSp"), Http.integer(b, "soLuong"));
+            ex.setAttribute("audit.detail", "maCn=" + safeCode(p.get(0)) + "; maSp=" + safeCode(Http.str(b, "maSp")) + "; soLuong=" + Http.integer(b, "soLuong") + "; maYc=" + maYc);
             Http.ok(ex, Map.of("maYc", maYc));
         });
 
@@ -216,15 +224,21 @@ public final class AdminApi implements AutoCloseable {
                     "true".equals(q.get("chenhLech"))));
         });
         r.post("/api/requests/{id}/offer", (ex, p) -> {
-            ctx.requests().offer(Integer.parseInt(p.get(0)), Http.integer(Http.body(ex), "soLuong"));
+            int soLuong = Http.integer(Http.body(ex), "soLuong");
+            ctx.requests().offer(Integer.parseInt(p.get(0)), soLuong);
+            ex.setAttribute("audit.detail", requestAuditDetail(Integer.parseInt(p.get(0)), soLuong));
             Http.ok(ex, Map.of("ok", true));
         });
         r.post("/api/requests/{id}/ship", (ex, p) -> {
-            ctx.requests().ship(Integer.parseInt(p.get(0)), Http.integer(Http.body(ex), "soLuong"));
+            int soLuong = Http.integer(Http.body(ex), "soLuong");
+            ctx.requests().ship(Integer.parseInt(p.get(0)), soLuong);
+            ex.setAttribute("audit.detail", requestAuditDetail(Integer.parseInt(p.get(0)), soLuong));
             Http.ok(ex, Map.of("ok", true));
         });
         r.post("/api/requests/{id}/shortage", (ex, p) -> {
-            ctx.requests().reportShortage(Integer.parseInt(p.get(0)), Http.integer(Http.body(ex), "soLuong"));
+            int soLuong = Http.integer(Http.body(ex), "soLuong");
+            ctx.requests().reportShortage(Integer.parseInt(p.get(0)), soLuong);
+            ex.setAttribute("audit.detail", requestAuditDetail(Integer.parseInt(p.get(0)), soLuong));
             Http.ok(ex, Map.of("ok", true));
         });
 
@@ -304,6 +318,16 @@ public final class AdminApi implements AutoCloseable {
                     SELECT id, ma_cn, chieu, lenh, noi_dung, thoi_gian FROM nhat_ky
                     WHERE (? = '' OR ma_cn = ?) AND (? = '' OR lenh = ?)
                     ORDER BY id DESC LIMIT ?""", maCn, maCn, lenh, lenh, limit)));
+        });
+        r.get("/api/audit", (ex, p) -> {
+            Map<String, String> q = Http.query(ex);
+            String actor = q.getOrDefault("actor", "");
+            String source = q.getOrDefault("source", "");
+            int limit = Math.max(1, Math.min(Integer.parseInt(q.getOrDefault("limit", "200")), 1000));
+            Http.ok(ex, ctx.db().read(c -> Db.rows(c, """
+                SELECT id, thoi_gian, nguon, actor, hanh_dong, chi_tiet, ket_qua, ip
+                FROM audit_log WHERE (? = '' OR actor = ?) AND (? = '' OR nguon = ?)
+                ORDER BY id DESC LIMIT ?""", actor, actor, source, source, limit)));
         });
         r.get("/api/stats", (ex, p) -> Http.ok(ex, ctx.db().read(c -> {
             Map<String, Object> s = new LinkedHashMap<>();
@@ -437,6 +461,42 @@ public final class AdminApi implements AutoCloseable {
             throw new Http.ApiException(404, "Khong tim thay phien " + id);
         });
         return r;
+    }
+
+    private String requestAuditDetail(int maYc, int soLuong) {
+        String base = "maYc=" + maYc + "; soLuong=" + soLuong;
+        try {
+            Map<String, Object> row = ctx.db().read(c -> Db.one(c,
+                    "SELECT ma_cn, ma_sp FROM yeu_cau WHERE ma_yc = ?", Db::toMap, maYc));
+            if (row == null) return base;
+            return base + "; maCn=" + safeCode(String.valueOf(row.get("maCn")))
+                    + "; maSp=" + safeCode(String.valueOf(row.get("maSp")));
+        } catch (java.sql.SQLException problem) {
+            System.err.println("[AUDIT] could not enrich request " + maYc + ": " + problem.getMessage());
+            return base;
+        }
+    }
+
+    private static String safeCode(String value) {
+        return value != null && value.matches("[A-Za-z0-9_-]{1,40}") ? value : "[redacted]";
+    }
+
+    /** Audit only routed business actions; template/path IDs, never request bodies or queries. */
+    private void auditHttp(com.sun.net.httpserver.HttpExchange ex, String method,
+                           String template, List<String> pathParams, int status) {
+        if (template.startsWith("/api/auth/") || template.startsWith("/api/experiment/")
+                || template.startsWith("/api/security/") || template.equals("/api/events")) return;
+        // Status, static pages and polling don't need a persistent audit event.
+        if (method.equals("GET") && !Set.of("/api/requests", "/api/stock/branches",
+                "/api/warehouses/{maCn}", "/api/imports", "/api/transfers",
+                "/api/debts/branches/{maCn}", "/api/debts/suppliers/{maNcc}",
+                "/api/notices/{id}", "/api/logs").contains(template)) return;
+        if (method.equals("GET") && template.equals("/api/logs")) return;
+        Object extra = ex.getAttribute("audit.detail");
+        String detail = extra instanceof String ? (String) extra : AuditLog.routeDetail(template, pathParams);
+        ctx.audit().record("ADMIN", auth.user(), method + " " + template,
+                detail, status < 400 ? "SUCCESS" : "HTTP_" + status,
+                clientIp(ex));
     }
 
     /** Kiểm tra Origin/Host (ADMIN_CSRF, ADMIN_DNS_REBIND); false thì trả 403. */

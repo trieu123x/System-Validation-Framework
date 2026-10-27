@@ -21,6 +21,7 @@ public final class ServerContext {
     private final Db db;
     private final Events events;
     private final MessageLog log;
+    private final AuditLog audit;
     private final SessionRegistry registry;
     private final Outbox outbox;
     private final AuthService auth;
@@ -48,6 +49,7 @@ public final class ServerContext {
         this.email = email;
         this.events = new Events();
         this.log = new MessageLog(db, events);
+        this.audit = new AuditLog(db, quiet);
         this.registry = new SessionRegistry(events);
         this.securityLog = new SecurityEventLog(db, events);
         this.security = new SecurityMonitor(settings.securityRules, () -> settings.securityMode, new EventSink() {
@@ -95,6 +97,10 @@ public final class ServerContext {
 
     public Events events() {
         return events;
+    }
+
+    public AuditLog audit() {
+        return audit;
     }
 
     public MessageLog log() {
