@@ -14,6 +14,7 @@ import java.net.InetSocketAddress;
 import java.net.URI;
 import java.nio.file.Path;
 import java.util.Arrays;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Executors;
@@ -30,6 +31,9 @@ public final class ClientMain {
         Config cfg = Config.load("config/client.properties", args);
         String host = cfg.get("http.host", "127.0.0.1");
         int port = cfg.getInt("http.port", 8081);
+        // Optional: lock one deployed client instance to one branch ID.
+        // Blank means an independent client.jar may log in to any permitted branch.
+        String fixedBranchId = cfg.get("branch.id", "").trim().toUpperCase(Locale.ROOT);
         String serverSetting = cfg.get("server", "auto");
         int defaultPort = cfg.getInt("server.port", Protocol.DEFAULT_TCP_PORT);
         int discoveryPort = cfg.getInt("discovery.port", Protocol.DEFAULT_DISCOVERY_PORT);
@@ -130,6 +134,11 @@ public final class ClientMain {
                 synchronized (loginLock) {
                     try {
                         var snapshot = agent.login(login, Http.str(body, "matKhau"), chosenServer);
+                        // Enforce on the server-side; a read-only input alone is not security.
+                        // So sánh chi nhánh thật sau đăng nhập vì có thể đăng nhập bằng email.
+                        if (!fixedBranchId.isEmpty() && !fixedBranchId.equalsIgnoreCase(agent.branchIdentity())) {
+                            throw new Http.ApiException(403, "Trang nay chi cho phep dang nhap " + fixedBranchId);
+                        }
                         String issued = browserSessions.issue(ex, System.currentTimeMillis(), agent.branchIdentity());
                         live.put(issued, new Session(agent, routes(agent, browserSessions)));
                         Http.ok(ex, snapshot);
@@ -142,7 +151,7 @@ public final class ClientMain {
                 return;
             }
             if (path.equals("/api/role")) { Http.ok(ex, Map.of("role", "branch")); return; }
-            if (path.equals("/api/config")) { Http.ok(ex, Map.of("server", serverSetting)); return; }
+            if (path.equals("/api/config")) { Http.ok(ex, Map.of("server", serverSetting, "branchId", fixedBranchId)); return; }
             if (!authenticated) {
                 if (path.equals("/api/state") && ex.getRequestMethod().equals("GET")) {
                     Http.ok(ex, Map.of("status", "DISCONNECTED", "statusDetail", "Dang nhap de xem du lieu", "server", serverSetting));

@@ -141,16 +141,26 @@ function Login({ snapshot }: { snapshot: BranchSnapshot }) {
   const [recoveryToken, setRecoveryToken] = useRecoveryToken();
   const [forgot, setForgot] = useState(false);
   const [branchHint, setBranchHint] = useState("");
+  const [fixedBranchId, setFixedBranchId] = useState("");
   const [matKhau, setMatKhau] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    api<{ server: string; branchId?: string }>("/api/config").then((c) => {
+      if (c.branchId) {
+        setFixedBranchId(c.branchId);
+        setMaCn(c.branchId);
+      }
+    }).catch(() => {});
+  }, []);
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
     setBusy(true);
     setError("");
     try {
-      await api("/api/login", { maCn: method === "email" ? maCn.trim().toLowerCase() : maCn.trim(), branchHint: method === "email" ? branchHint.trim().toUpperCase() : "", matKhau });
+      await api("/api/login", { maCn: method === "email" ? maCn.trim().toLowerCase() : (fixedBranchId || maCn).trim(), branchHint: method === "email" ? branchHint.trim().toUpperCase() : "", matKhau });
       window.location.reload();
     } catch (err) {
       setError((err as Error).message);
@@ -165,21 +175,23 @@ function Login({ snapshot }: { snapshot: BranchSnapshot }) {
         onCancel={() => { setForgot(false); setRecoveryToken(""); }} onDone={() => {}} /> :
       <form className="form-stack" onSubmit={submit}>
         <label className="field">Hình thức đăng nhập
-          <select value={method} onChange={(e) => { setMethod(e.target.value as "name" | "email"); setMaCn(""); setBranchHint(""); }}>
+          <select value={method} onChange={(e) => { setMethod(e.target.value as "name" | "email"); setMaCn(e.target.value === "name" ? fixedBranchId : ""); setBranchHint(""); }}>
             <option value="name">Tên hoặc mã chi nhánh</option>
             <option value="email">Email chi nhánh</option>
           </select>
         </label>
         <label className="field">{method === "email" ? "Email" : "Tên hoặc mã chi nhánh"}
-          <input type={method === "email" ? "email" : "text"} value={maCn} onChange={(e) => setMaCn(e.target.value)}
-            placeholder={method === "email" ? "VD: test0003@gmail.com" : "VD: CN03 hoặc Chi nhánh TP.HCM"} autoFocus required />
+          <input type={method === "email" ? "email" : "text"} value={method === "name" && fixedBranchId ? fixedBranchId : maCn} onChange={(e) => setMaCn(e.target.value)}
+            placeholder={method === "email" ? "VD: test0003@gmail.com" : "VD: CN03 hoặc Chi nhánh TP.HCM"}
+            readOnly={method === "name" && !!fixedBranchId} autoFocus={!fixedBranchId} required />
         </label>
         {method === "email" && <label className="field">Mã chi nhánh (nếu email dùng chung)
           <input value={branchHint} onChange={(e) => setBranchHint(e.target.value)} placeholder="VD: CN01 hoặc CN02" />
           <span className="note">CN01 và CN02 dùng chung email nên cần điền mã chi nhánh này.</span>
         </label>}
+        {fixedBranchId && <span className="note">Trang này chỉ dành cho tài khoản {fixedBranchId}.</span>}
         <label className="field">Mật khẩu
-          <input type="password" value={matKhau} onChange={(e) => setMatKhau(e.target.value)} required />
+          <input type="password" value={matKhau} onChange={(e) => setMatKhau(e.target.value)} autoFocus={!!fixedBranchId} required />
         </label>
         {snapshot.statusDetail && <span className="note">{snapshot.statusDetail}</span>}
         {error && <p className="error">{error}</p>}

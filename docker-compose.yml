@@ -76,6 +76,8 @@ services:
       TZ: Asia/Ho_Chi_Minh
       SERVER: server:5000
       CLIENT_ORIGIN: ${TAILSCALE_CLIENT_ORIGIN:-}
+      # để trống: gateway chung cho mọi chi nhánh; đặt CN01... để khoá một chi nhánh
+      BRANCH_ID: ${CLIENT_BRANCH_ID:-}
     depends_on:
       server:
         condition: service_healthy

@@ -36,6 +36,7 @@ public final class AdminApi implements AutoCloseable {
     private final phanphoi.server.mail.PasswordRecovery recovery;
     private final phanphoi.server.security.RateCounter monitoringReads = new phanphoi.server.security.RateCounter(60);
     private final Object loginLock = new Object();
+    private final AdminLoginDevice loginDevices = new AdminLoginDevice();
 
     /** Không cần đăng nhập: trang đăng nhập cần biết vai trò và trạng thái phiên. */
     private static final Set<String> PUBLIC = Set.of("/api/role", "/api/auth/login", "/api/auth/me", "/api/auth/logout", "/api/auth/recovery/request", "/api/auth/recovery/confirm");
@@ -127,21 +128,25 @@ public final class AdminApi implements AutoCloseable {
         });
         r.post("/api/auth/login", (ex, p) -> {
             JsonObject b = Http.body(ex);
+            // A signed, HttpOnly cookie distinguishes browser instances behind one Funnel/Caddy proxy.
+            // The token is not an authentication credential; it only scopes failed-login counters.
+            String browserKey = loginDevices.identify(ex);
             AdminAuth.LoginResult login;
             // ADMIN_BRUTE_FORCE: sai admin.lock.fails lần thì khóa đăng nhập, kể cả khi sau đó nhập đúng.
             // Tuần tự hoá kiểm tra khóa → xác thực → đếm lần sai, để nhiều request song song không vượt quá số lần thử.
             synchronized (loginLock) {
-                long locked = ctx.security().adminLockedUntil(System.currentTimeMillis());
+                long locked = ctx.security().adminLockedUntil(browserKey, System.currentTimeMillis());
                 if (locked > 0) {
-                    throw new Http.ApiException(429, "Dang nhap bi khoa den "
+                    throw new Http.ApiException(429, "Trinh duyet nay bi khoa dang nhap den "
                             + java.time.LocalTime.ofInstant(java.time.Instant.ofEpochMilli(locked), java.time.ZoneId.systemDefault())
                             .withNano(0) + " vi sai mat khau nhieu lan");
                 }
                 login = auth.login(Http.str(b, "user"), Http.str(b, "matKhau"), AdminAuth.token(ex));
                 if (login.status() == AdminAuth.LoginStatus.INVALID_CREDENTIALS) {
-                    ctx.security().onAdminLoginFail(clientIp(ex), System.currentTimeMillis());
+                    ctx.security().onAdminLoginFail(clientIp(ex), browserKey, System.currentTimeMillis());
                     throw new Http.ApiException(401, "Sai ten dang nhap/email hoac mat khau");
                 }
+                ctx.security().onAdminLoginSuccess(browserKey);
             }
             if (login.status() == AdminAuth.LoginStatus.ALREADY_ACTIVE) {
                 ctx.security().record("ADMIN", "DUPLICATE_LOGIN", "HIGH", clientIp(ex), null,

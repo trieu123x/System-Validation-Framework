@@ -24,7 +24,7 @@ case "$1" in
     ;;
   client)
     shift
-    exec java $JAVA_OPTS -jar client.jar http.host=0.0.0.0 open.browser=false "server=${SERVER:-server:5000}" "scraping.mode=${SCRAPING_MODE:-block}" "security.allowed.origins=http://localhost:3000,http://localhost:3001${CLIENT_ORIGIN:+,$CLIENT_ORIGIN}" "$@"
+    exec java $JAVA_OPTS -jar client.jar http.host=0.0.0.0 open.browser=false "server=${SERVER:-server:5000}" "scraping.mode=${SCRAPING_MODE:-block}" "security.allowed.origins=http://localhost:3000,http://localhost:3001${CLIENT_ORIGIN:+,$CLIENT_ORIGIN}" "branch.id=${BRANCH_ID:-}" "$@"
     ;;
   loadsim)
     shift

@@ -18,6 +18,9 @@ config/*.local.properties
 id_rsa
 id_ed25519
 
+# JDK + Maven portable (tools/env.sh), không đưa lên git
+tools/
+
 # Java / Maven build output
 target/
 *.class
