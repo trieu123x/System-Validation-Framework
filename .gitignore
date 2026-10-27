@@ -43,6 +43,13 @@ __pycache__/
 venv/
 .pytest_cache/
 
+# Legacy FRP local config/binaries (if retained outside the migrated project)
+frpc.toml
+frps.toml
+frpc.exe
+frps.exe
+/frp/
+
 # Logs, temporary output, and local caches
 *.log
 logs/

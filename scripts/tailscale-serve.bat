@@ -1,5 +1,4 @@
 @echo off
-rem Backward compatibility. Previously this enabled private Serve.
-rem Public access is now handled by tailscale-funnel.bat.
-call "%~dp0tailscale-funnel.bat" %*
+rem Private tailnet TCP 5000. Public web gateways are managed by tailscale-funnel.bat.
+call "%~dp0tailscale-tcp.bat" %*
 exit /b %ERRORLEVEL%

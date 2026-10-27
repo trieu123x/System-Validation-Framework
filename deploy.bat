@@ -60,7 +60,7 @@ if not exist ".env" (
     echo [INFO] Created .env from .env.example. Review passwords and SMTP settings.
 )
 echo.
-echo [INFO] Starting Docker, database migrations and Tailscale Funnel...
+echo [INFO] Starting Docker, database migrations, Funnel and private Tailnet TCP...
 call "%~dp0scripts\deploy-tailscale.bat"
 if errorlevel 1 goto FAILED
 
@@ -77,7 +77,9 @@ echo   PUBLIC DEPLOY COMPLETED
 if defined ADMIN_ORIGIN echo   ADMIN : %ADMIN_ORIGIN%/admin/
 if defined CLIENT_ORIGIN echo   CLIENT: %CLIENT_ORIGIN%/branch/
 echo ===============================================================
-echo [NOTE] Other computers do NOT need Tailscale for Funnel URLs.
+echo [NOTE] Web users do NOT need Tailscale for Funnel URLs.
+echo [TAILNET] Ubuntu Java client needs Tailscale; connect to SERVER-TAILSCALE-IP:5000.
+echo [TAILNET] Raw TCP 5000 is PRIVATE to authorized tailnet peers (not public).
 echo [NOTE] Public DNS can take time to propagate after first enable.
 echo [SECURITY] Change default admin/branch passwords before sharing.
 echo [MAIL] SMTP alerts require MAIL_ENABLED=true and valid settings.

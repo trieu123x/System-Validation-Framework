@@ -56,9 +56,9 @@ services:
       db:
         condition: service_healthy
     ports:
-      # TCP cho chi nhánh (kể cả client.jar chạy trên máy khác trong LAN, server=<ip máy này>:5000)
-      # TCP only inside Compose network; clients access through the shared client gateway.
-      # - "${SERVER_TCP_PORT:-5000}:5000"
+      # TCP exposed ONLY on Windows localhost; Tailscale Serve forwards tailnet TCP 5000 here.
+      # No raw TCP port is publicly bound on Wi-Fi/LAN interfaces.
+      - "127.0.0.1:${SERVER_TCP_PORT:-5000}:5000"
       # giao diện công ty chỉ mở trên máy này
       - "127.0.0.1:${ADMIN_HTTP_PORT:-8080}:8080"
     healthcheck:
