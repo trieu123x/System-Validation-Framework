@@ -8,6 +8,7 @@ BEGIN;
 CREATE TABLE chi_nhanh (
     ma_cn          VARCHAR(10)  PRIMARY KEY,
     ten            VARCHAR(100) NOT NULL,
+    email          VARCHAR(254),
     dia_chi        VARCHAR(255),
     mat_khau_hash  VARCHAR(128) NOT NULL,
     salt           VARCHAR(64)  NOT NULL,
@@ -67,6 +68,7 @@ CREATE TABLE yeu_cau (
     so_luong_de_xuat  INTEGER      CHECK (so_luong_de_xuat > 0),
     so_luong_chot     INTEGER      CHECK (so_luong_chot > 0),
     so_luong_giao     INTEGER      CHECK (so_luong_giao > 0),
+    so_luong_nhan     INTEGER      CHECK (so_luong_nhan >= 0),
     -- số chi nhánh xin khi trả lời thông báo (Cần hàng / Muốn nhập); NULL = YC từ LOW_STOCK
     so_luong_xin      INTEGER      CHECK (so_luong_xin > 0),
     trang_thai        VARCHAR(12)  NOT NULL DEFAULT 'CHO'
@@ -184,4 +186,29 @@ CREATE INDEX idx_su_kien_thoi_gian ON su_kien_bao_mat (thoi_gian);
 
 \ir thong_bao.sql
 
+COMMIT;
+
+-- PostgreSQL, additive/idempotent; no DROP and no seed reset.
+BEGIN;
+ALTER TABLE su_kien_bao_mat ADD COLUMN IF NOT EXISTS event_key VARCHAR(36);
+ALTER TABLE su_kien_bao_mat ADD COLUMN IF NOT EXISTS metadata TEXT NOT NULL DEFAULT '{}';
+ALTER TABLE su_kien_bao_mat ADD COLUMN IF NOT EXISTS review VARCHAR(20);
+ALTER TABLE su_kien_bao_mat ADD COLUMN IF NOT EXISTS review_reason VARCHAR(500);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_security_event_key ON su_kien_bao_mat(event_key);
+CREATE INDEX IF NOT EXISTS idx_security_type_time ON su_kien_bao_mat(loai, thoi_gian);
+CREATE TABLE IF NOT EXISTS security_scraping_blocks (
+    subject VARCHAR(160) PRIMARY KEY,
+    expires_at BIGINT NOT NULL,
+    reason VARCHAR(500) NOT NULL
+);
+CREATE TABLE IF NOT EXISTS security_email_delivery (
+    id BIGSERIAL PRIMARY KEY,
+    event_key VARCHAR(36) NOT NULL,
+    recipient VARCHAR(320) NOT NULL,
+    status VARCHAR(20) NOT NULL,
+    attempts INTEGER NOT NULL DEFAULT 0,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(event_key, recipient)
+);
+CREATE INDEX IF NOT EXISTS idx_security_email_time ON security_email_delivery(updated_at);
 COMMIT;

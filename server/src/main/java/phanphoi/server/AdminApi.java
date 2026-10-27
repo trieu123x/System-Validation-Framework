@@ -33,16 +33,19 @@ public final class AdminApi implements AutoCloseable {
     private final HttpServer http;
     private final Map<String, Object> info;
     private final AdminAuth auth;
+    private final phanphoi.server.mail.PasswordRecovery recovery;
+    private final phanphoi.server.security.RateCounter monitoringReads = new phanphoi.server.security.RateCounter(60);
     private final Object loginLock = new Object();
 
     /** Không cần đăng nhập: trang đăng nhập cần biết vai trò và trạng thái phiên. */
-    private static final Set<String> PUBLIC = Set.of("/api/role", "/api/auth/login", "/api/auth/me", "/api/auth/logout");
+    private static final Set<String> PUBLIC = Set.of("/api/role", "/api/auth/login", "/api/auth/me", "/api/auth/logout", "/api/auth/recovery/request", "/api/auth/recovery/confirm");
 
     public AdminApi(ServerContext ctx, String host, int port, Path uiDir, Map<String, Object> info,
-                    boolean experimentApi, AdminAuth auth) throws IOException {
+                    boolean experimentApi, AdminAuth auth, phanphoi.server.mail.PasswordRecovery recovery) throws IOException {
         this.ctx = ctx;
         this.info = info;
         this.auth = auth;
+        this.recovery = recovery;
         this.http = HttpServer.create(new InetSocketAddress(host, port), 50);
         http.setExecutor(Executors.newCachedThreadPool(r -> {
             Thread t = new Thread(r, "admin-http");
@@ -65,6 +68,25 @@ public final class AdminApi implements AutoCloseable {
                 Http.error(ex, 401, "Chua dang nhap");
                 return;
             }
+            if (!open && ex.getRequestMethod().equals("GET") && (path.startsWith("/api/security/") || path.equals("/api/mail/status"))) {
+                long now = System.currentTimeMillis();
+                monitoringReads.add(now);
+                if (monitoringReads.sum(now, 60) > 600) {
+                    ex.getResponseHeaders().set("Retry-After", "60");
+                    Http.error(ex, 429, "Vuot quota giam sat (600/phut)"); return;
+                }
+            }
+            // Monitoring/control routes remain accessible to resolve blocks. No query string is logged.
+            if (!open && ex.getRequestMethod().equals("GET") && !path.startsWith("/api/security/")
+                    && !path.equals("/api/mail/status") && !path.equals("/api/info")) {
+                String resource = path.replaceAll("/[0-9]+(?=/|$)", "/{id}");
+                var decision = ctx.security().onHttpRead(auth.user(), clientIp(ex), resource.length() > 100 ? resource.substring(0,100) : resource, System.currentTimeMillis());
+                if (decision.denied()) {
+                    ex.getResponseHeaders().set("Retry-After", Integer.toString(decision.retryAfter()));
+                    Http.error(ex, 429, "Truy xuat qua muc. Thu lai sau " + decision.retryAfter() + " giay");
+                    return;
+                }
+            }
             r.handle(ex);
         });
         http.createContext("/", new StaticFiles(uiDir));
@@ -78,7 +100,26 @@ public final class AdminApi implements AutoCloseable {
         Router r = new Router();
         r.get("/api/role", (ex, p) -> Http.ok(ex, Map.of("role", "admin")));
         r.get("/api/info", (ex, p) -> Http.ok(ex, info));
+        r.get("/api/mail/status", (ex, p) -> Http.ok(ex, ctx.email().status()));
 
+        // Public password recovery. All request responses are identical to avoid account enumeration.
+        r.post("/api/auth/recovery/request", (ex,p) -> {
+            JsonObject b = Http.body(ex);
+            recovery.request(Http.str(b,"scope"), Http.str(b,"email"), Http.str(b,"branchHint"), clientIp(ex));
+            Http.ok(ex, Map.of("ok",true,"message","Neu email hop le, ban se nhan duoc lien ket dat lai mat khau."));
+        });
+        r.post("/api/auth/recovery/confirm", (ex,p) -> {
+            JsonObject b = Http.body(ex);
+            try {
+                if (!recovery.confirm(Http.str(b,"scope"),Http.str(b,"token"),Http.str(b,"password")))
+                    throw new Http.ApiException(400,"Lien ket khong hop le, da dung hoac het han");
+                Http.ok(ex,Map.of("ok",true));
+            } catch (IllegalArgumentException bad) {
+                throw new Http.ApiException(400,bad.getMessage());
+            } catch (java.sql.SQLException err) {
+                throw new Http.ApiException(503,"Khong the dat lai mat khau luc nay");
+            }
+        });
         // ---- đăng nhập công ty ----
         r.get("/api/auth/me", (ex, p) -> {
             boolean in = auth.valid(ex);
@@ -86,7 +127,7 @@ public final class AdminApi implements AutoCloseable {
         });
         r.post("/api/auth/login", (ex, p) -> {
             JsonObject b = Http.body(ex);
-            String token;
+            AdminAuth.LoginResult login;
             // ADMIN_BRUTE_FORCE: sai admin.lock.fails lần thì khóa đăng nhập, kể cả khi sau đó nhập đúng.
             // Tuần tự hoá kiểm tra khóa → xác thực → đếm lần sai, để nhiều request song song không vượt quá số lần thử.
             synchronized (loginLock) {
@@ -96,13 +137,19 @@ public final class AdminApi implements AutoCloseable {
                             + java.time.LocalTime.ofInstant(java.time.Instant.ofEpochMilli(locked), java.time.ZoneId.systemDefault())
                             .withNano(0) + " vi sai mat khau nhieu lan");
                 }
-                token = auth.login(Http.str(b, "user"), Http.str(b, "matKhau"));
-                if (token == null) {
+                login = auth.login(Http.str(b, "user"), Http.str(b, "matKhau"), AdminAuth.token(ex));
+                if (login.status() == AdminAuth.LoginStatus.INVALID_CREDENTIALS) {
                     ctx.security().onAdminLoginFail(clientIp(ex), System.currentTimeMillis());
-                    throw new Http.ApiException(401, "Sai ten dang nhap hoac mat khau");
+                    throw new Http.ApiException(401, "Sai ten dang nhap/email hoac mat khau");
                 }
             }
-            ex.getResponseHeaders().add("Set-Cookie", AdminAuth.setCookie(token));
+            if (login.status() == AdminAuth.LoginStatus.ALREADY_ACTIVE) {
+                ctx.security().record("ADMIN", "DUPLICATE_LOGIN", "HIGH", clientIp(ex), null,
+                        "Da tu choi phien Admin thu hai; phien dang hoat dong duoc giu nguyen", "NGAT", System.currentTimeMillis());
+                throw new Http.ApiException(409, "Admin dang dang nhap tren thiet bi khac. Vui long dang xuat thiet bi do hoac thu lai sau 5 phut khong hoat dong.");
+            }
+            ctx.security().onSuccessfulLogin(null, clientIp(ex), System.currentTimeMillis());
+            ex.getResponseHeaders().add("Set-Cookie", AdminAuth.setCookie(login.token()));
             Http.ok(ex, Map.of("loggedIn", true, "user", auth.user()));
         });
         r.post("/api/auth/logout", (ex, p) -> {
@@ -111,7 +158,7 @@ public final class AdminApi implements AutoCloseable {
             Http.ok(ex, Map.of("loggedIn", false));
         });
         r.get("/api/events", (ex, p) -> ctx.events().hub().open(ex,
-                () -> new String[]{Events.BRANCHES, Http.GSON.toJson(Map.of("online", ctx.registry().onlineIds()))}));
+                () -> new String[]{Events.BRANCHES, Http.GSON.toJson(Map.of("online", ctx.registry().onlineIds()))}, () -> auth.isCurrent(ex)));
 
         // ---- chi nhánh (FR-03) ----
         r.get("/api/branches", (ex, p) -> Http.ok(ex, ctx.stock().branches(ctx.registry().onlineIds())));
@@ -165,7 +212,8 @@ public final class AdminApi implements AutoCloseable {
         r.get("/api/requests", (ex, p) -> {
             Map<String, String> q = Http.query(ex);
             Http.ok(ex, ctx.requests().search(q.getOrDefault("maCn", ""), q.getOrDefault("maSp", ""),
-                    q.getOrDefault("trangThai", ""), q.getOrDefault("tu", ""), q.getOrDefault("den", "")));
+                    q.getOrDefault("trangThai", ""), q.getOrDefault("tu", ""), q.getOrDefault("den", ""),
+                    "true".equals(q.get("chenhLech"))));
         });
         r.post("/api/requests/{id}/offer", (ex, p) -> {
             ctx.requests().offer(Integer.parseInt(p.get(0)), Http.integer(Http.body(ex), "soLuong"));
@@ -283,6 +331,10 @@ public final class AdminApi implements AutoCloseable {
                            count(*) FILTER (WHERE muc = 'LOW') AS low
                     FROM su_kien_bao_mat WHERE thoi_gian > CURRENT_TIMESTAMP - INTERVAL '24 hours'""", Db::toMap)));
             s.put("mode", ctx.settings().securityMode.name());
+            s.put("scraping", ctx.security().scraping().summary(now));
+            s.put("mail", ctx.email().status());
+            s.put("scrapingPersistence", ctx.scrapingStore().status());
+            s.put("realtimeDropped", ctx.securityLog().realtimeDropped());
             s.put("suKienBiBo", ctx.security().droppedEvents());
             Http.ok(ex, s);
         });
@@ -294,11 +346,40 @@ public final class AdminApi implements AutoCloseable {
             String ip = q.getOrDefault("ip", "");
             String maCn = q.getOrDefault("maCn", "");
             int limit = Math.max(1, Math.min(Integer.parseInt(q.getOrDefault("limit", "300")), 2000));
+            int offset = Math.max(0, Math.min(Integer.parseInt(q.getOrDefault("offset", "0")), 1000000));
             Http.ok(ex, ctx.db().read(c -> Db.rows(c, """
-                    SELECT id, thoi_gian, nguon, loai, muc, ip, ma_cn, chi_tiet, hanh_dong FROM su_kien_bao_mat
+                    SELECT id, thoi_gian, nguon, loai, muc, ip, ma_cn, chi_tiet, hanh_dong, event_key, metadata, review, review_reason,
+                    (SELECT string_agg(DISTINCT status, ',') FROM security_email_delivery d WHERE d.event_key=e.event_key) AS email_status
+                    FROM su_kien_bao_mat e
                     WHERE (? = '' OR muc = ?) AND (? = '' OR loai = ?) AND (? = '' OR nguon = ?)
                       AND (? = '' OR ip = ?) AND (? = '' OR ma_cn = ?)
-                    ORDER BY id DESC LIMIT ?""", muc, muc, loai, loai, nguon, nguon, ip, ip, maCn, maCn, limit)));
+                    ORDER BY id DESC LIMIT ? OFFSET ?""", muc, muc, loai, loai, nguon, nguon, ip, ip, maCn, maCn, limit, offset)));
+        });
+        r.get("/api/security/scraping/summary", (ex, p) -> Http.ok(ex, ctx.security().scraping().summary(System.currentTimeMillis())));
+        r.get("/api/security/scraping/blocks", (ex, p) -> Http.ok(ex, ctx.security().scraping().blocks(System.currentTimeMillis())));
+        r.post("/api/security/scraping/blocks/revoke", (ex, p) -> {
+            JsonObject b = Http.body(ex);
+            String subject = Http.str(b, "subject"), reason = Http.str(b, "reason").trim();
+            if (subject.length() > 160 || reason.isEmpty() || reason.length() > 500) throw new Http.ApiException(400, "Can doi tuong va ly do (1..500 ky tu)");
+            boolean had = ctx.security().scraping().revoke(subject);
+            ctx.security().record("ADMIN", "SCRAPING_REVOKE", "LOW", clientIp(ex), null,
+                    "actor=" + auth.user() + "; subject=" + subject + "; reason=" + reason, "GHI_NHAN", System.currentTimeMillis());
+            Http.ok(ex, Map.of("ok", had));
+        });
+        r.post("/api/security/scraping/events/{id}/review", (ex, p) -> {
+            JsonObject b = Http.body(ex);
+            String verdict = Http.str(b, "verdict"), reason = Http.str(b, "reason").trim();
+            if (!Set.of("TRUE_POSITIVE", "FALSE_POSITIVE").contains(verdict) || reason.isEmpty() || reason.length() > 500)
+                throw new Http.ApiException(400, "Danh gia hoac ly do khong hop le");
+            long id = Long.parseLong(p.get(0));
+            int changed = ctx.db().tx(c -> {
+                int n = Db.update(c, "UPDATE su_kien_bao_mat SET review=?, review_reason=? WHERE id=? AND loai IN ('SCRAPING','CLIENT_SCRAPING')", verdict, reason, id);
+                if (n > 0) Db.update(c, "INSERT INTO su_kien_bao_mat(nguon,loai,muc,ip,chi_tiet,hanh_dong) VALUES('ADMIN','SCRAPING_REVIEW','LOW',?,?,'GHI_NHAN')",
+                        clientIp(ex), "actor=" + auth.user() + "; event=" + id + "; " + verdict + "; " + reason);
+                return n;
+            });
+            if (changed == 0) throw new Http.ApiException(404, "Khong tim thay su kien scraping");
+            Http.ok(ex, Map.of("ok", true));
         });
         r.get("/api/security/ips", (ex, p) -> Http.ok(ex, ctx.security().ipTable(System.currentTimeMillis())));
         r.get("/api/security/sessions", (ex, p) -> {

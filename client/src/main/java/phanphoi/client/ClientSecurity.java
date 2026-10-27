@@ -61,6 +61,8 @@ final class ClientSecurity {
         return false;
     }
 
+    synchronized void scrapingReport(String detail, long now) { add("CLIENT_SCRAPING", "MEDIUM", detail, now); }
+
     private void countApi(long now) {
         long sec = now / 1000;
         if (sec != apiSecond) {

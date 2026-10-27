@@ -1,8 +1,9 @@
 "use client";
+import { PasswordRecovery, useRecoveryToken } from "@/components/PasswordRecovery";
 
 import { FormEvent, useEffect, useState } from "react";
 import {
-  api, fmtMoney, fmtNumber, NOTICE_STATE_LABEL, NOTICE_STATE_TONE, NOTICE_TYPE_LABEL, STATE_LABEL, today, TRANSFER_LABEL, useEvents,
+  api, fmtMoney, fmtNumber, NOTICE_STATE_LABEL, NOTICE_STATE_TONE, NOTICE_TYPE_LABEL, STATE_LABEL, today, TRANSFER_LABEL, useEvents, UNAUTHORIZED,
 } from "@/lib/api";
 import type {
   BranchDebtInfo, BranchItem, BranchRequest, BranchSnapshot, BranchTransfer, ClientSecurityInfo, InboxItem, Notice,
@@ -26,35 +27,40 @@ const STATUS_TEXT: Record<BranchSnapshot["status"], string> = {
 
 export default function BranchPage() {
   const [s, setS] = useState<BranchSnapshot | null>(null);
+  const [forceRecovery, setForceRecovery] = useState(false);
   const [tab, setTab] = useState<Tab>("stock");
   const { toasts, push, dismiss } = useToasts();
+  const [duplicateAlert, setDuplicateAlert] = useState<{ maCn: string; time: string; message: string } | null>(null);
 
   const agentUp = useEvents({
     state: (snap: BranchSnapshot) => setS(snap),
     toast: (n: Notice) => push(n.level, n.text),
-  });
+    "duplicate-login": (alert: { maCn: string; time: string; message: string }) => {
+      setDuplicateAlert(alert);
+      push("error", alert.message);
+    },
+  }, !!s?.maCn);
 
   useEffect(() => {
+    if (/^#reset=[A-Za-z0-9_-]{43}$/.test(window.location.hash)) setForceRecovery(true);
     api<BranchSnapshot>("/api/state").then(setS).catch(() => {});
   }, []);
 
-  // URL theo tên chi nhánh: /da-nang/ khi đã đăng nhập, /branch/ khi đăng xuất (client.jar phục vụ cùng một trang)
-  const slug = s?.maCn ? s.slug : null;
   useEffect(() => {
-    if (s === null) return;
-    const want = `/${slug ?? "branch"}/`;
-    if (window.location.pathname !== want) {
-      window.history.replaceState(window.history.state, "", want + window.location.search + window.location.hash);
-    }
-  }, [s === null, slug]);
+    const reset = () => window.location.reload();
+    window.addEventListener(UNAUTHORIZED, reset);
+    return () => window.removeEventListener(UNAUTHORIZED, reset);
+  }, []);
+
+  // All branches use the same public URL /branch/; identity lives in the secure cookie.
 
   if (!s) {
     return <main className="center"><p className="muted">Đang mở ứng dụng chi nhánh...</p></main>;
   }
-  if (!s.maCn) {
+  if (forceRecovery || !s.maCn) {
     return (
       <>
-        <Login snapshot={s} agentUp={agentUp} />
+        <Login snapshot={s} />
         <Toasts toasts={toasts} dismiss={dismiss} />
       </>
     );
@@ -92,10 +98,17 @@ export default function BranchPage() {
         status={
           <>
             <span title={s.statusDetail}><Dot on={online} />{STATUS_TEXT[s.status]}</span>
-            <button className="btn btn-sm" onClick={() => api("/api/logout", {}).catch(() => {})}>Đăng xuất</button>
+            <button className="btn btn-sm" onClick={() => api("/api/logout", {}).then(() => window.location.reload()).catch(() => {})}>Đăng xuất</button>
           </>
         }>
-        {!agentUp && <div className="banner banner-danger">Không liên lạc được với client.jar trên máy này.</div>}
+        {duplicateAlert && (
+          <div className="banner banner-danger" role="alert" style={{ marginBottom: 16 }}>
+            <strong>Cảnh báo bảo mật — {duplicateAlert.maCn}</strong>
+            <p>{duplicateAlert.message}</p>
+            <button className="btn btn-sm" type="button" onClick={() => setDuplicateAlert(null)}>Đã hiểu</button>
+          </div>
+        )}
+        {!agentUp && <div className="banner banner-danger">Không kết nối được với dịch vụ chi nhánh.</div>}
         {agentUp && !online && (
           <div className="banner banner-warn">
             {s.statusDetail}. Dữ liệu bên dưới là bản cuối cùng nhận được; thao tác sẽ mở lại khi nối lại được server.
@@ -122,23 +135,23 @@ export default function BranchPage() {
   );
 }
 
-function Login({ snapshot, agentUp }: { snapshot: BranchSnapshot; agentUp: boolean }) {
+function Login({ snapshot }: { snapshot: BranchSnapshot }) {
   const [maCn, setMaCn] = useState("");
+  const [method, setMethod] = useState<"name" | "email">("name");
+  const [recoveryToken, setRecoveryToken] = useRecoveryToken();
+  const [forgot, setForgot] = useState(false);
+  const [branchHint, setBranchHint] = useState("");
   const [matKhau, setMatKhau] = useState("");
-  const [server, setServer] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
-
-  useEffect(() => {
-    api<{ server: string }>("/api/config").then((c) => setServer(c.server)).catch(() => {});
-  }, []);
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
     setBusy(true);
     setError("");
     try {
-      await api("/api/login", { maCn: maCn.trim().toUpperCase(), matKhau, server });
+      await api("/api/login", { maCn: method === "email" ? maCn.trim().toLowerCase() : maCn.trim(), branchHint: method === "email" ? branchHint.trim().toUpperCase() : "", matKhau });
+      window.location.reload();
     } catch (err) {
       setError((err as Error).message);
     } finally {
@@ -148,24 +161,31 @@ function Login({ snapshot, agentUp }: { snapshot: BranchSnapshot; agentUp: boole
 
   return (
     <LoginScreen side="branch">
+      {forgot || recoveryToken ? <PasswordRecovery scope="branch" token={recoveryToken}
+        onCancel={() => { setForgot(false); setRecoveryToken(""); }} onDone={() => {}} /> :
       <form className="form-stack" onSubmit={submit}>
-        <label className="field">Mã chi nhánh
-          <input value={maCn} onChange={(e) => setMaCn(e.target.value)} placeholder="VD: CN01" autoFocus required />
+        <label className="field">Hình thức đăng nhập
+          <select value={method} onChange={(e) => { setMethod(e.target.value as "name" | "email"); setMaCn(""); setBranchHint(""); }}>
+            <option value="name">Tên hoặc mã chi nhánh</option>
+            <option value="email">Email chi nhánh</option>
+          </select>
         </label>
+        <label className="field">{method === "email" ? "Email" : "Tên hoặc mã chi nhánh"}
+          <input type={method === "email" ? "email" : "text"} value={maCn} onChange={(e) => setMaCn(e.target.value)}
+            placeholder={method === "email" ? "VD: test0003@gmail.com" : "VD: CN03 hoặc Chi nhánh TP.HCM"} autoFocus required />
+        </label>
+        {method === "email" && <label className="field">Mã chi nhánh (nếu email dùng chung)
+          <input value={branchHint} onChange={(e) => setBranchHint(e.target.value)} placeholder="VD: CN01 hoặc CN02" />
+          <span className="note">CN01 và CN02 dùng chung email nên cần điền mã chi nhánh này.</span>
+        </label>}
         <label className="field">Mật khẩu
           <input type="password" value={matKhau} onChange={(e) => setMatKhau(e.target.value)} required />
         </label>
-        <label className="field">Địa chỉ server
-          <input value={server} onChange={(e) => setServer(e.target.value)} placeholder="auto hoặc 192.168.1.10:5000" />
-        </label>
-        <span className="note">
-          Để “auto” thì máy tự tìm server trong mạng LAN (UDP broadcast).
-          {snapshot.statusDetail && <> Trạng thái: {snapshot.statusDetail}</>}
-        </span>
+        {snapshot.statusDetail && <span className="note">{snapshot.statusDetail}</span>}
         {error && <p className="error">{error}</p>}
-        {!agentUp && <p className="error">Không liên lạc được với client.jar.</p>}
         <button className="btn btn-primary" disabled={busy}>{busy ? "Đang đăng nhập..." : "Đăng nhập"}</button>
-      </form>
+        <button type="button" className="btn" onClick={() => setForgot(true)}>Quên mật khẩu?</button>
+      </form>}
     </LoginScreen>
   );
 }
@@ -193,12 +213,11 @@ const SEC_TONE: Record<string, string> = { HIGH: "danger", MEDIUM: "warn", LOW: 
 
 /** Sự kiện an ninh client.jar phát hiện trên máy này; mỗi sự kiện cũng được báo lên công ty (SECURITY_REPORT). */
 function SecurityTab({ sec }: { sec: ClientSecurityInfo | undefined }) {
-  if (!sec) return <Card><Empty>client.jar này chưa hỗ trợ giám sát an ninh.</Empty></Card>;
+  if (!sec) return <Card><Empty>Chưa có dữ liệu giám sát an ninh.</Empty></Card>;
   return (
     <Card title={<>Sự kiện an ninh <span className="muted">· {sec.suKien.length} gần nhất{sec.choGui ? `, ${sec.choGui} chờ gửi lên công ty` : ""}</span></>}>
       <p className="note">
-        Ứng dụng chặn trang web lạ gọi API trên máy này (CSRF, DNS rebinding), cảnh báo khi nhiều server cùng trả lời
-        tìm server, server đổi địa chỉ, hoặc server gửi tin lạ.
+        Ứng dụng cảnh báo khi có truy cập bất thường, thay đổi kết nối hoặc nhận được dữ liệu không hợp lệ.
       </p>
       {sec.suKien.length === 0 ? <Empty>Chưa phát hiện gì bất thường.</Empty> : (
         <div className="table-wrap scroll" style={{ maxHeight: 520 }}>
@@ -440,16 +459,18 @@ function Offers({ requests, items, online, push }: {
           )}
         </Card>
         {closed.length > 0 && (
-          <Card title="Đã xử lý trong phiên này">
+          <Card title="Đã xử lý gần đây">
             <div className="table-wrap">
               <table>
-                <thead><tr><th>Mã YC</th><th>Mặt hàng</th><th className="num">Số lượng</th><th>Trạng thái</th><th>Cập nhật</th></tr></thead>
+                <thead><tr><th>Mã YC</th><th>Mặt hàng</th><th className="num">Đã gửi</th><th className="num">Thực nhận</th><th>Chênh lệch</th><th>Trạng thái</th><th>Cập nhật</th></tr></thead>
                 <tbody>
                   {closed.map((r) => (
                     <tr key={r.maYc}>
                       <td className="code">YC{r.maYc}</td>
                       <td>{name(r.maHang)}</td>
                       <td className="num">{r.soLuongGiao != null ? fmtNumber(r.soLuongGiao) : fmtNumber(r.soLuongDeXuat)}</td>
+                      <td className="num">{fmtNumber(r.soLuongNhan)}</td>
+                      <td>{r.soLuongNhan == null ? "—" : r.soLuongNhan === r.soLuongGiao ? "Đủ hàng" : `${r.soLuongNhan > (r.soLuongGiao ?? 0) ? "Thừa" : "Thiếu"} ${Math.abs(r.soLuongNhan - (r.soLuongGiao ?? 0))}`}</td>
                       <td><StateBadge state={r.trangThai} /></td>
                       <td className="muted nowrap">{r.capNhat}</td>
                     </tr>
@@ -465,17 +486,23 @@ function Offers({ requests, items, online, push }: {
 }
 
 function OfferRow({ r, name, online, push }: { r: BranchRequest; name: string; online: boolean; push: Push }) {
-  const initial = r.trangThai === "THIEU_HANG" ? r.soLuongCoThe : r.soLuongDeXuat;
+  const initial = r.trangThai === "DA_GIAO" ? "" : r.trangThai === "THIEU_HANG" ? r.soLuongCoThe : r.soLuongDeXuat;
   const [qty, setQty] = useState(String(initial ?? ""));
   const { run, busy } = useAction(push);
   const n = Number(qty);
+  const validReceipt = qty.trim() !== "" && Number.isInteger(n) && n >= 0 && n <= 2147483647;
+  const delta = n - (r.soLuongGiao ?? 0);
   const off = !online || busy;
 
   useEffect(() => setQty(String(initial ?? "")), [initial]);
 
   const accept = () => run(() => api(`/api/requests/${r.maYc}/accept`, { soLuong: n }));
   const reject = () => run(() => api(`/api/requests/${r.maYc}/reject`, {}), `Đã từ chối YC #${r.maYc}`);
-  const received = () => run(() => api(`/api/requests/${r.maYc}/received`, {}), `Đã nhập kho YC #${r.maYc}`);
+  const received = () => {
+    if (!validReceipt) return;
+    if (delta !== 0 && !window.confirm(`YC #${r.maYc}: đã gửi ${r.soLuongGiao}, thực nhận ${n} (${delta > 0 ? "thừa" : "thiếu"} ${Math.abs(delta)}). Xác nhận nhập kho và báo công ty?`)) return;
+    run(() => api(`/api/requests/${r.maYc}/received`, { soLuongNhan: n }), "Đã gửi số kiểm đếm, chờ server xác nhận.");
+  };
 
   return (
     <tr className={r.trangThai === "THIEU_HANG" ? "warn" : ""}>
@@ -486,13 +513,19 @@ function OfferRow({ r, name, online, push }: { r: BranchRequest; name: string; o
         {r.trangThai === "DA_DE_XUAT" && <>Công ty đề xuất cấp <b>{fmtNumber(r.soLuongDeXuat)}</b>. Đồng ý, sửa số lượng hoặc từ chối.</>}
         {r.trangThai === "THIEU_HANG" && <>Công ty báo không đủ hàng, kho tổng chỉ còn <b>{fmtNumber(r.soLuongCoThe)}</b>.
           Nhận số đó, chờ điều chuyển từ chi nhánh khác, hoặc từ chối.</>}
-        {r.trangThai === "DA_GIAO" && <>Công ty đã gửi <b>{fmtNumber(r.soLuongGiao)}</b>. Bấm khi hàng tới để cộng vào kho.</>}
+        {r.trangThai === "DA_GIAO" && <>Công ty đã gửi <b>{fmtNumber(r.soLuongGiao)}</b>. Nhập số thực tế đã kiểm đếm (kể cả 0 nếu thiếu toàn bộ).</>}
         <div className="muted" style={{ fontSize: 12 }}>{r.capNhat}</div>
       </td>
       {r.trangThai === "DA_GIAO" ? (
         <>
-          <td className="num">{fmtNumber(r.soLuongGiao)}</td>
-          <td className="right nowrap"><button className="btn btn-sm btn-success" disabled={off} onClick={received}>Đã nhận hàng</button></td>
+          <td className="num">
+            <input type="number" min={0} max={2147483647} step={1} value={qty} placeholder="Thực nhận"
+              aria-label={`Số lượng thực nhận YC ${r.maYc}`} disabled={off} onChange={(e) => setQty(e.target.value)} />
+            {validReceipt && <div className={delta === 0 ? "muted" : "badge badge-danger"} style={{ fontSize: 12 }}>
+              {delta === 0 ? "Đủ hàng" : `${delta > 0 ? "Thừa" : "Thiếu"} ${Math.abs(delta)} — sẽ báo công ty`}
+            </div>}
+          </td>
+          <td className="right nowrap"><button className="btn btn-sm btn-success" disabled={off || !validReceipt} onClick={received}>Xác nhận thực nhận</button></td>
         </>
       ) : (
         <>
@@ -732,7 +765,7 @@ function History({ s, online, push }: { s: BranchSnapshot; online: boolean; push
           : shown.length === 0 ? <Empty>Không có phiếu nào khớp bộ lọc.</Empty> : (
           <div className="table-wrap">
             <table>
-              <thead><tr><th>Thời gian</th><th>Mã YC</th><th>Mã hàng</th><th>Tên hàng</th><th className="num">Số lượng</th><th>Nguồn</th></tr></thead>
+              <thead><tr><th>Thời gian</th><th>Mã YC</th><th>Mã hàng</th><th>Tên hàng</th><th className="num">Đã gửi</th><th className="num">Thực nhận</th><th>Chênh lệch</th><th>Nguồn</th></tr></thead>
               <tbody>
                 {shown.map((h, i) => (
                   <tr key={i}>
@@ -741,6 +774,9 @@ function History({ s, online, push }: { s: BranchSnapshot; online: boolean; push
                     <td>{h.maHang}</td>
                     <td>{h.tenHang}</td>
                     <td className="num">{fmtNumber(h.soLuong)}</td>
+                    <td className="num">{fmtNumber(h.soLuongNhan)}</td>
+                    <td>{h.soLuongNhan == null ? "Chưa ghi nhận" : h.soLuongNhan === h.soLuong ? "Đủ hàng" :
+                      <Badge tone="danger">{h.soLuongNhan > h.soLuong ? "Thừa" : "Thiếu"} {Math.abs(h.soLuongNhan - h.soLuong)}</Badge>}</td>
                     <td>{h.nguon === "KHO_TONG" ? "Kho tổng" : <Badge tone="info">Điều chuyển từ {h.nguon}</Badge>}</td>
                   </tr>
                 ))}
@@ -749,7 +785,7 @@ function History({ s, online, push }: { s: BranchSnapshot; online: boolean; push
             {s.historyRange && (
               <div className="table-foot">
                 Khoảng {s.historyRange}: {filtering ? `${shown.length}/${s.history.length}` : s.history.length} phiếu,
-                tổng {fmtNumber(total)}.
+                tổng đã gửi {fmtNumber(total)}, thực nhận đã kiểm đếm {fmtNumber(shown.reduce((sum, h) => sum + (h.soLuongNhan ?? 0), 0))}.
               </div>
             )}
           </div>

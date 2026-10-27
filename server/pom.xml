@@ -13,6 +13,11 @@
 
     <dependencies>
         <dependency>
+            <groupId>org.eclipse.angus</groupId>
+            <artifactId>jakarta.mail</artifactId>
+            <version>2.0.5</version>
+        </dependency>
+        <dependency>
             <groupId>phanphoi</groupId>
             <artifactId>common</artifactId>
         </dependency>

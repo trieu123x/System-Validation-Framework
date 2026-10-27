@@ -88,6 +88,12 @@ final class BranchAgent implements ServerLink.Handler {
         return serverSetting;
     }
 
+    String branchIdentity() { synchronized (lock) { return state.maCn; } }
+    Map<String, Object> publicSnapshot() {
+        return Map.of("status", "DISCONNECTED", "statusDetail", "Dang nhap de xem du lieu", "server", serverSetting);
+    }
+    void scrapingReport(String detail) { security.scrapingReport(detail, System.currentTimeMillis()); }
+
     Map<String, Object> snapshot() {
         synchronized (lock) {
             return snap();
@@ -205,7 +211,8 @@ final class BranchAgent implements ServerLink.Handler {
         }
         synchronized (lock) {
             if (state.status == Status.ONLINE) {
-                if (maCn.equals(state.maCn)) {
+                if (maCn.equals(state.maCn) && credPw != null && java.security.MessageDigest.isEqual(
+                        matKhau.getBytes(java.nio.charset.StandardCharsets.UTF_8), credPw.getBytes(java.nio.charset.StandardCharsets.UTF_8))) {
                     return snap();
                 }
                 throw new Http.ApiException(409, "Dang dang nhap " + state.maCn + ", hay dang xuat truoc");
@@ -254,6 +261,13 @@ final class BranchAgent implements ServerLink.Handler {
             throw new Http.ApiException(Protocol.LOGIN_FAIL_ONLINE.equals(reply.param(0)) ? 409 : 401, reply.param(0));
         }
         return snapshot();
+    }
+
+    void stop() {
+        logout();
+        timer.shutdownNow();
+        hub.closeAll();
+        hub.shutdown();
     }
 
     void logout() {
@@ -314,17 +328,12 @@ final class BranchAgent implements ServerLink.Handler {
         }
     }
 
-    void received(int maYc) {
-        send(Message.of(Command.RECEIVED, maYc));
-        synchronized (lock) {
-            BranchState.Request r = state.requests.get(maYc);
-            if (r != null) {
-                r.trangThai = "HOAN_TAT";
-                r.capNhat = BranchState.now();
-                alerted.remove(r.maHang);
-            }
-            publish();
+    void received(int maYc, int soLuongNhan) {
+        if (soLuongNhan < 0) {
+            throw new Http.ApiException(400, "Số lượng thực nhận phải là số nguyên không âm");
         }
+        // Chỉ RECEIVED_OK từ server mới được đóng YC, tránh báo thành công khi giao dịch bị từ chối.
+        send(Message.of(Command.RECEIVED, maYc, soLuongNhan));
     }
 
     void transferAnswer(int maDc, boolean agree) {
@@ -401,8 +410,18 @@ final class BranchAgent implements ServerLink.Handler {
         switch (m.command()) {
             case PING -> l.send(Message.of(Command.PONG));
             case PONG -> { }
-            case LOGIN_OK -> onLoginOk(l, m.param(0));
+            case LOGIN_OK -> onLoginOk(l, m.params().size() >= 2 ? m.param(0) : attemptId, m.params().size() >= 2 ? m.param(1) : m.param(0));
             case LOGIN_FAIL -> onLoginFail(l, m);
+            case DUPLICATE_LOGIN_ALERT -> {
+                String time = m.param(0);
+                String ip = m.param(1);
+                String message = "Có thiết bị khác vừa thử đăng nhập " + state.maCn
+                        + ". Yêu cầu đã bị từ chối; phiên của bạn vẫn hoạt động.";
+                state.notice("error", message);
+                hub.publish("duplicate-login", Map.of(
+                        "maCn", state.maCn == null ? "" : state.maCn,
+                        "ip", ip, "time", time, "message", message));
+            }
             case INVENTORY -> {
                 state.inventory.clear();
                 for (List<String> r : m.listParam(0)) {
@@ -469,6 +488,26 @@ final class BranchAgent implements ServerLink.Handler {
                 r.capNhat = BranchState.now();
                 alerted.add(r.maHang);
             }
+            case RECEIVED_OK -> {
+                BranchState.Request r = state.request(m.intParam(0));
+                boolean fresh = !"HOAN_TAT".equals(r.trangThai);
+                r.maHang = m.param(1);
+                r.soLuongGiao = m.intParam(2);
+                r.soLuongNhan = m.intParam(3);
+                r.trangThai = "HOAN_TAT";
+                r.capNhat = BranchState.now();
+                // Khi đồng bộ, xác nhận của đơn cũ không được xóa cờ thiếu hàng của đơn mới cùng mặt hàng.
+                boolean anotherOpen = state.requests.values().stream().anyMatch(other -> other != r
+                        && r.maHang.equals(other.maHang) && other.trangThai != null && OPEN_STATES.contains(other.trangThai));
+                if (!anotherOpen) alerted.remove(r.maHang);
+                int delta = r.soLuongNhan - r.soLuongGiao;
+                if (fresh && System.currentTimeMillis() - loginOkAt > 3000) {
+                    toast(delta == 0 ? "success" : "warn", "Server đã xác nhận YC #" + r.maYc
+                            + ": thực nhận " + r.soLuongNhan + "/" + r.soLuongGiao
+                            + (delta == 0 ? " (đủ hàng)." : "; " + (delta > 0 ? "thừa " : "thiếu ")
+                            + Math.abs(delta) + ". Đã báo về công ty."));
+                }
+            }
             case HISTORY -> {
                 List<Map<String, Object>> rows = new ArrayList<>();
                 for (List<String> r : m.listParam(0)) {
@@ -479,6 +518,7 @@ final class BranchAgent implements ServerLink.Handler {
                     row.put("soLuong", Integer.parseInt(r.get(3)));
                     row.put("thoiGian", r.get(4));
                     row.put("nguon", r.size() > 5 ? r.get(5) : "KHO_TONG");
+                    row.put("soLuongNhan", r.size() > 6 && !r.get(6).isEmpty() ? Integer.valueOf(r.get(6)) : null);
                     rows.add(row);
                 }
                 state.history = rows;
@@ -565,15 +605,15 @@ final class BranchAgent implements ServerLink.Handler {
         }
     }
 
-    private void onLoginOk(ServerLink l, String tenCn) {
+    private void onLoginOk(ServerLink l, String canonicalId, String tenCn) {
         attempt = 0;
         loginOkAt = System.currentTimeMillis();
-        String id = attemptId;
+        String id = canonicalId;
         if (!id.equals(state.maCn)) {
             state.clearBranchData();
             alerted.clear();
         }
-        credId = id;
+        credId = attemptId;
         credPw = attemptPw;
         wantOnline = true;
         state.maCn = id;
@@ -585,7 +625,7 @@ final class BranchAgent implements ServerLink.Handler {
         // server chỉ đẩy DEBT khi chi nhánh đang online, nên sau mỗi lần đăng nhập tự xin lại
         l.send(Message.of(Command.DEBT_GET));
         if (pendingLogin != null) {
-            pendingLogin.complete(Message.of(Command.LOGIN_OK, tenCn));
+            pendingLogin.complete(Message.of(Command.LOGIN_OK, canonicalId, tenCn));
         }
     }
 
@@ -603,10 +643,9 @@ final class BranchAgent implements ServerLink.Handler {
             state.statusDetail = "Server con giu phien cu, thu lai sau 5 giay";
             l.close();
         } else {
-            wantOnline = false;
-            state.status = Status.DISCONNECTED;
-            state.statusDetail = "Tu dang nhap lai that bai: " + reason;
+            // A password reset (or revoked credentials) must clear cached branch data and identity.
             l.close();
+            logout();
         }
     }
 

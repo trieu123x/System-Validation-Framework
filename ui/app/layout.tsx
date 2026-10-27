@@ -3,7 +3,7 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "TOBOKI",
-  description: "Hệ thống phân phối hàng hóa TOBOKI với cảnh báo thiếu hàng tự động",
+  description: "TOBOKI - quản lý chi nhánh, hàng hóa và thông báo",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

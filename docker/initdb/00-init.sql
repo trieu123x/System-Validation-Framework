@@ -16,3 +16,6 @@
 -- 3 mặt hàng mới (không có ở chi nhánh thật) và ảnh trên Cloudinary; chạy sau seed_demo
 \i /db/seed_hang_moi.sql
 \i /db/seed_images.sql
+\i /db/migrate_branch_emails.sql
+
+\i /db/migrate_password_recovery.sql

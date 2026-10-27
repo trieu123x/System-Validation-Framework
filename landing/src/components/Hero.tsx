@@ -17,12 +17,12 @@ export default function Hero() {
       <div className="hero-copy">
         <p className="eyebrow"><span className="eyebrow-line" /> THIẾT BỊ CHO TỪNG CÔNG VIỆC</p>
         <h1 id="hero-title">Vững thiết bị.<br /><span>Tiếp sức</span><br />mọi công trình.</h1>
-        <p className="hero-description">Giới thiệu đại lý bán buôn máy móc, thiết bị TOBOKI. Từ máy hút bụi, máy tời đến thiết bị thi công, kết nối công ty với các chi nhánh qua hệ thống phân phối của nhóm.</p>
+        <p className="hero-description">TOBOKI cung cấp máy móc và thiết bị cho công trình, nhà xưởng và nhu cầu thương mại.</p>
         <div className="hero-actions">
           <a className="button button-orange" href="#san-pham">Xem sản phẩm <Icon name="arrow" /></a>
-          {systemLinks.admin && <a className="text-link" href={systemLinks.admin}>Đăng nhập hệ thống <span aria-hidden="true">↗</span></a>}
+          {systemLinks.admin && <a className="text-link" href={systemLinks.admin}>Đăng nhập quản trị <span aria-hidden="true">↗</span></a>}
         </div>
-        <p className="hero-footnote"><span className="status-dot" /> Dữ liệu mẫu cho bài tập lớn môn Lập trình mạng</p>
+        
       </div>
       <div className="hero-visual" role="region" aria-roledescription="bộ trình chiếu" aria-label="Sản phẩm TOBOKI" data-product-id={product.id} onKeyDown={(event) => {
         if (!(event.target instanceof HTMLButtonElement)) return

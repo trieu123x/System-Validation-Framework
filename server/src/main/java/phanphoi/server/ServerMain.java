@@ -3,6 +3,8 @@ package phanphoi.server;
 import phanphoi.common.Config;
 import phanphoi.common.Protocol;
 import phanphoi.server.db.Db;
+import phanphoi.server.mail.EmailNotifications;
+import phanphoi.server.mail.MailSettings;
 import phanphoi.server.net.DiscoveryResponder;
 import phanphoi.server.net.BioServer;
 import phanphoi.server.net.NetServer;
@@ -21,6 +23,7 @@ public final class ServerMain {
 
     public static void main(String[] args) throws Exception {
         Config cfg = Config.load("config/server.properties", args);
+        MailSettings mailSettings = MailSettings.from(cfg);
         int tcpPort = cfg.getInt("tcp.port", Protocol.DEFAULT_TCP_PORT);
         int udpPort = cfg.getInt("discovery.port", Protocol.DEFAULT_DISCOVERY_PORT);
         String adminHost = cfg.get("admin.http.host", "127.0.0.1");
@@ -33,10 +36,14 @@ public final class ServerMain {
                 cfg.get("db.password", ""),
                 cfg.getInt("db.pool.size", 20));
         db.read(c -> c.isValid(3)); // báo lỗi sớm nếu sai thông tin CSDL
+        phanphoi.server.db.ReceiptSchema.ensure(db);
         System.out.println("[server] da ket noi CSDL");
 
         ServerSettings settings = new ServerSettings(cfg);
-        ServerContext ctx = new ServerContext(db, settings, cfg.getBool("log.quiet", false));
+        EmailNotifications email = new EmailNotifications(mailSettings);
+        email.useDatabaseRecipients(db);
+        ServerContext ctx = new ServerContext(db, settings, cfg.getBool("log.quiet", false), email);
+        System.out.println("[server] email: " + (ctx.email().enabled() ? "SMTP bat" : "tat"));
         long idleMs = cfg.getInt("heartbeat.idle.seconds", 30) * 1000L;
         long pongMs = cfg.getInt("heartbeat.pong.timeout.seconds", 10) * 1000L;
         NetServer tcp = settings.ioMode == ServerSettings.IoMode.NIO
@@ -55,13 +62,14 @@ public final class ServerMain {
         info.put("tcpPort", tcpPort);
         info.put("discoveryPort", udpPort);
         info.put("maxClients", maxClients);
-        AdminAuth auth = new AdminAuth(cfg);
+        AdminAuth auth = new AdminAuth(cfg, db);
         if (auth.usesDefaultPassword()) {
             System.out.println("[server] dang nhap cong ty: " + auth.user() + " / mat khau mac dinh admin123"
                     + " (doi bang admin.password.hash trong server.properties)");
         }
+        var recovery = new phanphoi.server.mail.PasswordRecovery(db, auth, ctx.registry(), mailSettings);
         AdminApi admin = new AdminApi(ctx, adminHost, adminPort, Path.of(cfg.get("ui.dir", "ui/out")), info,
-                cfg.getBool("experiment.api", true), auth);
+                cfg.getBool("experiment.api", true), auth, recovery);
         admin.start();
         String url = "http://" + ("0.0.0.0".equals(adminHost) ? "localhost" : adminHost) + ":" + adminPort + "/admin/";
         System.out.println("[server] giao dien admin: " + url);
@@ -74,10 +82,14 @@ public final class ServerMain {
             try {
                 tcp.close();
                 ctx.log().close();
+                ctx.events().hub().closeAll();
                 ctx.securityLog().close();
             } catch (Exception ignored) {
                 // đang tắt
             }
+            recovery.close();
+            ctx.email().close();
+            ctx.scrapingStore().close();
             db.close();
         }, "shutdown"));
 

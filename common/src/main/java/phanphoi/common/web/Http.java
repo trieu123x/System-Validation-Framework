@@ -56,7 +56,9 @@ public final class Http {
 
     public static JsonObject body(HttpExchange ex) throws IOException {
         try (InputStream in = ex.getRequestBody()) {
-            String s = new String(in.readAllBytes(), StandardCharsets.UTF_8);
+            byte[] bytes = in.readNBytes(65537);
+            if (bytes.length > 65536) throw new ApiException(413, "JSON vuot 64 KiB");
+            String s = new String(bytes, StandardCharsets.UTF_8);
             if (s.isBlank()) {
                 return new JsonObject();
             }

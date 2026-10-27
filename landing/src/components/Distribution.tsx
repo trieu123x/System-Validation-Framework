@@ -10,9 +10,9 @@ const steps = [
 
 export default function Distribution() {
   return <section id="he-thong" className="distribution-section" aria-labelledby="distribution-title"><div className="page-width">
-    <div className="distribution-top"><div><p className="eyebrow">03 / HỆ THỐNG PHÂN PHỐI</p><h2 id="distribution-title">Kết nối chi nhánh.<br /><span>Thông suốt hàng hóa.</span></h2></div><p>Mô hình quản lý phân phối trong bài tập lớn: theo dõi tồn kho, cảnh báo thiếu hàng theo thời gian thực và xác nhận giao nhận.</p></div>
-    <div className="system-stats" aria-label="Quy mô dữ liệu demo">
-      <div><strong>{branches.length.toString().padStart(2, '0')}<span>↗</span></strong><span>Chi nhánh trong dữ liệu mẫu</span></div>
+    <div className="distribution-top"><div><p className="eyebrow">03 / HỆ THỐNG PHÂN PHỐI</p><h2 id="distribution-title">Kết nối chi nhánh.<br /><span>Thông suốt hàng hóa.</span></h2></div><p>Theo dõi hàng hóa và kết nối các chi nhánh nhanh chóng, thuận tiện.</p></div>
+    <div className="system-stats" aria-label="Thông tin chi nhánh và danh mục">
+      <div><strong>{branches.length.toString().padStart(2, '0')}<span>↗</span></strong><span>Chi nhánh</span></div>
       <div><strong>{products.length}</strong><span>Mặt hàng trong danh mục</span></div>
       <div><strong>{categories.filter((category) => category.primary).length.toString().padStart(2, '0')}<small> + 3</small></strong><span>Danh mục chủ lực + nhóm mới</span></div>
     </div>

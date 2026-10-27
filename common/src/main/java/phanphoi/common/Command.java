@@ -9,8 +9,10 @@ import java.util.Map;
  */
 public enum Command {
     LOGIN(2),
-    LOGIN_OK(1),
+    LOGIN_OK(2),
     LOGIN_FAIL(1),
+    // Thông báo tới phiên đang hoạt động khi có thiết bị khác đăng nhập cùng chi nhánh.
+    DUPLICATE_LOGIN_ALERT(2),
     INVENTORY_GET(0),
     INVENTORY(1),
     SALE(2),
@@ -23,7 +25,10 @@ public enum Command {
     DELIVERED(3),
     // maYC, soLuongCoThe, maHang (maHang để CN hiển thị được YC do admin báo thiếu mà chưa từng nhận OFFER)
     OUT_OF_STOCK(3),
-    RECEIVED(1),
+    // maYC, soLuongThucNhan (0 khi thiếu toàn bộ). Cần nâng cấp server và client cùng phiên bản.
+    RECEIVED(2),
+    // Server xác nhận sau commit: maYC, maHang, soLuongGiao, soLuongNhan.
+    RECEIVED_OK(4),
     HISTORY_GET(2),
     HISTORY(1),
     BROADCAST(1),

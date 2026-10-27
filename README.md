@@ -1,6 +1,11 @@
+> **Anti-scraping V1 (26/10/2026):** xem [hướng dẫn nâng cấp](docs/ANTI_SCRAPING.md). Database cũ cần chạy `db/migrate_anti_scraping.sql` trước khi dùng bản server mới. Luật mới mặc định `detect`; SMTP cần cấu hình riêng.
+
 # Hệ thống phân phối hàng hóa với cảnh báo thiếu hàng tự động
 
 Bài tập lớn môn Lập trình mạng, Chủ đề 3 (ứng dụng mạng Client/Server).
+
+**Email bổ sung:** server có thể gửi cảnh báo đăng nhập bất thường và email khi công ty tạo thông báo
+cho chi nhánh. Mặc định tắt; xem [cấu hình SMTP, thử Mailpit và giải thích thiết kế](docs/EMAIL.md).
 
 ## 1. Mô tả
 

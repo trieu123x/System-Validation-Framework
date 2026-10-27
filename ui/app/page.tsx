@@ -10,7 +10,7 @@ export default function Home() {
   useEffect(() => {
     api<{ role: string }>("/api/role")
       .then((r) => window.location.replace(r.role === "admin" ? "/admin/" : "/branch/"))
-      .catch(() => setError("Không gọi được tiến trình Java. Hãy chạy server.jar hoặc client.jar."));
+      .catch(() => setError("Không thể kết nối đến dịch vụ. Vui lòng thử lại sau."));
   }, []);
 
   return (

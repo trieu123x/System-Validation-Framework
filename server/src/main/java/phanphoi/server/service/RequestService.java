@@ -31,7 +31,7 @@ public final class RequestService {
     public static final String TU_CHOI = "TU_CHOI";
     public static final String THIEU_HANG = "THIEU_HANG";
 
-    private record Yc(int maYc, String maCn, String maSp, Integer deXuat, Integer chot, Integer giao, String trangThai) {
+    private record Yc(int maYc, String maCn, String maSp, Integer deXuat, Integer chot, Integer giao, Integer nhan, String trangThai) {
     }
 
     private final Db db;
@@ -61,10 +61,10 @@ public final class RequestService {
     private static Yc lockYc(Connection c, int maYc, String maCn) throws SQLException {
         // Lọc theo mã CN của phiên: CN A gửi mã YC của CN B → E04 (NFR-07)
         Yc yc = Db.one(c, """
-                SELECT ma_yc, ma_cn, ma_sp, so_luong_de_xuat, so_luong_chot, so_luong_giao, trang_thai
+                SELECT ma_yc, ma_cn, ma_sp, so_luong_de_xuat, so_luong_chot, so_luong_giao, so_luong_nhan, trang_thai
                 FROM yeu_cau WHERE ma_yc = ? AND ma_cn = ? FOR UPDATE""",
                 rs -> new Yc(rs.getInt(1), rs.getString(2), rs.getString(3), (Integer) rs.getObject(4),
-                        (Integer) rs.getObject(5), (Integer) rs.getObject(6), rs.getString(7)), maYc, maCn);
+                        (Integer) rs.getObject(5), (Integer) rs.getObject(6), (Integer) rs.getObject(7), rs.getString(8)), maYc, maCn);
         if (yc == null) {
             throw new ServiceException(ErrorCode.E04, "Khong tim thay yeu cau " + maYc);
         }
@@ -236,36 +236,44 @@ public final class RequestService {
         }
     }
 
-    /**
-     * RECEIVED (FR-20): cộng kho CN, đóng YC và ghi nợ XUAT trong cùng transaction.
-     * @return true nếu kho CN vừa thay đổi.
-     */
-    public boolean received(String maCn, int maYc) throws SQLException {
-        boolean changed = db.tx(c -> {
+    /** Ghi số thực nhận và cộng kho trong cùng transaction. Gửi lại cùng số không cộng kho/nợ lần hai. */
+    public Message received(String maCn, int maYc, int soLuongNhan) throws SQLException {
+        if (soLuongNhan < 0) {
+            throw new ServiceException(ErrorCode.E05, "So luong thuc nhan phai >= 0");
+        }
+        boolean[] changed = {false};
+        Message ack = db.tx(c -> {
             Yc yc = lockYc(c, maYc, maCn);
-            switch (yc.trangThai) {
-                case HOAN_TAT -> {
-                    return false;
+            if (HOAN_TAT.equals(yc.trangThai)) {
+                int saved = yc.nhan == null ? yc.giao : yc.nhan;
+                if (saved != soLuongNhan) {
+                    throw new ServiceException(ErrorCode.E03, "Yeu cau da xac nhan " + saved
+                            + ", khong the doi so thuc nhan bang cach gui lai");
                 }
-                case DA_GIAO -> {
-                    Db.update(c, """
-                            INSERT INTO kho_chi_nhanh (ma_cn, ma_sp, so_luong, nguong_toi_thieu) VALUES (?, ?, ?, 0)
-                            ON CONFLICT (ma_cn, ma_sp) DO UPDATE SET so_luong = kho_chi_nhanh.so_luong + EXCLUDED.so_luong""",
-                            maCn, yc.maSp, yc.giao);
-                    setState(c, maYc, HOAN_TAT);
-                    DebtService.recordDelivery(c, maYc);
-                    return true;
-                }
-                default -> throw new ServiceException(ErrorCode.E03,
+                return Message.of(Command.RECEIVED_OK, maYc, yc.maSp, yc.giao, saved);
+            }
+            if (!DA_GIAO.equals(yc.trangThai)) {
+                throw new ServiceException(ErrorCode.E03,
                         "Yeu cau " + maYc + " chua duoc giao (trang thai " + yc.trangThai + ")");
             }
+            Db.update(c, """
+                    INSERT INTO kho_chi_nhanh (ma_cn, ma_sp, so_luong, nguong_toi_thieu) VALUES (?, ?, ?, 0)
+                    ON CONFLICT (ma_cn, ma_sp) DO UPDATE SET so_luong = kho_chi_nhanh.so_luong + EXCLUDED.so_luong""",
+                    maCn, yc.maSp, soLuongNhan);
+            Db.update(c, """
+                    UPDATE yeu_cau SET so_luong_nhan = ?, trang_thai = 'HOAN_TAT', cap_nhat_luc = CURRENT_TIMESTAMP
+                    WHERE ma_yc = ?""", soLuongNhan, maYc);
+            // Công nợ vẫn theo phiếu xuất gốc; chênh lệch là dữ liệu đối chiếu cho công ty.
+            DebtService.recordDelivery(c, maYc);
+            changed[0] = true;
+            return Message.of(Command.RECEIVED_OK, maYc, yc.maSp, yc.giao, soLuongNhan);
         });
-        if (changed) {
-            publishRequest(maYc);
+        if (changed[0]) {
+            publishRequest(maYc); // SSE chứa số giao, thực nhận và chênh lệch; dữ liệu lưu bền vững trong yeu_cau.
             events.publish(Events.STOCK, Map.of("maCn", maCn));
             debts.changed(maCn);
         }
-        return changed;
+        return ack;
     }
 
     // ================= thao tác admin =================
@@ -450,7 +458,8 @@ public final class RequestService {
                    COALESCE(y.so_luong_xin,
                             GREATEST(2 * COALESCE(k.nguong_toi_thieu, 0) - COALESCE(k.so_luong, 0), 1)) AS goi_y,
                    COALESCE(kt.so_luong, 0) AS ton_tong, sp.gia_xuat, y.so_luong_xin,
-                   y.so_luong_de_xuat, y.so_luong_chot, y.so_luong_giao, y.trang_thai, y.tao_luc, y.cap_nhat_luc
+                   y.so_luong_de_xuat, y.so_luong_chot, y.so_luong_giao, y.so_luong_nhan,
+                   y.so_luong_nhan - y.so_luong_giao AS chenh_lech, y.trang_thai, y.tao_luc, y.cap_nhat_luc
             FROM yeu_cau y
             JOIN chi_nhanh cn ON cn.ma_cn = y.ma_cn
             JOIN san_pham sp ON sp.ma_sp = y.ma_sp
@@ -465,15 +474,16 @@ public final class RequestService {
     }
 
     /** FR-23: lọc theo CN, SP, trạng thái, khoảng thời gian. */
-    public List<Map<String, Object>> search(String maCn, String maSp, String trangThai, String tu, String den)
+    public List<Map<String, Object>> search(String maCn, String maSp, String trangThai, String tu, String den, boolean onlyMismatch)
             throws SQLException {
         Timestamp from = Timestamp.valueOf((tu.isEmpty() ? LocalDate.of(1970, 1, 1) : LocalDate.parse(tu)).atStartOfDay());
         Timestamp to = Timestamp.valueOf((den.isEmpty() ? LocalDate.of(9998, 1, 1) : LocalDate.parse(den)).plusDays(1).atStartOfDay());
         return db.read(c -> Db.rows(c, ALERT_SQL + """
                  WHERE (? = '' OR y.ma_cn = ?) AND (? = '' OR y.ma_sp = ?) AND (? = '' OR y.trang_thai = ?)
                   AND y.tao_luc >= ? AND y.tao_luc < ?
+                  AND (NOT ? OR y.so_luong_nhan <> y.so_luong_giao)
                 ORDER BY y.ma_yc DESC LIMIT 500""",
-                maCn, maCn, maSp, maSp, trangThai, trangThai, from, to));
+                maCn, maCn, maSp, maSp, trangThai, trangThai, from, to, onlyMismatch));
     }
 
     private void publishRequest(int maYc) throws SQLException {
@@ -505,6 +515,11 @@ public final class RequestService {
                     }
                 }
             }
+            out.addAll(Db.list(c, """
+                    SELECT ma_yc, ma_sp, so_luong_giao, so_luong_nhan FROM yeu_cau
+                    WHERE ma_cn = ? AND trang_thai = 'HOAN_TAT' AND so_luong_nhan IS NOT NULL
+                    ORDER BY ma_yc DESC LIMIT 100""",
+                    rs -> Message.of(Command.RECEIVED_OK, rs.getInt(1), rs.getString(2), rs.getInt(3), rs.getInt(4)), maCn));
             return out;
         });
     }

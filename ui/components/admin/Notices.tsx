@@ -6,6 +6,7 @@ import type { Branch, NoticeDetail, NoticeRow, NoticeSuggestion, NoticeType, Pro
 import { Badge, Card, Dot, Empty, ProductImage, useAction } from "@/components/ui";
 
 type Push = (l: string, t: string) => void;
+type NoticeSent = { tong: number; guiNgay: number; emailEnabled?: boolean; emailQueued?: number };
 
 const TYPE_TONE: Record<NoticeType, string> = { TIN: "muted", HOI_NHU_CAU: "warn", SP_MOI: "info" };
 
@@ -66,15 +67,16 @@ export function Notices({ products, branches, version, push }: {
   const send = async (e: FormEvent) => {
     e.preventDefault();
     const chiNhanh = all ? null : Object.entries(picked).map(([maCn, d]) => ({ maCn, deXuat: d ? Number(d) : null }));
-    let res: { tong: number; guiNgay: number } | null = null;
+    let res: NoticeSent | null = null;
     const ok = await run(async () => {
-      res = await api<{ tong: number; guiNgay: number }>("/api/notices", {
+      res = await api<NoticeSent>("/api/notices", {
         loai, tieuDe, noiDung, maSp: loai === "TIN" ? "" : maSp, soLuongDeXuat: soLuong ? Number(soLuong) : null, chiNhanh,
       });
     });
     if (ok && res) {
-      const r: { tong: number; guiNgay: number } = res;
-      push("success", `Đã gửi tới ${r.tong} chi nhánh (${r.guiNgay} online nhận ngay, còn lại nhận khi đăng nhập)`);
+      const r: NoticeSent = res;
+      const emailInfo = r.emailEnabled ? ` · Email: ${r.emailQueued ?? 0} thư đã xếp hàng gửi` : " · Kênh email chưa bật";
+      push("success", `Đã gửi tới ${r.tong} chi nhánh (${r.guiNgay} online nhận ngay, còn lại nhận khi đăng nhập)${emailInfo}`);
       reset();
       setMine((x) => x + 1);
     }

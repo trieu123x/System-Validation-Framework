@@ -21,12 +21,20 @@ export default function AdminPage() {
   const [user, setUser] = useState<string | null | undefined>(undefined);
 
   useEffect(() => {
+    if (/^#reset=[A-Za-z0-9_-]{43}$/.test(window.location.hash)) { setUser(null); return; }
     api<{ loggedIn: boolean; user: string }>("/api/auth/me")
       .then((r) => setUser(r.loggedIn ? r.user : null))
       .catch(() => setUser(null));
     const expired = () => setUser(null);
     window.addEventListener(UNAUTHORIZED, expired);
-    return () => window.removeEventListener(UNAUTHORIZED, expired);
+    // Keep the active Admin lease alive while this browser is open.
+    // A closed browser stops heartbeats; the server releases the session automatically.
+    const heartbeat = window.setInterval(() => {
+      api<{ loggedIn: boolean; user: string }>("/api/auth/me")
+        .then((r) => { if (!r.loggedIn) setUser(null); })
+        .catch(() => {});
+    }, 30_000);
+    return () => { window.clearInterval(heartbeat); window.removeEventListener(UNAUTHORIZED, expired); };
   }, []);
 
   if (user === undefined) {
@@ -79,6 +87,7 @@ function AdminApp({ user, onLogout }: { user: string; onLogout: () => void }) {
   const refreshDebts = useDebounced(() => bump("debts"), 800);
   const refreshSecurity = useDebounced(() => bump("security"), 500);
   const [highCount, setHighCount] = useState(0);
+  const [duplicateAlert, setDuplicateAlert] = useState<SecurityEventRow | null>(null);
   const isSim = (maCn: string) => maCn.startsWith("SIM");
 
   const connected = useEvents({
@@ -93,7 +102,10 @@ function AdminApp({ user, onLogout }: { user: string; onLogout: () => void }) {
     },
     request: (r: RequestRow) => {
       if (showSim || !isSim(r.maCn)) {
-        if (r.trangThai === "HOAN_TAT") push("success", `${r.tenCn} đã nhận ${r.soLuongGiao} ${r.tenSp} (YC${r.maYc})`);
+        if (r.trangThai === "HOAN_TAT") {
+          const delta = r.chenhLech ?? 0;
+          push(delta === 0 ? "success" : "error", `${r.tenCn} nhận ${r.soLuongNhan ?? r.soLuongGiao}/${r.soLuongGiao} ${r.tenSp} (YC${r.maYc})${delta === 0 ? " — đủ hàng" : ` — ${delta > 0 ? "THỪA" : "THIẾU"} ${Math.abs(delta)}`}`);
+        }
         if (r.trangThai === "TU_CHOI") push("warn", `${r.tenCn} từ chối yêu cầu YC${r.maYc} (${r.tenSp})`);
       }
       flash(r.maYc);
@@ -105,6 +117,7 @@ function AdminApp({ user, onLogout }: { user: string; onLogout: () => void }) {
     debt: () => refreshDebts(),
     notice: () => bump("notices"),
     security: (e: SecurityEventRow) => {
+      if (e.loai === "DUPLICATE_LOGIN") setDuplicateAlert(e);
       if (e.muc === "HIGH") {
         push("error", `🛡 ${e.loai}${e.ip ? ` từ ${e.ip}` : ""}${e.maCn ? ` (${e.maCn})` : ""}: ${e.chiTiet ?? ""}`.slice(0, 220));
         if (tab !== "monitor") setHighCount((n) => n + 1);
@@ -133,7 +146,7 @@ function AdminApp({ user, onLogout }: { user: string; onLogout: () => void }) {
           { id: "products", label: "Hàng hóa" },
           { id: "stock", label: "Kho chi nhánh" },
           { id: "debts", label: "Công nợ" },
-          { id: "history", label: "Yêu cầu cấp hàng" },
+          { id: "history", label: "Yêu cầu cấp hàng", count: requests.filter((r) => r.chenhLech != null && r.chenhLech !== 0 && (showSim || !isSim(r.maCn))).length, tone: "danger" },
           { id: "transfers", label: "Điều chuyển", count: shortage, tone: "warn" },
           { id: "broadcast", label: "Thông báo" },
           { id: "monitor", label: "Giám sát", count: highCount, tone: "danger" },
@@ -142,7 +155,7 @@ function AdminApp({ user, onLogout }: { user: string; onLogout: () => void }) {
         status={
           <>
             <span>{online} chi nhánh online</span>
-            <span title={connected ? "Đang nhận sự kiện từ server.jar" : "Không nhận được sự kiện từ server.jar"}>
+            <span title={connected ? "Đang nhận thông báo trực tiếp" : "Không nhận được thông báo trực tiếp"}>
               <Dot on={connected} />{connected ? "Đã nối server" : "Mất kết nối server"}
             </span>
             <span>{user}</span>
@@ -151,9 +164,19 @@ function AdminApp({ user, onLogout }: { user: string; onLogout: () => void }) {
         }
         actions={(tab === "overview" || tab === "debts") && (
           <label className="row muted">
-            <input type="checkbox" checked={showSim} onChange={(e) => setShowSim(e.target.checked)} /> Hiện chi nhánh ảo (giả lập tải)
+            <input type="checkbox" checked={showSim} onChange={(e) => setShowSim(e.target.checked)} /> Hiện chi nhánh kiểm thử
           </label>
         )}>
+        {duplicateAlert && (
+          <div className="banner banner-danger" role="alert" style={{ marginBottom: 16 }}>
+            <strong>Cảnh báo đăng nhập trùng: {duplicateAlert.maCn || "Admin"}</strong>
+            {" — "}Thiết bị khác đã thử đăng nhập nhưng bị từ chối. Phiên đang sử dụng vẫn được giữ nguyên.
+            <div className="row" style={{ marginTop: 8, gap: 8 }}>
+              <button type="button" className="btn btn-sm" onClick={() => { setTab("monitor"); setHighCount(0); }}>Xem sự kiện</button>
+              <button type="button" className="btn btn-sm" onClick={() => setDuplicateAlert(null)}>Đóng</button>
+            </div>
+          </div>
+        )}
         {tab === "overview" && (
           <Overview branches={branches} products={products} alerts={shownAlerts} requests={requests} stats={stats}
             freshIds={fresh} showSim={showSim} push={push} live={live} go={setTab}

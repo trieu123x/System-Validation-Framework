@@ -16,6 +16,28 @@ import static org.junit.jupiter.api.Assertions.*;
 /** Các quy tắc của SecurityMonitor với ngưỡng mặc định, đồng hồ do test điều khiển. */
 class SecurityRulesTest {
 
+    @Test
+    void successfulLoginWarnsOnlyWhenIpChangesForSameAccount() {
+        m.onSuccessfulLogin("CN01", "192.0.2.1", T0);
+        m.onSuccessfulLogin("CN01", "192.0.2.1", T0 + 1);
+        m.onSuccessfulLogin("CN02", "192.0.2.2", T0 + 2);
+        m.onSuccessfulLogin(null, "192.0.2.3", T0 + 3);
+        assertTrue(of("LOGIN_NEW_IP").isEmpty());
+        m.onSuccessfulLogin("CN01", "192.0.2.4", T0 + 4);
+        m.onSuccessfulLogin(null, "192.0.2.5", T0 + 5);
+        assertEquals(2, of("LOGIN_NEW_IP").size());
+        assertEquals("CN01", of("LOGIN_NEW_IP").get(0).maCn());
+        assertEquals("ADMIN", of("LOGIN_NEW_IP").get(1).nguon());
+    }
+
+    @Test
+    void offModeDoesNotGenerateNewIpAlert() {
+        mode.set(Mode.OFF);
+        m.onSuccessfulLogin("CN01", "192.0.2.1", T0);
+        m.onSuccessfulLogin("CN01", "192.0.2.2", T0 + 1);
+        assertTrue(of("LOGIN_NEW_IP").isEmpty());
+    }
+
     private static final long T0 = 1_800_000_000_000L;
     private static final String EVIL = "10.0.0.66";
 

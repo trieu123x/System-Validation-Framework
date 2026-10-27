@@ -14,7 +14,12 @@ import java.util.Map;
  * @param hanhDong GHI_NHAN | CHAN_IP | NGAT | GIOI_HAN | KHOA_TK
  */
 public record SecurityEvent(LocalDateTime thoiGian, String nguon, String loai, String muc, String ip, String maCn,
-                            String chiTiet, String hanhDong) {
+                            String chiTiet, String hanhDong, String eventKey, Map<String, Object> metadata) {
+    public SecurityEvent(LocalDateTime time, String source, String type, String severity, String ip, String branch, String detail, String action) {
+        this(time, source, type, severity, ip, branch, detail, action, java.util.UUID.randomUUID().toString(), Map.of());
+    }
+    public SecurityEvent { metadata = Map.copyOf(metadata); }
+
 
     public static final String SERVER = "SERVER";
     public static final String CLIENT = "CLIENT";
@@ -33,6 +38,8 @@ public record SecurityEvent(LocalDateTime thoiGian, String nguon, String loai, S
     /** Dạng JSON cho SSE "security" và API, cùng tên trường với Db.toMap(). */
     public Map<String, Object> toMap() {
         Map<String, Object> m = new LinkedHashMap<>();
+        m.put("eventKey", eventKey);
+        m.put("metadata", metadata);
         m.put("thoiGian", thoiGian.format(Db.TIME_FORMAT));
         m.put("nguon", nguon);
         m.put("loai", loai);

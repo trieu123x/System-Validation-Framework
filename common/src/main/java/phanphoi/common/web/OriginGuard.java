@@ -25,14 +25,16 @@ public final class OriginGuard {
     }
 
     public static Verdict check(String origin, String host, List<String> allowedOrigins) {
-        if (host != null && !host.isBlank() && !LOOPBACK.contains(hostName(host))) {
+        if (host != null && !host.isBlank() && !LOOPBACK.contains(hostName(host))
+                && allowedOrigins.stream().noneMatch(a -> allowedAuthority(a, host))) {
             return Verdict.DNS_REBIND;
         }
         if (origin == null || origin.isBlank()) {
             return Verdict.OK;
         }
         String o = origin.trim().toLowerCase(Locale.ROOT);
-        if (host != null && o.equals("http://" + host.trim().toLowerCase(Locale.ROOT))) {
+        if (host != null && (o.equals("http://" + host.trim().toLowerCase(Locale.ROOT))
+                || o.equals("https://" + host.trim().toLowerCase(Locale.ROOT)))) {
             return Verdict.OK;
         }
         for (String a : allowedOrigins) {
@@ -41,6 +43,20 @@ public final class OriginGuard {
             }
         }
         return Verdict.CSRF;
+    }
+
+    private static boolean allowedAuthority(String allowed, String host) {
+        try {
+            java.net.URI uri = java.net.URI.create(allowed.trim());
+            String authority = uri.getRawAuthority();
+            if (!("https".equalsIgnoreCase(uri.getScheme()) || "http".equalsIgnoreCase(uri.getScheme())) || authority == null)
+                return false;
+            String actual = host.trim();
+            // A default :443 or :80 from reverse proxies represents the same HTTPS/HTTP authority.
+            return authority.equalsIgnoreCase(actual)
+                    || ("https".equalsIgnoreCase(uri.getScheme()) && (authority + ":443").equalsIgnoreCase(actual))
+                    || ("http".equalsIgnoreCase(uri.getScheme()) && (authority + ":80").equalsIgnoreCase(actual));
+        } catch (IllegalArgumentException e) { return false; }
     }
 
     /** "localhost:8080" → "localhost", "[::1]:8080" → "::1". */

@@ -191,9 +191,8 @@ public final class ClientHandler {
             case ACCEPT -> ctx.requests().accept(cn, m.intParam(0), m.intParam(1)).forEach(this::send);
             case REJECT -> ctx.requests().reject(cn, m.intParam(0));
             case RECEIVED -> {
-                if (ctx.requests().received(cn, m.intParam(0))) {
-                    send(ctx.stock().inventoryMessage(cn));
-                }
+                send(ctx.requests().received(cn, m.intParam(0), m.intParam(1)));
+                send(ctx.stock().inventoryMessage(cn));
             }
             case HISTORY_GET -> send(ctx.stock().historyMessage(cn, m.param(0), m.param(1)));
             case TRANSFER_ACCEPT -> send(ctx.transfers().accept(cn, m.intParam(0)));
@@ -227,32 +226,42 @@ public final class ClientHandler {
         if (maCn != null) {
             throw new ServiceException(ErrorCode.E03, "Da dang nhap voi ma " + maCn);
         }
-        String ten = ctx.auth().verify(id, password);
-        if (ten == null) {
+        var branch = ctx.auth().verify(id, password);
+        if (branch != null && branch.ambiguous()) {
+            send(Message.of(Command.LOGIN_FAIL, "Email dung chung. Hay nhap ma CN trong o xac dinh chi nhanh (CN01/CN02)."));
+            return;
+        }
+        if (branch == null) {
             send(Message.of(Command.LOGIN_FAIL, Protocol.LOGIN_FAIL_WRONG));
-            // BRUTE_FORCE / CRED_STUFFING; IP vừa bị chặn thì đóng luôn kết nối này
-            if (ctx.security().onLoginFail(ip(), id, System.currentTimeMillis())) {
-                sendError(ErrorCode.E06, "Dang nhap sai qua nhieu lan, IP bi chan");
-                close();
+            if (ctx.security().onLoginFail(ip(), id.substring(0, Math.min(id.length(), 10)), System.currentTimeMillis())) {
+                sendError(ErrorCode.E06, "Dang nhap sai qua nhieu lan, IP bi chan"); close();
             }
             return;
         }
-        if (!ctx.registry().login(id, this)) {
-            // Kết nối cũ có thể đã chết mà chưa phát hiện (rút dây mạng): kiểm tra sớm để lần thử sau vào được.
-            ClientHandler old = ctx.registry().get(id);
-            if (old != null) {
-                old.probe();
+        String canonical = branch.code();
+        if (!ctx.registry().login(canonical, this)) {
+            // Thông tin đã xác thực đúng nhưng chi nhánh còn phiên hoạt động khác.
+            // Không đẩy phiên cũ ra, không gửi dữ liệu hay tạo phiên cho người đăng nhập sau.
+            long now = System.currentTimeMillis();
+            ClientHandler active = ctx.registry().get(canonical);
+            if (active != null) {
+                active.send(Message.of(Command.DUPLICATE_LOGIN_ALERT,
+                        java.time.LocalDateTime.ofInstant(java.time.Instant.ofEpochMilli(now),
+                                java.time.ZoneId.systemDefault()).toString(), ip()));
             }
+            ctx.security().record("SERVER", "DUPLICATE_LOGIN", "HIGH", ip(), canonical,
+                    "Da tu choi ket noi dang nhap thu hai; phien dang hoat dong duoc giu nguyen", "NGAT", now);
             send(Message.of(Command.LOGIN_FAIL, Protocol.LOGIN_FAIL_ONLINE));
             return;
         }
-        maCn = id;
+        maCn = canonical;
         ctx.security().onLogin(stats, ip(), System.currentTimeMillis());
+        ctx.security().onSuccessfulLogin(canonical, ip(), System.currentTimeMillis());
         if (!ctx.quiet()) {
-            System.out.println("[server] " + id + " dang nhap tu " + remote());
+            System.out.println("[server] " + canonical + " dang nhap tu " + remote());
         }
-        send(Message.of(Command.LOGIN_OK, ten));
-        ctx.outbox().deliverOnLogin(id, this);
+        send(Message.of(Command.LOGIN_OK, canonical, branch.name()));
+        ctx.outbox().deliverOnLogin(canonical, this);
     }
 
     private void logout() {
