@@ -38,6 +38,7 @@ final class BranchState {
         Integer soLuongDeXuat;
         Integer soLuongCoThe;
         Integer soLuongGiao;
+        Integer soLuongNhan;
         String trangThai;
         String capNhat;
     }

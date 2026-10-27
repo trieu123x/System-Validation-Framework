@@ -211,7 +211,7 @@ public final class ClientMain {
             Http.ok(ex, ok);
         });
         r.post("/api/requests/{id}/received", (ex, p) -> {
-            agent.received(Integer.parseInt(p.get(0)));
+            agent.received(Integer.parseInt(p.get(0)), Http.integer(Http.body(ex), "soLuongNhan"));
             Http.ok(ex, ok);
         });
         r.post("/api/transfers/{id}/accept", (ex, p) -> {

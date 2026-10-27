@@ -44,6 +44,8 @@ export type RequestRow = {
   soLuongDeXuat: number | null;
   soLuongChot: number | null;
   soLuongGiao: number | null;
+  soLuongNhan: number | null;
+  chenhLech?: number | null;
   trangThai: string;
   taoLuc: string;
   capNhatLuc: string;
@@ -182,6 +184,8 @@ export type BranchRequest = {
   soLuongDeXuat: number | null;
   soLuongCoThe: number | null;
   soLuongGiao: number | null;
+  soLuongNhan: number | null;
+  chenhLech?: number | null;
   trangThai: string;
   capNhat: string;
 };
@@ -195,7 +199,7 @@ export type BranchTransfer = {
   capNhat: string;
 };
 
-export type HistoryRow = { maYc: string; maHang: string; tenHang: string; soLuong: number; thoiGian: string; nguon: string };
+export type HistoryRow = { maYc: string; maHang: string; tenHang: string; soLuong: number; soLuongNhan: number | null; thoiGian: string; nguon: string };
 
 export type BranchSnapshot = {
   status: "DISCONNECTED" | "CONNECTING" | "CONNECTED" | "ONLINE";

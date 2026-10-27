@@ -212,7 +212,8 @@ public final class AdminApi implements AutoCloseable {
         r.get("/api/requests", (ex, p) -> {
             Map<String, String> q = Http.query(ex);
             Http.ok(ex, ctx.requests().search(q.getOrDefault("maCn", ""), q.getOrDefault("maSp", ""),
-                    q.getOrDefault("trangThai", ""), q.getOrDefault("tu", ""), q.getOrDefault("den", "")));
+                    q.getOrDefault("trangThai", ""), q.getOrDefault("tu", ""), q.getOrDefault("den", ""),
+                    "true".equals(q.get("chenhLech"))));
         });
         r.post("/api/requests/{id}/offer", (ex, p) -> {
             ctx.requests().offer(Integer.parseInt(p.get(0)), Http.integer(Http.body(ex), "soLuong"));

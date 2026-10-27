@@ -36,6 +36,7 @@ public final class ServerMain {
                 cfg.get("db.password", ""),
                 cfg.getInt("db.pool.size", 20));
         db.read(c -> c.isValid(3)); // báo lỗi sớm nếu sai thông tin CSDL
+        phanphoi.server.db.ReceiptSchema.ensure(db);
         System.out.println("[server] da ket noi CSDL");
 
         ServerSettings settings = new ServerSettings(cfg);

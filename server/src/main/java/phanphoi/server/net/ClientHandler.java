@@ -191,9 +191,8 @@ public final class ClientHandler {
             case ACCEPT -> ctx.requests().accept(cn, m.intParam(0), m.intParam(1)).forEach(this::send);
             case REJECT -> ctx.requests().reject(cn, m.intParam(0));
             case RECEIVED -> {
-                if (ctx.requests().received(cn, m.intParam(0))) {
-                    send(ctx.stock().inventoryMessage(cn));
-                }
+                send(ctx.requests().received(cn, m.intParam(0), m.intParam(1)));
+                send(ctx.stock().inventoryMessage(cn));
             }
             case HISTORY_GET -> send(ctx.stock().historyMessage(cn, m.param(0), m.param(1)));
             case TRANSFER_ACCEPT -> send(ctx.transfers().accept(cn, m.intParam(0)));

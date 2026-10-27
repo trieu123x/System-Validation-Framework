@@ -102,7 +102,10 @@ function AdminApp({ user, onLogout }: { user: string; onLogout: () => void }) {
     },
     request: (r: RequestRow) => {
       if (showSim || !isSim(r.maCn)) {
-        if (r.trangThai === "HOAN_TAT") push("success", `${r.tenCn} đã nhận ${r.soLuongGiao} ${r.tenSp} (YC${r.maYc})`);
+        if (r.trangThai === "HOAN_TAT") {
+          const delta = r.chenhLech ?? 0;
+          push(delta === 0 ? "success" : "error", `${r.tenCn} nhận ${r.soLuongNhan ?? r.soLuongGiao}/${r.soLuongGiao} ${r.tenSp} (YC${r.maYc})${delta === 0 ? " — đủ hàng" : ` — ${delta > 0 ? "THỪA" : "THIẾU"} ${Math.abs(delta)}`}`);
+        }
         if (r.trangThai === "TU_CHOI") push("warn", `${r.tenCn} từ chối yêu cầu YC${r.maYc} (${r.tenSp})`);
       }
       flash(r.maYc);
@@ -143,7 +146,7 @@ function AdminApp({ user, onLogout }: { user: string; onLogout: () => void }) {
           { id: "products", label: "Hàng hóa" },
           { id: "stock", label: "Kho chi nhánh" },
           { id: "debts", label: "Công nợ" },
-          { id: "history", label: "Yêu cầu cấp hàng" },
+          { id: "history", label: "Yêu cầu cấp hàng", count: requests.filter((r) => r.chenhLech != null && r.chenhLech !== 0 && (showSim || !isSim(r.maCn))).length, tone: "danger" },
           { id: "transfers", label: "Điều chuyển", count: shortage, tone: "warn" },
           { id: "broadcast", label: "Thông báo" },
           { id: "monitor", label: "Giám sát", count: highCount, tone: "danger" },

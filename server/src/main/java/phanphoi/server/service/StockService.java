@@ -110,20 +110,22 @@ public final class StockService {
         LocalDateTime from = parseDate(tu, false);
         LocalDateTime to = parseDate(den, true);
         List<List<Object>> rows = db.read(c -> Db.list(c, """
-                SELECT ma_yc, ma_sp, ten, so_luong, thoi_gian, nguon FROM (
-                    SELECT px.ma_yc, px.ma_sp, sp.ten, px.so_luong, px.thoi_gian, 'KHO_TONG' AS nguon
+                SELECT ma_yc, ma_sp, ten, so_luong, thoi_gian, nguon, so_luong_nhan FROM (
+                    SELECT px.ma_yc, px.ma_sp, sp.ten, px.so_luong, px.thoi_gian, 'KHO_TONG' AS nguon, y.so_luong_nhan
                     FROM phieu_xuat px JOIN san_pham sp ON sp.ma_sp = px.ma_sp
+                    JOIN yeu_cau y ON y.ma_yc = px.ma_yc
                     WHERE px.ma_cn = ?
                     UNION ALL
-                    SELECT dc.ma_yc, dc.ma_sp, sp.ten, dc.so_luong, dc.cap_nhat_luc, dc.tu_cn
+                    SELECT dc.ma_yc, dc.ma_sp, sp.ten, dc.so_luong, dc.cap_nhat_luc, dc.tu_cn, y.so_luong_nhan
                     FROM dieu_chuyen dc JOIN san_pham sp ON sp.ma_sp = dc.ma_sp
+                    JOIN yeu_cau y ON y.ma_yc = dc.ma_yc
                     WHERE dc.den_cn = ? AND dc.trang_thai = 'HOAN_TAT'
                 ) h
                 WHERE thoi_gian >= ? AND thoi_gian < ?
                 ORDER BY thoi_gian DESC
                 LIMIT 200""",
                 rs -> List.of(rs.getInt(1), rs.getString(2), rs.getString(3), rs.getInt(4),
-                        rs.getTimestamp(5).toLocalDateTime().format(Db.TIME_FORMAT).substring(0, 19), rs.getString(6)),
+                        rs.getTimestamp(5).toLocalDateTime().format(Db.TIME_FORMAT).substring(0, 19), rs.getString(6), rs.getObject(7) == null ? "" : rs.getInt(7)),
                 maCn, maCn, Timestamp.valueOf(from), Timestamp.valueOf(to)));
         return Lists.fit(Command.HISTORY, rows);
     }
@@ -432,12 +434,14 @@ public final class StockService {
                         COALESCE((SELECT sum(so_luong) FROM phieu_nhap WHERE ma_sp = sp.ma_sp), 0) AS tong_nhap,
                         COALESCE((SELECT sum(so_luong) FROM phieu_xuat WHERE ma_sp = sp.ma_sp), 0) AS tong_xuat,
                         COALESCE((SELECT so_luong FROM kho_tong WHERE ma_sp = sp.ma_sp), 0) AS ton_tong,
-                        COALESCE((SELECT sum(so_luong_giao) FROM yeu_cau
+                        COALESCE((SELECT sum(COALESCE(so_luong_nhan, so_luong_giao)) FROM yeu_cau
                                   WHERE ma_sp = sp.ma_sp AND trang_thai = 'HOAN_TAT'), 0) AS cn_da_nhan,
                         COALESCE((SELECT sum(so_luong) FROM dieu_chuyen
                                   WHERE ma_sp = sp.ma_sp AND trang_thai = 'HOAN_TAT'), 0) AS tu_dieu_chuyen,
                         COALESCE((SELECT sum(so_luong_giao) FROM yeu_cau
                                   WHERE ma_sp = sp.ma_sp AND trang_thai = 'DA_GIAO'), 0) AS dang_giao,
+                        (SELECT count(*) FROM yeu_cau WHERE ma_sp = sp.ma_sp
+                          AND so_luong_nhan <> so_luong_giao) AS so_don_lech,
                         (SELECT count(*) FROM kho_tong WHERE ma_sp = sp.ma_sp AND so_luong < 0) AS am
                     FROM san_pham sp ORDER BY sp.ma_sp""");
             boolean ok = true;
@@ -445,7 +449,7 @@ public final class StockService {
                 long xuat = ((Number) r.get("tongXuat")).longValue();
                 long nhanTuKho = ((Number) r.get("cnDaNhan")).longValue() - ((Number) r.get("tuDieuChuyen")).longValue()
                         + ((Number) r.get("dangGiao")).longValue();
-                boolean rowOk = xuat == nhanTuKho && ((Number) r.get("am")).longValue() == 0;
+                boolean rowOk = ((Number) r.get("soDonLech")).longValue() == 0 && xuat == nhanTuKho && ((Number) r.get("am")).longValue() == 0;
                 r.put("khop", rowOk);
                 ok &= rowOk;
             }

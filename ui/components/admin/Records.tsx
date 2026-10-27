@@ -11,7 +11,7 @@ import {
 export function RequestHistory({ branches, products, version }: {
   branches: Branch[]; products: Product[]; version: number;
 }) {
-  const [f, setF] = useState({ maCn: "", maSp: "", trangThai: "", tu: "", den: "" });
+  const [f, setF] = useState({ maCn: "", maSp: "", trangThai: "", tu: "", den: "", chenhLech: "" });
   const [rows, setRows] = useState<RequestRow[]>([]);
   const [error, setError] = useState("");
 
@@ -42,6 +42,10 @@ export function RequestHistory({ branches, products, version }: {
             ...["CHO", "DA_DE_XUAT", "THIEU_HANG", "DA_GIAO", "HOAN_TAT", "TU_CHOI"].map((s) => ({ id: s, label: STATE_LABEL[s] })),
           ]} />
         </FilterGroup>
+        <FilterGroup title="Kiểm đếm">
+          <label className="row"><input type="checkbox" checked={f.chenhLech === "true"}
+            onChange={(e) => setF({ ...f, chenhLech: e.target.checked ? "true" : "" })} /> Chỉ đơn thừa / thiếu</label>
+        </FilterGroup>
         <FilterGroup title="Thời gian tạo">
           <div className="form-stack">
             <label className="field">Từ ngày<input type="date" value={f.tu} onChange={(e) => setF({ ...f, tu: e.target.value })} /></label>
@@ -57,7 +61,7 @@ export function RequestHistory({ branches, products, version }: {
               <thead>
                 <tr>
                   <th>Mã YC</th><th>Tạo lúc</th><th>Chi nhánh</th><th>Mặt hàng</th><th className="num">Đề xuất</th><th className="num">Chốt</th>
-                  <th className="num">Giao</th><th>Trạng thái</th><th>Cập nhật</th>
+                  <th className="num">Giao</th><th className="num">Thực nhận</th><th>Chênh lệch</th><th>Trạng thái</th><th>Cập nhật</th>
                 </tr>
               </thead>
               <tbody>
@@ -70,6 +74,9 @@ export function RequestHistory({ branches, products, version }: {
                     <td className="num">{fmtNumber(r.soLuongDeXuat)}</td>
                     <td className="num">{fmtNumber(r.soLuongChot)}</td>
                     <td className="num">{fmtNumber(r.soLuongGiao)}</td>
+                    <td className="num">{fmtNumber(r.soLuongNhan)}</td>
+                    <td>{r.soLuongNhan == null ? <span className="muted">Chưa ghi nhận</span> :
+                      <Badge tone={r.chenhLech === 0 ? "success" : "danger"}>{r.chenhLech === 0 ? "Đủ hàng" : `${(r.chenhLech ?? 0) > 0 ? "Thừa" : "Thiếu"} ${Math.abs(r.chenhLech ?? 0)}`}</Badge>}</td>
                     <td><StateBadge state={r.trangThai} /></td>
                     <td className="muted nowrap">{r.capNhatLuc.slice(0, 19)}</td>
                   </tr>
@@ -126,7 +133,7 @@ export function Transfers({ version }: { version: number }) {
 
 type ReconcileRow = {
   maSp: string; ten: string; tongNhap: number; tongXuat: number; tonTong: number; cnDaNhan: number;
-  tuDieuChuyen: number; dangGiao: number; khop: boolean;
+  tuDieuChuyen: number; dangGiao: number; soDonLech: number; khop: boolean;
 };
 
 /** NFR-03: đối soát kho. */
@@ -141,7 +148,7 @@ export function Reconcile({ version }: { version: number }) {
       <Badge tone={data.khop ? "success" : "danger"}>{data.khop ? "Toàn bộ khớp" : "Có mặt hàng lệch"}</Badge>
     }>
       <p className="note">
-        Tổng xuất kho tổng (phiếu xuất) phải bằng số chi nhánh đã nhận từ kho tổng cộng số đang giao; kho tổng không bao giờ âm.
+        Số nhận dựa trên kiểm đếm thực tế; đơn cũ chưa kiểm đếm dùng số đã giao. Đơn thừa/thiếu luôn được đánh dấu lệch để đối chiếu, kể cả khi chênh lệch giữa các đơn bù nhau.
       </p>
       <div className="table-wrap">
         <table>
@@ -149,7 +156,7 @@ export function Reconcile({ version }: { version: number }) {
             <tr>
               <th>Mặt hàng</th><th className="num">Tổng nhập</th><th className="num">Tồn kho tổng</th>
               <th className="num">Tổng xuất</th><th className="num">CN đã nhận</th><th className="num">trong đó điều chuyển</th>
-              <th className="num">Đang giao</th><th />
+              <th className="num">Đang giao</th><th className="num">Đơn thừa/thiếu</th><th />
             </tr>
           </thead>
           <tbody>
@@ -162,6 +169,7 @@ export function Reconcile({ version }: { version: number }) {
                 <td className="num">{fmtNumber(r.cnDaNhan)}</td>
                 <td className="num">{fmtNumber(r.tuDieuChuyen)}</td>
                 <td className="num">{fmtNumber(r.dangGiao)}</td>
+                <td className="num">{fmtNumber(r.soDonLech)}</td>
                 <td><Badge tone={r.khop ? "success" : "danger"}>{r.khop ? "Khớp" : "Lệch"}</Badge></td>
               </tr>
             ))}

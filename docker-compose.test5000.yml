@@ -1,0 +1,18 @@
+# Isolated test stack; unchanged original Docker Compose deployment.
+name: svf-test5000
+services:
+  db:
+    restart: "no"
+  server:
+    image: svf-test5000:latest
+    restart: "no"
+    command: ["server"]
+    ports:
+      # FRP Client runs on this Windows host; only localhost needs TCP 5000.
+      - "127.0.0.1:5000:5000"
+  client:
+    image: svf-test5000:latest
+    restart: "no"
+  loadsim:
+    image: svf-test5000:latest
+    restart: "no"

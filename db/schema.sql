@@ -68,6 +68,7 @@ CREATE TABLE yeu_cau (
     so_luong_de_xuat  INTEGER      CHECK (so_luong_de_xuat > 0),
     so_luong_chot     INTEGER      CHECK (so_luong_chot > 0),
     so_luong_giao     INTEGER      CHECK (so_luong_giao > 0),
+    so_luong_nhan     INTEGER      CHECK (so_luong_nhan >= 0),
     -- số chi nhánh xin khi trả lời thông báo (Cần hàng / Muốn nhập); NULL = YC từ LOW_STOCK
     so_luong_xin      INTEGER      CHECK (so_luong_xin > 0),
     trang_thai        VARCHAR(12)  NOT NULL DEFAULT 'CHO'

@@ -18,6 +18,8 @@ docker compose exec -T db psql -U postgres -d phan_phoi_hang -v ON_ERROR_STOP=1 
 if errorlevel 1 exit /b 1
 docker compose exec -T db psql -U postgres -d phan_phoi_hang -v ON_ERROR_STOP=1 -f /db/migrate_password_recovery.sql
 if errorlevel 1 exit /b 1
+docker compose exec -T db psql -U postgres -d phan_phoi_hang -v ON_ERROR_STOP=1 -f /db/migrate_received_quantity.sql
+if errorlevel 1 exit /b 1
 echo [STEP 3] Build and start server and shared client...
 docker compose up -d --build --remove-orphans server client
 if errorlevel 1 exit /b 1

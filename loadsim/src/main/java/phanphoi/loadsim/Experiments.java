@@ -997,7 +997,7 @@ public final class Experiments {
             long tAnswer = System.nanoTime();
             if (p.command() == Command.DELIVERED) {
                 st.delivered.incrementAndGet();
-                c.send(Message.of(Command.RECEIVED, yc));
+                c.send(Message.of(Command.RECEIVED, yc, p.intParam(2)));
                 stock += p.intParam(2);
             } else {
                 st.outOfStock.incrementAndGet();

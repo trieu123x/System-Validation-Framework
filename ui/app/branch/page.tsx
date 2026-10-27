@@ -459,16 +459,18 @@ function Offers({ requests, items, online, push }: {
           )}
         </Card>
         {closed.length > 0 && (
-          <Card title="Đã xử lý trong phiên này">
+          <Card title="Đã xử lý gần đây">
             <div className="table-wrap">
               <table>
-                <thead><tr><th>Mã YC</th><th>Mặt hàng</th><th className="num">Số lượng</th><th>Trạng thái</th><th>Cập nhật</th></tr></thead>
+                <thead><tr><th>Mã YC</th><th>Mặt hàng</th><th className="num">Đã gửi</th><th className="num">Thực nhận</th><th>Chênh lệch</th><th>Trạng thái</th><th>Cập nhật</th></tr></thead>
                 <tbody>
                   {closed.map((r) => (
                     <tr key={r.maYc}>
                       <td className="code">YC{r.maYc}</td>
                       <td>{name(r.maHang)}</td>
                       <td className="num">{r.soLuongGiao != null ? fmtNumber(r.soLuongGiao) : fmtNumber(r.soLuongDeXuat)}</td>
+                      <td className="num">{fmtNumber(r.soLuongNhan)}</td>
+                      <td>{r.soLuongNhan == null ? "—" : r.soLuongNhan === r.soLuongGiao ? "Đủ hàng" : `${r.soLuongNhan > (r.soLuongGiao ?? 0) ? "Thừa" : "Thiếu"} ${Math.abs(r.soLuongNhan - (r.soLuongGiao ?? 0))}`}</td>
                       <td><StateBadge state={r.trangThai} /></td>
                       <td className="muted nowrap">{r.capNhat}</td>
                     </tr>
@@ -484,17 +486,23 @@ function Offers({ requests, items, online, push }: {
 }
 
 function OfferRow({ r, name, online, push }: { r: BranchRequest; name: string; online: boolean; push: Push }) {
-  const initial = r.trangThai === "THIEU_HANG" ? r.soLuongCoThe : r.soLuongDeXuat;
+  const initial = r.trangThai === "DA_GIAO" ? "" : r.trangThai === "THIEU_HANG" ? r.soLuongCoThe : r.soLuongDeXuat;
   const [qty, setQty] = useState(String(initial ?? ""));
   const { run, busy } = useAction(push);
   const n = Number(qty);
+  const validReceipt = qty.trim() !== "" && Number.isInteger(n) && n >= 0 && n <= 2147483647;
+  const delta = n - (r.soLuongGiao ?? 0);
   const off = !online || busy;
 
   useEffect(() => setQty(String(initial ?? "")), [initial]);
 
   const accept = () => run(() => api(`/api/requests/${r.maYc}/accept`, { soLuong: n }));
   const reject = () => run(() => api(`/api/requests/${r.maYc}/reject`, {}), `Đã từ chối YC #${r.maYc}`);
-  const received = () => run(() => api(`/api/requests/${r.maYc}/received`, {}), `Đã nhập kho YC #${r.maYc}`);
+  const received = () => {
+    if (!validReceipt) return;
+    if (delta !== 0 && !window.confirm(`YC #${r.maYc}: đã gửi ${r.soLuongGiao}, thực nhận ${n} (${delta > 0 ? "thừa" : "thiếu"} ${Math.abs(delta)}). Xác nhận nhập kho và báo công ty?`)) return;
+    run(() => api(`/api/requests/${r.maYc}/received`, { soLuongNhan: n }), "Đã gửi số kiểm đếm, chờ server xác nhận.");
+  };
 
   return (
     <tr className={r.trangThai === "THIEU_HANG" ? "warn" : ""}>
@@ -505,13 +513,19 @@ function OfferRow({ r, name, online, push }: { r: BranchRequest; name: string; o
         {r.trangThai === "DA_DE_XUAT" && <>Công ty đề xuất cấp <b>{fmtNumber(r.soLuongDeXuat)}</b>. Đồng ý, sửa số lượng hoặc từ chối.</>}
         {r.trangThai === "THIEU_HANG" && <>Công ty báo không đủ hàng, kho tổng chỉ còn <b>{fmtNumber(r.soLuongCoThe)}</b>.
           Nhận số đó, chờ điều chuyển từ chi nhánh khác, hoặc từ chối.</>}
-        {r.trangThai === "DA_GIAO" && <>Công ty đã gửi <b>{fmtNumber(r.soLuongGiao)}</b>. Bấm khi hàng tới để cộng vào kho.</>}
+        {r.trangThai === "DA_GIAO" && <>Công ty đã gửi <b>{fmtNumber(r.soLuongGiao)}</b>. Nhập số thực tế đã kiểm đếm (kể cả 0 nếu thiếu toàn bộ).</>}
         <div className="muted" style={{ fontSize: 12 }}>{r.capNhat}</div>
       </td>
       {r.trangThai === "DA_GIAO" ? (
         <>
-          <td className="num">{fmtNumber(r.soLuongGiao)}</td>
-          <td className="right nowrap"><button className="btn btn-sm btn-success" disabled={off} onClick={received}>Đã nhận hàng</button></td>
+          <td className="num">
+            <input type="number" min={0} max={2147483647} step={1} value={qty} placeholder="Thực nhận"
+              aria-label={`Số lượng thực nhận YC ${r.maYc}`} disabled={off} onChange={(e) => setQty(e.target.value)} />
+            {validReceipt && <div className={delta === 0 ? "muted" : "badge badge-danger"} style={{ fontSize: 12 }}>
+              {delta === 0 ? "Đủ hàng" : `${delta > 0 ? "Thừa" : "Thiếu"} ${Math.abs(delta)} — sẽ báo công ty`}
+            </div>}
+          </td>
+          <td className="right nowrap"><button className="btn btn-sm btn-success" disabled={off || !validReceipt} onClick={received}>Xác nhận thực nhận</button></td>
         </>
       ) : (
         <>
@@ -751,7 +765,7 @@ function History({ s, online, push }: { s: BranchSnapshot; online: boolean; push
           : shown.length === 0 ? <Empty>Không có phiếu nào khớp bộ lọc.</Empty> : (
           <div className="table-wrap">
             <table>
-              <thead><tr><th>Thời gian</th><th>Mã YC</th><th>Mã hàng</th><th>Tên hàng</th><th className="num">Số lượng</th><th>Nguồn</th></tr></thead>
+              <thead><tr><th>Thời gian</th><th>Mã YC</th><th>Mã hàng</th><th>Tên hàng</th><th className="num">Đã gửi</th><th className="num">Thực nhận</th><th>Chênh lệch</th><th>Nguồn</th></tr></thead>
               <tbody>
                 {shown.map((h, i) => (
                   <tr key={i}>
@@ -760,6 +774,9 @@ function History({ s, online, push }: { s: BranchSnapshot; online: boolean; push
                     <td>{h.maHang}</td>
                     <td>{h.tenHang}</td>
                     <td className="num">{fmtNumber(h.soLuong)}</td>
+                    <td className="num">{fmtNumber(h.soLuongNhan)}</td>
+                    <td>{h.soLuongNhan == null ? "Chưa ghi nhận" : h.soLuongNhan === h.soLuong ? "Đủ hàng" :
+                      <Badge tone="danger">{h.soLuongNhan > h.soLuong ? "Thừa" : "Thiếu"} {Math.abs(h.soLuongNhan - h.soLuong)}</Badge>}</td>
                     <td>{h.nguon === "KHO_TONG" ? "Kho tổng" : <Badge tone="info">Điều chuyển từ {h.nguon}</Badge>}</td>
                   </tr>
                 ))}
@@ -768,7 +785,7 @@ function History({ s, online, push }: { s: BranchSnapshot; online: boolean; push
             {s.historyRange && (
               <div className="table-foot">
                 Khoảng {s.historyRange}: {filtering ? `${shown.length}/${s.history.length}` : s.history.length} phiếu,
-                tổng {fmtNumber(total)}.
+                tổng đã gửi {fmtNumber(total)}, thực nhận đã kiểm đếm {fmtNumber(shown.reduce((sum, h) => sum + (h.soLuongNhan ?? 0), 0))}.
               </div>
             )}
           </div>

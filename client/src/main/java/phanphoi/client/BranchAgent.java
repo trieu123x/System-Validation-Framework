@@ -328,17 +328,12 @@ final class BranchAgent implements ServerLink.Handler {
         }
     }
 
-    void received(int maYc) {
-        send(Message.of(Command.RECEIVED, maYc));
-        synchronized (lock) {
-            BranchState.Request r = state.requests.get(maYc);
-            if (r != null) {
-                r.trangThai = "HOAN_TAT";
-                r.capNhat = BranchState.now();
-                alerted.remove(r.maHang);
-            }
-            publish();
+    void received(int maYc, int soLuongNhan) {
+        if (soLuongNhan < 0) {
+            throw new Http.ApiException(400, "Số lượng thực nhận phải là số nguyên không âm");
         }
+        // Chỉ RECEIVED_OK từ server mới được đóng YC, tránh báo thành công khi giao dịch bị từ chối.
+        send(Message.of(Command.RECEIVED, maYc, soLuongNhan));
     }
 
     void transferAnswer(int maDc, boolean agree) {
@@ -493,6 +488,26 @@ final class BranchAgent implements ServerLink.Handler {
                 r.capNhat = BranchState.now();
                 alerted.add(r.maHang);
             }
+            case RECEIVED_OK -> {
+                BranchState.Request r = state.request(m.intParam(0));
+                boolean fresh = !"HOAN_TAT".equals(r.trangThai);
+                r.maHang = m.param(1);
+                r.soLuongGiao = m.intParam(2);
+                r.soLuongNhan = m.intParam(3);
+                r.trangThai = "HOAN_TAT";
+                r.capNhat = BranchState.now();
+                // Khi đồng bộ, xác nhận của đơn cũ không được xóa cờ thiếu hàng của đơn mới cùng mặt hàng.
+                boolean anotherOpen = state.requests.values().stream().anyMatch(other -> other != r
+                        && r.maHang.equals(other.maHang) && other.trangThai != null && OPEN_STATES.contains(other.trangThai));
+                if (!anotherOpen) alerted.remove(r.maHang);
+                int delta = r.soLuongNhan - r.soLuongGiao;
+                if (fresh && System.currentTimeMillis() - loginOkAt > 3000) {
+                    toast(delta == 0 ? "success" : "warn", "Server đã xác nhận YC #" + r.maYc
+                            + ": thực nhận " + r.soLuongNhan + "/" + r.soLuongGiao
+                            + (delta == 0 ? " (đủ hàng)." : "; " + (delta > 0 ? "thừa " : "thiếu ")
+                            + Math.abs(delta) + ". Đã báo về công ty."));
+                }
+            }
             case HISTORY -> {
                 List<Map<String, Object>> rows = new ArrayList<>();
                 for (List<String> r : m.listParam(0)) {
@@ -503,6 +518,7 @@ final class BranchAgent implements ServerLink.Handler {
                     row.put("soLuong", Integer.parseInt(r.get(3)));
                     row.put("thoiGian", r.get(4));
                     row.put("nguon", r.size() > 5 ? r.get(5) : "KHO_TONG");
+                    row.put("soLuongNhan", r.size() > 6 && !r.get(6).isEmpty() ? Integer.valueOf(r.get(6)) : null);
                     rows.add(row);
                 }
                 state.history = rows;
