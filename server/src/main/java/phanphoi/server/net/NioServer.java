@@ -99,7 +99,7 @@ public final class NioServer extends NetServer {
                             c.flush();
                         }
                     } catch (IOException | RuntimeException e) {
-                        c.close();
+                        c.handler.closeWithReason("IO_ERROR");
                     }
                 }
             } catch (IOException e) {
@@ -197,7 +197,7 @@ public final class NioServer extends NetServer {
         void read() throws IOException {
             int n = ch.read(readBuf);
             if (n < 0) {
-                close();
+                handler.closeWithReason("REMOTE_CLOSED");
                 return;
             }
             readBuf.flip();
@@ -230,7 +230,7 @@ public final class NioServer extends NetServer {
             }
             if (pending.incrementAndGet() > ctx.settings().sendQueueLimit) {
                 System.err.println("[server] " + remote + " doc qua cham, cat ket noi");
-                close();
+                handler.closeWithReason("SLOW_CONSUMER");
                 return false;
             }
             out.add(ByteBuffer.wrap(line));
@@ -273,7 +273,7 @@ public final class NioServer extends NetServer {
                     }
                 }
             } catch (IOException e) {
-                close();
+                handler.closeWithReason("WRITE_FAILURE");
                 return true;
             }
         }

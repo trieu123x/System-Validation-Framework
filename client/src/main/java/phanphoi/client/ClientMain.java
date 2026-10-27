@@ -24,7 +24,21 @@ import java.util.concurrent.Executors;
  */
 public final class ClientMain {
 
-    private record Session(BranchAgent agent, Router routes) { }
+    private static final class Session {
+        final BranchAgent agent;
+        final Router routes;
+        final String browserId = java.util.UUID.randomUUID().toString().replace("-", "");
+        final java.util.concurrent.atomic.AtomicLong forwardedAt = new java.util.concurrent.atomic.AtomicLong();
+        Session(BranchAgent agent, Router routes) { this.agent = agent; this.routes = routes; }
+        // Bound a compromised authenticated browser to at most one TCP heartbeat / 5 seconds.
+        boolean shouldForward(long now) {
+            while (true) {
+                long prior = forwardedAt.get();
+                if (prior != 0 && now - prior < 5_000) return false;
+                if (forwardedAt.compareAndSet(prior, now)) return true;
+            }
+        }
+    }
 
     public static void main(String[] args) throws Exception {
         Config cfg = Config.load("config/client.properties", args);
@@ -43,7 +57,10 @@ public final class ClientMain {
         cleanup.scheduleWithFixedDelay(() -> {
             long current = System.currentTimeMillis();
             live.forEach((id, s) -> {
-                if (!browserSessions.validToken(id, current) && live.remove(id, s)) s.agent.stop();
+                if (!browserSessions.validToken(id, current) && live.remove(id, s)) {
+                    s.agent.browserExit(s.browserId, "SESSION_EXPIRED");
+                    s.agent.stop();
+                }
             });
         }, 60, 60, java.util.concurrent.TimeUnit.SECONDS);
         var scraping = new phanphoi.common.security.ScrapingGuard(phanphoi.common.security.ScrapingPolicy.from(cfg));
@@ -55,9 +72,19 @@ public final class ClientMain {
         }));
         http.createContext("/api/", ex -> {
             String path = ex.getRequestURI().getPath().replaceAll("/+$", "");
-            if (phanphoi.common.web.OriginGuard.check(ex.getRequestHeaders().getFirst("Origin"),
-                    ex.getRequestHeaders().getFirst("Host"), allowedOrigins)
-                    != phanphoi.common.web.OriginGuard.Verdict.OK) {
+            // Reject cross-site requests BEFORE looking up the browser session: 403, not 401.
+            // Tailscale Funnel must forward the original Origin header unchanged.
+            var origin = ex.getRequestHeaders().getFirst("Origin");
+            var requestHost = ex.getRequestHeaders().getFirst("Host");
+            var originVerdict = phanphoi.common.web.OriginGuard.check(origin, requestHost, allowedOrigins);
+            if (originVerdict != phanphoi.common.web.OriginGuard.Verdict.OK) {
+                String category = originVerdict == phanphoi.common.web.OriginGuard.Verdict.CSRF
+                        ? "CLIENT_CSRF" : "CLIENT_DNS_REBIND";
+                // Header fields are untrusted: sanitize before printing to Docker logs.
+                System.err.println("[SECURITY] " + category + " | "
+                        + safeLog(ex.getRequestMethod()) + " " + safeLog(path)
+                        + " | HTTP_403 | Origin=" + safeLog(origin)
+                        + " | Host=" + safeLog(requestHost));
                 Http.error(ex, 403, "Origin/Host khong hop le"); return;
             }
             if (path.equals("/api/password/forgot") || path.equals("/api/password/reset")) {
@@ -94,7 +121,10 @@ public final class ClientMain {
             String token = browserSessions.sessionToken(ex);
             Session session = live.get(token);
             if (session != null && !browserSessions.valid(ex, now, session.agent.branchIdentity())) {
-                if (live.remove(token, session)) session.agent.stop();
+                if (live.remove(token, session)) {
+                    session.agent.browserExit(session.browserId, "SESSION_EXPIRED");
+                    session.agent.stop();
+                }
                 session = null;
             }
             boolean authenticated = session != null;
@@ -149,9 +179,23 @@ public final class ClientMain {
                 } else Http.error(ex, 401, "Chua dang nhap trinh duyet");
                 return;
             }
+            // Authenticated browser heartbeat, derived from secure session cookie (no browser-supplied branch ID).
+            if (path.equals("/api/browser/heartbeat")) {
+                if (!"POST".equals(ex.getRequestMethod())) { Http.error(ex, 405, "Method not allowed"); return; }
+                if (!session.agent.allowHttp(ex.getRequestMethod(), path,
+                        ex.getRequestHeaders().getFirst("Origin"), ex.getRequestHeaders().getFirst("Host"))) {
+                    Http.error(ex, 403, "Origin/Host khong hop le"); return;
+                }
+                if (session.shouldForward(now)) {
+                    try { session.agent.browserPresence(session.browserId, clientIp); }
+                    catch (Http.ApiException e) { Http.error(ex, e.status(), e.getMessage()); return; }
+                }
+                Http.ok(ex, Map.of("ok", true)); return;
+            }
             if (path.equals("/api/logout")) {
                 if (!ex.getRequestMethod().equals("POST")) { Http.error(ex, 405, "Method not allowed"); return; }
                 live.remove(token);
+                session.agent.browserExit(session.browserId, "USER_LOGOUT");
                 browserSessions.revoke(ex);
                 session.agent.stop();
                 Http.ok(ex, Map.of("ok", true)); return;
@@ -173,6 +217,13 @@ public final class ClientMain {
             try { Desktop.getDesktop().browse(URI.create("http://localhost:" + port + "/branch/")); }
             catch (Exception ignored) { }
         }
+    }
+
+    /** Prevent log forging with header values and keep diagnostics concise. */
+    private static String safeLog(String input) {
+        if (input == null) return "(none)";
+        String value = input.replaceAll("[\\r\\n\\t\\p{Cntrl}]", "_");
+        return value.length() > 160 ? value.substring(0, 160) : value;
     }
 
     private static Router routes(BranchAgent agent, phanphoi.common.web.BrowserSessions browserSessions) {

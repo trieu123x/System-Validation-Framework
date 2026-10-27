@@ -38,6 +38,7 @@ public final class ServerMain {
         db.read(c -> c.isValid(3)); // báo lỗi sớm nếu sai thông tin CSDL
         phanphoi.server.db.ReceiptSchema.ensure(db);
         AuditLog.ensure(db);
+        NetworkLog.ensure(db);
         System.out.println("[server] da ket noi CSDL");
 
         ServerSettings settings = new ServerSettings(cfg);
@@ -69,8 +70,13 @@ public final class ServerMain {
                     + " (doi bang admin.password.hash trong server.properties)");
         }
         var recovery = new phanphoi.server.mail.PasswordRecovery(db, auth, ctx.registry(), mailSettings);
+        boolean experimentApi = cfg.getBool("experiment.api", false);
+        System.out.println("[SECURITY] EXPERIMENT_API " + (experimentApi ? "ENABLED" : "DISABLED"));
+        if (experimentApi && "0.0.0.0".equals(adminHost)) {
+            System.err.println("[SECURITY] WARNING: experiment API enabled on all interfaces; DO NOT publish through Funnel/Serve");
+        }
         AdminApi admin = new AdminApi(ctx, adminHost, adminPort, Path.of(cfg.get("ui.dir", "ui/out")), info,
-                cfg.getBool("experiment.api", true), auth, recovery);
+                experimentApi, auth, recovery);
         admin.start();
         String url = "http://" + ("0.0.0.0".equals(adminHost) ? "localhost" : adminHost) + ":" + adminPort + "/admin/";
         System.out.println("[server] giao dien admin: " + url);
@@ -84,6 +90,8 @@ public final class ServerMain {
                 tcp.close();
                 ctx.log().close();
                 ctx.audit().close();
+                ctx.browsers().close();
+                ctx.network().close();
                 ctx.events().hub().closeAll();
                 ctx.securityLog().close();
             } catch (Exception ignored) {

@@ -63,13 +63,19 @@ public final class AdminApi implements AutoCloseable {
                 Http.error(ex, 403, "Origin/Host khong hop le");
                 return;
             }
-            // API thực nghiệm (trình giả lập tải) chỉ bật khi experiment.api=true và chỉ nghe trên localhost
+            // Disabled experiments must return 404 even without an admin session.
+            // Otherwise the auth middleware would produce 401 and reveal a confusing state.
+            if (!experimentApi && (path.equals("/api/experiment") || path.startsWith("/api/experiment/"))) {
+                Http.error(ex, 404, "Not Found");
+                return;
+            }
+            // API thực nghiệm không yêu cầu đăng nhập: chỉ bật trong môi trường test cô lập.
             boolean open = PUBLIC.contains(path) || (experimentApi && path.startsWith("/api/experiment/"));
             if (!open && !auth.valid(ex)) {
                 Http.error(ex, 401, "Chua dang nhap");
                 return;
             }
-            if (!open && ex.getRequestMethod().equals("GET") && (path.startsWith("/api/security/") || path.equals("/api/mail/status"))) {
+            if (!open && ex.getRequestMethod().equals("GET") && (path.startsWith("/api/security/") || path.startsWith("/api/network/") || path.equals("/api/mail/status"))) {
                 long now = System.currentTimeMillis();
                 monitoringReads.add(now);
                 if (monitoringReads.sum(now, 60) > 600) {
@@ -78,7 +84,7 @@ public final class AdminApi implements AutoCloseable {
                 }
             }
             // Monitoring/control routes remain accessible to resolve blocks. No query string is logged.
-            if (!open && ex.getRequestMethod().equals("GET") && !path.startsWith("/api/security/")
+            if (!open && ex.getRequestMethod().equals("GET") && !path.startsWith("/api/security/") && !path.startsWith("/api/network/")
                     && !path.equals("/api/mail/status") && !path.equals("/api/info")) {
                 String resource = path.replaceAll("/[0-9]+(?=/|$)", "/{id}");
                 var decision = ctx.security().onHttpRead(auth.user(), clientIp(ex), resource.length() > 100 ? resource.substring(0,100) : resource, System.currentTimeMillis());
@@ -319,6 +325,60 @@ public final class AdminApi implements AutoCloseable {
                     WHERE (? = '' OR ma_cn = ?) AND (? = '' OR lenh = ?)
                     ORDER BY id DESC LIMIT ?""", maCn, maCn, lenh, lenh, limit)));
         });
+        // ---- branch TCP health (read-only; dedicated network audit, not security/scraping) ----
+        r.get("/api/network/branches", (ex, p) -> {
+            var rows = ctx.db().read(c -> Db.rows(c, """
+                SELECT cn.ma_cn, cn.ten, cn.gia_lap,
+                       last_event.thoi_gian AS su_kien_luc, last_event.su_kien AS su_kien_cuoi,
+                       last_event.ly_do AS ly_do_cuoi, last_event.gian_doan_ms AS gian_doan_ms_cuoi,
+                       COALESCE(counts.su_co_24h,0) AS su_co_24h,
+                       COALESCE(counts.timeout_24h,0) AS timeout_24h,
+                       COALESCE(counts.ket_noi_lai_24h,0) AS ket_noi_lai_24h,
+                       COALESCE(counts.browser_su_co_24h,0) AS browser_su_co_24h,
+                       COALESCE(counts.browser_ket_noi_lai_24h,0) AS browser_ket_noi_lai_24h
+                FROM chi_nhanh cn
+                LEFT JOIN LATERAL (
+                    SELECT thoi_gian,su_kien,ly_do,gian_doan_ms
+                    FROM network_events WHERE ma_cn=cn.ma_cn ORDER BY id DESC LIMIT 1
+                ) last_event ON TRUE
+                LEFT JOIN (
+                    SELECT ma_cn,
+                        COUNT(*) FILTER (WHERE su_kien='DISCONNECTED' AND ly_do NOT IN
+                            ('CLIENT_LOGOUT','SERVER_SHUTDOWN','SERVER_CLOSE','ADMIN_KICK','IP_BANNED','SECURITY_KICK')) AS su_co_24h,
+                        COUNT(*) FILTER (WHERE su_kien='TIMEOUT') AS timeout_24h,
+                        COUNT(*) FILTER (WHERE su_kien='RECONNECTED') AS ket_noi_lai_24h,
+                        COUNT(*) FILTER (WHERE su_kien='BROWSER_OFFLINE' AND ly_do IN
+                            ('HEARTBEAT_TIMEOUT','GATEWAY_DISCONNECTED')) AS browser_su_co_24h,
+                        COUNT(*) FILTER (WHERE su_kien='BROWSER_RECONNECTED') AS browser_ket_noi_lai_24h
+                    FROM network_events WHERE thoi_gian >= CURRENT_TIMESTAMP - INTERVAL '24 hours'
+                    GROUP BY ma_cn
+                ) counts ON counts.ma_cn=cn.ma_cn
+                ORDER BY cn.ma_cn"""));
+            for (var row : rows) {
+                String maCn = (String) row.get("maCn");
+                var h = ctx.registry().get(maCn);
+                row.put("trangThai", h == null ? "OFFLINE" : h.awaitingPong() ? "AWAITING_PONG" : "ONLINE");
+                row.put("phien", h == null ? null : h.id());
+                row.put("ipHienTai", h == null ? null : h.ip());
+                row.put("hoatDongCuoi", h == null ? null : java.time.LocalDateTime.ofInstant(
+                        java.time.Instant.ofEpochMilli(h.lastReadAt()), java.time.ZoneId.systemDefault())
+                        .format(Db.TIME_FORMAT));
+            }
+            Http.ok(ex, rows);
+        });
+        r.get("/api/network/browsers", (ex, p) -> Http.ok(ex, ctx.browsers().snapshot()));
+        r.get("/api/network/events", (ex, p) -> {
+            var q = Http.query(ex);
+            String maCn = q.getOrDefault("maCn", "");
+            if (!maCn.isEmpty() && !maCn.matches("[A-Za-z0-9_-]{1,40}"))
+                throw new Http.ApiException(400, "Ma chi nhanh khong hop le");
+            int limit = Math.max(1, Math.min(Integer.parseInt(q.getOrDefault("limit", "100")), 500));
+            Http.ok(ex, ctx.db().read(c -> Db.rows(c, """
+                SELECT id, thoi_gian, ma_cn, su_kien, ly_do, ip, session_id, gian_doan_ms, browser_id
+                FROM network_events WHERE (? = '' OR ma_cn = ?)
+                ORDER BY id DESC LIMIT ?""", maCn, maCn, limit)));
+        });
+
         r.get("/api/audit", (ex, p) -> {
             Map<String, String> q = Http.query(ex);
             String actor = q.getOrDefault("actor", "");
@@ -439,7 +499,7 @@ public final class AdminApi implements AutoCloseable {
             // ngắt luôn các kết nối đang mở từ IP này
             for (phanphoi.server.net.ClientHandler h : ctx.registry().connections()) {
                 if (ip.equals(h.ip())) {
-                    h.close();
+                    h.closeWithReason("IP_BANNED");
                 }
             }
             Http.ok(ex, Map.of("until", java.time.LocalDateTime.ofInstant(java.time.Instant.ofEpochMilli(until),
@@ -453,7 +513,7 @@ public final class AdminApi implements AutoCloseable {
                 if (h.id() == id) {
                     ctx.security().record("ADMIN", "ADMIN_KICK", "LOW", h.ip(), h.maCn(),
                             "Admin ngat phien #" + id, "NGAT", System.currentTimeMillis());
-                    h.close();
+                    h.closeWithReason("ADMIN_KICK");
                     Http.ok(ex, Map.of("ok", true));
                     return;
                 }

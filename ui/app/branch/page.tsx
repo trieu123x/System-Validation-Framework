@@ -52,6 +52,29 @@ export default function BranchPage() {
     return () => window.removeEventListener(UNAUTHORIZED, reset);
   }, []);
 
+  // Separate browser presence from the gateway TCP connection. Each logged-in browser
+  // sends a heartbeat; lost Wi-Fi or a closed browser is detected by server timeout.
+  useEffect(() => {
+    if (!s?.maCn) return;
+    let active = true;
+    const pulse = () => {
+      if (!active) return;
+      void fetch("/api/browser/heartbeat", { method: "POST", credentials: "same-origin", cache: "no-store" })
+        .catch(() => { /* Network may be down; the server will time out this browser. */ });
+    };
+    pulse();
+    const timer = window.setInterval(pulse, 10_000);
+    window.addEventListener("online", pulse);
+    const visibility = () => { if (document.visibilityState === "visible") pulse(); };
+    document.addEventListener("visibilitychange", visibility);
+    return () => {
+      active = false;
+      window.clearInterval(timer);
+      window.removeEventListener("online", pulse);
+      document.removeEventListener("visibilitychange", visibility);
+    };
+  }, [s?.maCn]);
+
   // All branches use the same public URL /branch/; identity lives in the secure cookie.
 
   if (!s) {

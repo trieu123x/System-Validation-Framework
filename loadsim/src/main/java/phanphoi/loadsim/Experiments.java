@@ -1638,7 +1638,8 @@ public final class Experiments {
         // security.mode=off: 1000 kết nối từ 127.0.0.1 sẽ dính CONN_FLOOD, giữ số liệu E1–E7 so được với trước;
         // E8 ghi đè bằng tham số riêng (tham số sau thắng)
         List<String> all = new ArrayList<>(List.of("max.clients=2000", "db.pool.size=20",
-                "tcp.port=" + PORT, "admin.http.port=" + adminPort, "security.mode=off"));
+                "tcp.port=" + PORT, "admin.http.port=" + adminPort, "security.mode=off",
+                "experiment.api=true"));
         all.addAll(args);
         ServerProcess p = new ServerProcess(serverJar, outDir.resolve("logs").resolve("server-" + tag + ".log"), all);
         p.awaitReady();

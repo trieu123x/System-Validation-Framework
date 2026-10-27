@@ -5,6 +5,7 @@ import { api, fmtNumber } from "@/lib/api";
 import type { Branch, IpRow, LogRow, SecurityEventRow, SecurityOverview, SessionRow, ScrapingMetadata, ScrapingBlock } from "@/lib/types";
 import { Badge, Card, Empty, Stat, useAction } from "@/components/ui";
 import { AuditTrail, Monitor } from "@/components/admin/Comms";
+import { Network } from "@/components/admin/Network";
 
 type Push = (l: string, t: string) => void;
 
@@ -21,15 +22,17 @@ const IP_STATE: Record<IpRow["trangThai"], [string, string]> = {
 export function Security({ version, live, branches, clearLive, push }: {
   version: number; live: LogRow[]; branches: Branch[]; clearLive: () => void; push: Push;
 }) {
-  const [sub, setSub] = useState<"security" | "stream" | "audit">("security");
+  const [sub, setSub] = useState<"security" | "stream" | "audit" | "network">("security");
   return (
     <>
       <div className="row" style={{ gap: 6, marginBottom: 12 }}>
         <button className={`btn ${sub === "security" ? "btn-primary" : ""}`} onClick={() => setSub("security")}>An ninh</button>
+        <button className={`btn ${sub === "network" ? "btn-primary" : ""}`} onClick={() => setSub("network")}>Kết nối chi nhánh</button>
         <button className={`btn ${sub === "stream" ? "btn-primary" : ""}`} onClick={() => setSub("stream")}>Luồng tin</button>
         <button className={`btn ${sub === "audit" ? "btn-primary" : ""}`} onClick={() => setSub("audit")}>Nhật ký thao tác</button>
       </div>
-      {sub === "stream" ? <Monitor live={live} branches={branches} clearLive={clearLive} />
+      {sub === "network" ? <Network branches={branches} />
+        : sub === "stream" ? <Monitor live={live} branches={branches} clearLive={clearLive} />
         : sub === "audit" ? <AuditTrail branches={branches} />
         : <SecurityPanel version={version} branches={branches} push={push} />}
     </>

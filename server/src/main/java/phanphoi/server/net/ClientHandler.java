@@ -21,6 +21,8 @@ import java.time.temporal.ChronoUnit;
 import java.util.EnumSet;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * Phiên làm việc của một chi nhánh: tách tin, kiểm tra trạng thái đăng nhập, gọi nghiệp vụ, heartbeat.
@@ -40,7 +42,7 @@ public final class ClientHandler {
             Command.LOGIN, Command.INVENTORY_GET, Command.SALE, Command.SET_THRESHOLD, Command.LOW_STOCK,
             Command.ACCEPT, Command.REJECT, Command.RECEIVED, Command.HISTORY_GET, Command.PING, Command.PONG,
             Command.LOGOUT, Command.TRANSFER_ACCEPT, Command.TRANSFER_REJECT, Command.DEBT_GET, Command.SECURITY_REPORT,
-            Command.NOTICE_REPLY);
+            Command.NOTICE_REPLY, Command.BROWSER_PRESENCE, Command.BROWSER_EXIT);
 
     private static final AtomicLong SEQ = new AtomicLong();
 
@@ -55,6 +57,8 @@ public final class ClientHandler {
     /** Hạn chót nhận PONG (ms); 0 = không chờ. */
     private volatile long pongDeadline;
     private volatile boolean closed;
+    private final AtomicBoolean closeRecorded = new AtomicBoolean();
+    private final AtomicReference<String> closeReason = new AtomicReference<>();
 
     public ClientHandler(ServerContext ctx, Transport transport) {
         this.ctx = ctx;
@@ -76,6 +80,10 @@ public final class ClientHandler {
     public long id() {
         return id;
     }
+
+    public long lastReadAt() { return lastReadAt; }
+
+    public boolean awaitingPong() { return !closed && pongDeadline > 0; }
 
     public SessionStats stats() {
         return stats;
@@ -117,12 +125,14 @@ public final class ClientHandler {
             malformed(line, now);
             return;
         }
-        ctx.log().log(maCn, MessageLog.IN, msg.command().name(),
-                msg.command() == Command.LOGIN ? "LOGIN|[identifier redacted]|[password redacted]" : line);
+        // Browser heartbeats are high-frequency and must not fill the protocol audit table.
+        if (msg.command() != Command.BROWSER_PRESENCE && msg.command() != Command.BROWSER_EXIT)
+            ctx.log().log(maCn, MessageLog.IN, msg.command().name(),
+                    msg.command() == Command.LOGIN ? "LOGIN|[identifier redacted]|[password redacted]" : line);
         if (ctx.security().onMessage(stats, ip(), maCn, msg.command(), now) == SecurityMonitor.Action.KICK) {
             audit(msg, "BLOCKED");
             sendError(ErrorCode.E06, "Gui lenh don dap, ngat phien");
-            close();
+            closeWithReason("SECURITY_KICK");
             return;
         }
         try {
@@ -136,7 +146,7 @@ public final class ClientHandler {
             } else if (e.code() == ErrorCode.E04
                     && ctx.security().onNotFound(stats, ip(), maCn, msg.command(), now) == SecurityMonitor.Action.KICK) {
                 sendError(ErrorCode.E06, "Do ma yeu cau cua chi nhanh khac, ngat phien");
-                close();
+                closeWithReason("SECURITY_KICK");
             }
         } catch (ProtocolException e) {
             audit(msg, "E01");
@@ -157,7 +167,8 @@ public final class ClientHandler {
         Command cmd = msg.command();
         // LOGIN is handled where authentication result is known; never log credentials.
         if (cmd == Command.LOGIN || cmd == Command.PING || cmd == Command.PONG
-                || cmd == Command.SECURITY_REPORT) return;
+                || cmd == Command.SECURITY_REPORT || cmd == Command.BROWSER_PRESENCE
+                || cmd == Command.BROWSER_EXIT) return;
         ctx.audit().record("BRANCH", maCn == null ? "UNAUTHENTICATED" : maCn,
                 cmd.name(), AuditLog.tcpDetail(msg), result, ip());
     }
@@ -165,13 +176,19 @@ public final class ClientHandler {
     /** E01 / dòng quá dài: FUZZING theo IP; IP vừa bị chặn thì đóng kết nối. */
     private void malformed(String sample, long now) {
         if (ctx.security().onMalformed(ip(), maCn, sample, now)) {
-            close();
+            closeWithReason("SECURITY_KICK");
         }
     }
 
     /** Kết nối đã đóng (do client, do lỗi hoặc do server): dọn phiên. */
     void onClosed() {
+        if (!closeRecorded.compareAndSet(false, true)) return;
         closed = true;
+        String cn = maCn;
+        if (cn != null) {
+            ctx.network().disconnected(cn, ip(), id, closeReason.get());
+            ctx.browsers().gatewayDisconnected(cn, id, System.currentTimeMillis());
+        }
         ctx.registry().closed(this);
         ctx.security().onClose(stats, ip());
     }
@@ -221,6 +238,8 @@ public final class ClientHandler {
                 }
             }
             case NOTICE_REPLY -> send(ctx.notices().reply(cn, m.intParam(0), m.param(1), m.intParam(2)));
+            case BROWSER_PRESENCE -> ctx.browsers().heartbeat(cn, id, m.param(0), m.param(1), System.currentTimeMillis());
+            case BROWSER_EXIT -> ctx.browsers().exit(cn, m.param(0), m.param(1), System.currentTimeMillis());
             case SECURITY_REPORT ->
                     ctx.security().onClientReport(stats, ip(), cn, m.param(0), m.param(1), System.currentTimeMillis());
             default -> throw new ServiceException(ErrorCode.E01, "Lenh khong ho tro: " + cmd);
@@ -275,6 +294,7 @@ public final class ClientHandler {
             return;
         }
         maCn = canonical;
+        ctx.network().connected(canonical, ip(), this.id);
         ctx.audit().record("BRANCH", canonical, "LOGIN", "", "SUCCESS", ip());
         ctx.security().onLogin(stats, ip(), System.currentTimeMillis());
         ctx.security().onSuccessfulLogin(canonical, ip(), System.currentTimeMillis());
@@ -293,7 +313,7 @@ public final class ClientHandler {
                 System.out.println("[server] " + id + " dang xuat");
             }
         }
-        close();
+        closeWithReason("CLIENT_LOGOUT");
     }
 
     /** Gửi một tin; false nếu kết nối đã hỏng (bên gọi có thể xếp hàng lại). */
@@ -302,6 +322,7 @@ public final class ClientHandler {
             return false;
         }
         if (!transport.write(line(m))) {
+            closeWithReason("WRITE_FAILURE");
             return false;
         }
         stats.sent();
@@ -325,13 +346,12 @@ public final class ClientHandler {
         // PRELOGIN_IDLE: mở kết nối mà không LOGIN (chiếm chỗ max.clients)
         if (maCn == null && ctx.security().onPreloginTimeout(stats, ip(), now)) {
             sendError(ErrorCode.E06, "Qua thoi gian dang nhap");
-            close();
+            closeWithReason("PRELOGIN_TIMEOUT");
             return;
         }
         long deadline = pongDeadline;
         if (deadline > 0 && now >= deadline) {
-            System.out.println("[server] " + who() + " khong tra PONG, dong ket noi");
-            close();
+            closeWithReason("PONG_TIMEOUT");
             return;
         }
         if (deadline == 0 && now - lastReadAt >= idleMs) {
@@ -347,6 +367,11 @@ public final class ClientHandler {
             pongDeadline = deadline;
         }
         send(Message.of(Command.PING));
+    }
+
+    public void closeWithReason(String reason) {
+        closeReason.compareAndSet(null, reason);
+        close();
     }
 
     public void close() {

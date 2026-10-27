@@ -134,7 +134,7 @@ function AdminApp({ user, onLogout }: { user: string; onLogout: () => void }) {
   const TITLES: Record<Tab, string> = {
     overview: "Tổng quan", products: "Hàng hóa & kho tổng", stock: "Quản lý kho chi nhánh", debts: "Công nợ",
     history: "Yêu cầu cấp hàng",
-    transfers: "Điều chuyển hàng", broadcast: "Thông báo tới chi nhánh", monitor: "Giám sát an ninh", reconcile: "Đối soát kho",
+    transfers: "Điều chuyển hàng", broadcast: "Thông báo tới chi nhánh", monitor: "Giám sát hệ thống", reconcile: "Đối soát kho",
   };
 
   return (

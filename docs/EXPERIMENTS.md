@@ -2,6 +2,8 @@
 
 Mỗi cải tiến của nhóm có một **cờ cấu hình** để bật lại cách làm baseline. Cùng một kịch bản được chạy cho từng biến thể, nên mọi khác biệt trong số liệu đến từ cải tiến đó.
 
+Chế độ thực nghiệm chỉ bật khi công cụ tải khởi động server riêng trên localhost (`experiment.api=true` truyền bằng tham số). Trên Docker/Funnel, `EXPERIMENT_API=false` và `/api/experiment/*` trả 404.
+
 Toàn bộ thực nghiệm chạy tự động bằng một lệnh. Bộ chạy tự khởi động `server.jar` với cấu hình từng biến thể, giả lập các chi nhánh ảo `SIM001..SIM1000` nói đúng giao thức TCP, rồi ghi CSV và bảng Markdown vào `experiments/results/`. Log của từng server nằm trong `experiments/results/logs/`.
 
 ```bat

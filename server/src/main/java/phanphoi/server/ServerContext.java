@@ -22,6 +22,8 @@ public final class ServerContext {
     private final Events events;
     private final MessageLog log;
     private final AuditLog audit;
+    private final NetworkLog network;
+    private final BrowserMonitor browsers;
     private final SessionRegistry registry;
     private final Outbox outbox;
     private final AuthService auth;
@@ -50,6 +52,8 @@ public final class ServerContext {
         this.events = new Events();
         this.log = new MessageLog(db, events);
         this.audit = new AuditLog(db, quiet);
+        this.network = new NetworkLog(db, quiet);
+        this.browsers = new BrowserMonitor(network);
         this.registry = new SessionRegistry(events);
         this.securityLog = new SecurityEventLog(db, events);
         this.security = new SecurityMonitor(settings.securityRules, () -> settings.securityMode, new EventSink() {
@@ -97,6 +101,12 @@ public final class ServerContext {
 
     public Events events() {
         return events;
+    }
+
+    public BrowserMonitor browsers() { return browsers; }
+
+    public NetworkLog network() {
+        return network;
     }
 
     public AuditLog audit() {
