@@ -15,6 +15,8 @@ case "$1" in
       echo "admin.http.host=0.0.0.0"
       echo "open.browser=false"
       echo "scraping.mode=${SCRAPING_MODE:-block}"
+      # An explicit Docker override wins over config/server.properties.
+      echo "experiment.api=${EXPERIMENT_API:-false}"
       echo "security.allowed.origins=http://localhost:3000,http://localhost:3001,http://server:8080${ADMIN_ORIGIN:+,$ADMIN_ORIGIN}"
       if [ -n "${ADMIN_PASSWORD_HASH:-}" ]; then
         echo "admin.password.hash=${ADMIN_PASSWORD_HASH}"

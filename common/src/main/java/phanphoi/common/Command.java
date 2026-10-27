@@ -53,7 +53,11 @@ public enum Command {
     // id, loai, trangThai, taoLuc, tieuDe, noiDung, maSp, deXuat, soLuong, maYc, anh (trường không áp dụng để rỗng)
     NOTICE(11),
     // CN trả lời thông báo: id, traLoi (XEM | CAN_HANG | KHONG_CAN | MUON_NHAP | BO_QUA), soLuong (0 khi không cần)
-    NOTICE_REPLY(3);
+    NOTICE_REPLY(3),
+    // Authenticated browser heartbeat relayed by the branch gateway (not a user operation).
+    BROWSER_PRESENCE(2), // opaque browser session id, observed browser IP
+    BROWSER_EXIT(2);     // opaque browser session id, USER_LOGOUT or SESSION_EXPIRED
+
 
     private static final Map<String, Command> BY_NAME = new HashMap<>();
 

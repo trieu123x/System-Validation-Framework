@@ -20,7 +20,8 @@ import java.util.Map;
 /**
  * API phục vụ trình giả lập tải khi chạy thực nghiệm (docs/EXPERIMENTS.md). Chỉ thao tác trên
  * các chi nhánh ảo (chi_nhanh.gia_lap = TRUE), không đụng dữ liệu CN01..CN03.
- * Chỉ mở trên localhost cùng API admin; tắt bằng experiment.api=false.
+ * Chạy cùng listener HTTP Admin. KHÔNG tự giới hạn localhost nếu Admin qua proxy/Funnel;
+ * chỉ bật trên môi trường thử nghiệm cô lập bằng experiment.api=true.
  */
 final class ExperimentApi {
 

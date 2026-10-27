@@ -68,3 +68,52 @@ function Feed({ rows }: { rows: LogRow[] }) {
     </div>
   );
 }
+
+
+/** Business audit is separate from raw protocol messages, with success/failure outcomes. */
+type AuditRow = {
+  id: number; thoiGian: string; nguon: string; actor: string;
+  hanhDong: string; chiTiet: string; ketQua: string; ip: string;
+};
+
+export function AuditTrail({ branches }: { branches: Branch[] }) {
+  const [actor, setActor] = useState("");
+  const [source, setSource] = useState("");
+  const [rows, setRows] = useState<AuditRow[]>([]);
+  const [refresh, setRefresh] = useState(0);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    let active = true;
+    const qs = new URLSearchParams({ actor, source, limit: "300" });
+    api<AuditRow[]>(`/api/audit?${qs}`).then(data => { if (active) { setRows(data); setError(""); } })
+      .catch(() => { if (active) setError("Không đọc được lịch sử thao tác."); });
+    return () => { active = false; };
+  }, [actor, source, refresh]);
+
+  return <Card title="Lịch sử thao tác (audit_log)" actions={
+    <button className="btn btn-sm" onClick={() => setRefresh(n => n + 1)}>Làm mới</button>
+  }>
+    <p className="note">Ghi nhận thao tác nghiệp vụ của admin và chi nhánh, gồm thời gian, dữ liệu chính và kết quả. Tối đa 300 bản ghi mới nhất.</p>
+    <div className="row" style={{ marginBottom: 10 }}>
+      <select value={source} onChange={e => setSource(e.target.value)} aria-label="Nguồn thao tác">
+        <option value="">Tất cả nguồn</option><option value="ADMIN">Admin</option><option value="BRANCH">Chi nhánh</option>
+      </select>
+      <select value={actor} onChange={e => setActor(e.target.value)} aria-label="Chi nhánh thao tác">
+        <option value="">Mọi tài khoản</option><option value="admin">admin</option>
+        {branches.map(b => <option key={b.maCn} value={b.maCn}>{b.maCn}</option>)}
+      </select>
+    </div>
+    {error ? <p role="alert">{error}</p> : rows.length === 0 ? <Empty>Chưa có thao tác phù hợp.</Empty> :
+      <div className="table-wrap scroll" style={{ maxHeight: 540 }}>
+        <table>
+          <thead><tr><th>Thời gian</th><th>Nguồn</th><th>Tài khoản</th><th>Thao tác</th><th>Chi tiết</th><th>Kết quả</th><th>IP</th></tr></thead>
+          <tbody>{rows.map(r => <tr key={r.id}>
+            <td className="muted nowrap">{r.thoiGian}</td><td>{r.nguon}</td><td>{r.actor}</td>
+            <td className="code">{r.hanhDong}</td><td>{r.chiTiet}</td>
+            <td>{r.ketQua === "SUCCESS" ? "Thành công" : r.ketQua}</td><td>{r.ip}</td>
+          </tr>)}</tbody>
+        </table>
+      </div>}
+  </Card>;
+}

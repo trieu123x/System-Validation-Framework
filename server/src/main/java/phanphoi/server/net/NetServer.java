@@ -57,7 +57,7 @@ public abstract class NetServer implements AutoCloseable {
     public void close() throws IOException {
         heartbeat.shutdownNow();
         for (ClientHandler h : ctx.registry().connections()) {
-            h.close();
+            h.closeWithReason("SERVER_SHUTDOWN");
         }
     }
 }

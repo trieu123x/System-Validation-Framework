@@ -98,7 +98,7 @@ public final class BioServer extends NetServer {
                 h.onLine(line);
             }
         } catch (IOException e) {
-            // client mất kết nối hoặc server đã đóng socket
+            h.closeWithReason("IO_ERROR");
         } finally {
             try {
                 s.close();

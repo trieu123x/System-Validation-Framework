@@ -94,6 +94,13 @@ final class BranchAgent implements ServerLink.Handler {
     }
     void scrapingReport(String detail) { security.scrapingReport(detail, System.currentTimeMillis()); }
 
+    void browserPresence(String id, String browserIp) { send(Message.of(Command.BROWSER_PRESENCE, id, browserIp)); }
+    void browserExit(String id, String reason) {
+        ServerLink l = link;
+        if (l != null && !l.isClosed() && state.status == Status.ONLINE)
+            l.send(Message.of(Command.BROWSER_EXIT, id, reason));
+    }
+
     Map<String, Object> snapshot() {
         synchronized (lock) {
             return snap();
@@ -187,7 +194,11 @@ final class BranchAgent implements ServerLink.Handler {
             if (!wantOnline || now < nextAttemptAt) {
                 return;
             }
-            nextAttemptAt = now + policy.delayMs(attempt++);
+            int attemptNumber = ++attempt;
+            nextAttemptAt = now + policy.delayMs(attemptNumber - 1);
+            String branchCode = branchIdentity();
+            String safeBranch = branchCode == null ? "UNAUTHENTICATED" : branchCode.replaceAll("[^A-Za-z0-9_-]", "");
+            System.out.println("[NETWORK] " + safeBranch + " | RECONNECTING | attempt=" + attemptNumber);
             try {
                 ServerLink nl = connect();
                 synchronized (lock) {
@@ -196,6 +207,8 @@ final class BranchAgent implements ServerLink.Handler {
                 }
                 nl.send(Message.of(Command.LOGIN, credId, credPw));
             } catch (IOException | RuntimeException e) {
+                System.err.println("[NETWORK] " + safeBranch + " | RETRY_FAILED | attempt=" + attemptNumber
+                        + " | type=" + e.getClass().getSimpleName());
                 setStatus(Status.DISCONNECTED, "Mat ket noi: " + e.getMessage() + ". Thu lai sau 5 giay");
             }
         } catch (RuntimeException e) {
@@ -695,6 +708,8 @@ final class BranchAgent implements ServerLink.Handler {
                 pendingLogin.completeExceptionally(new IOException("closed"));
             }
             if (state.status == Status.ONLINE) {
+                System.err.println("[NETWORK] " + (state.maCn == null ? "UNKNOWN" : state.maCn)
+                        + " | CONNECTION_LOST | retry=" + wantOnline);
                 addNotice("error", "Mat ket noi toi server");
             }
             state.status = Status.DISCONNECTED;

@@ -270,6 +270,7 @@ UTF-8, mỗi tin một dòng tối đa 4096 byte, dạng `LENH|thamSo1|thamSo2`.
 | `NOTICE_REPLY` | CN→S | id, traLoi (`XEM`; `CAN_HANG`/`KHONG_CAN` cho `HOI_NHU_CAU`; `MUON_NHAP`/`BO_QUA` cho `SP_MOI`), soLuong (0 khi không cần). Server trả `NOTICE` mới; thông báo của chi nhánh khác → `E04`, đã trả lời → `E03`, sai loại → `E01`, số lượng ≤ 0 → `E05` |
 | `DEBT_GET` / `DEBT` | CN→S / S→CN | — / tongNhan, daTra, conNo, hanMuc, danh sách id,loai,soTien,thoiGian,ghiChu (50 bút toán mới nhất; tiền là số nguyên đồng). Server tự đẩy `DEBT` khi sổ công nợ của chi nhánh đổi và chi nhánh đang online (không xếp hàng); sau `LOGIN_OK` client tự gửi `DEBT_GET` |
 | `SECURITY_REPORT` | CN→S | loai, chiTiet (≤ 500 ký tự): sự kiện an ninh client phát hiện; chỉ sau khi đăng nhập, tối đa 1 tin/giây/phiên, mã CN lấy từ phiên |
+| `BROWSER_PRESENCE` / `BROWSER_EXIT` | CN→S | idPhienTrinhDuyet, ipTrinhDuyet / idPhienTrinhDuyet, lyDo (`USER_LOGOUT`/`SESSION_EXPIRED`): gateway chi nhánh chuyển tiếp heartbeat của trình duyệt đã đăng nhập (tối đa 1 tin/5 giây/phiên); chỉ sau khi đăng nhập, mã CN lấy từ phiên TCP; quá 35 giây không có heartbeat → `BROWSER_OFFLINE` (xem `docs/BROWSER_HEARTBEAT.md`) |
 | `ERROR` | S→CN | E01 định dạng, E02 chưa đăng nhập, E03 sai trạng thái/server đầy, E04 không tìm thấy, E05 số lượng sai, E06 bị giới hạn tần suất hoặc IP bị chặn |
 | `PING` / `PONG`, `LOGOUT` | hai chiều, CN→S | — |
 | UDP `DISCOVER` / `HERE` | CN→S / S→CN | — / ip, cổngTCP |

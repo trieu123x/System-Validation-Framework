@@ -253,3 +253,21 @@ export type NoticeSuggestion = {
   maCn: string; tenCn: string; maSp: string; tenSp: string; soLuong: number; nguong: number;
   muc: "critical" | "warning"; deXuat: number;
 };
+
+/** Trạng thái TCP hiện tại, không khẳng định chắc chắn tình trạng Internet của chi nhánh. */
+export type NetworkBranch = {
+  maCn: string; ten: string; giaLap: boolean;
+  trangThai: "ONLINE" | "OFFLINE" | "AWAITING_PONG";
+  phien: number | null; ipHienTai: string | null; hoatDongCuoi: string | null;
+  suKienLuc: string | null; suKienCuoi: string | null; lyDoCuoi: string | null;
+  gianDoanMsCuoi: number | null; suCo24h: number; timeout24h: number; ketNoiLai24h: number;
+  browserSuCo24h: number; browserKetNoiLai24h: number;
+};
+export type NetworkEvent = {
+  id: number; thoiGian: string; maCn: string; suKien: string; lyDo: string;
+  ip: string | null; sessionId: number; gianDoanMs: number | null; browserId: string | null;
+};
+export type BrowserConnection = {
+  maCn: string; browserId: string; trangThai: "ONLINE" | "OFFLINE";
+  ip: string; lanCuoi: string; offlineTu: string | null;
+};
