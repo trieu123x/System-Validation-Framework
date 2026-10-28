@@ -84,8 +84,6 @@ echo [NOTE] Public DNS can take time to propagate after first enable.
 echo [SECURITY] Change default admin/branch passwords before sharing.
 echo [MAIL] SMTP alerts require MAIL_ENABLED=true and valid settings.
 echo.
-if defined ADMIN_ORIGIN start "" "%ADMIN_ORIGIN%/admin/"
-if defined CLIENT_ORIGIN start "" "%CLIENT_ORIGIN%/branch/"
 pause
 exit /b 0
 
