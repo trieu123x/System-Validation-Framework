@@ -2,6 +2,7 @@
 
 - Đã bỏ khối quy trình nghiệp vụ và các ghi chú demo, trích dẫn, nguồn ảnh khỏi giao diện.
 - Đã cập nhật metadata, ảnh chia sẻ PNG/SVG và cấu hình URL mặc định trống.
+- Nút về đầu trang cố định ở góc phải dưới, chỉ xuất hiện khi điểm cuối trang đi vào vùng nhìn; hỗ trợ bàn phím và giảm chuyển động. Cú pháp TSX đã kiểm tra, chưa chạy thử trên trình duyệt.
 - `npm run data:check`: đạt; dữ liệu sản phẩm, danh mục và chi nhánh giữ nguyên.
 - Kiểm tra cú pháp TS/TSX, import nội bộ, liên kết neo và nội dung giao diện: đạt.
 - `node --check scripts/verify-browser.mjs`: đạt.
