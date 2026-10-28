@@ -25,18 +25,18 @@ Nếu `npm` bị PowerShell chặn script, dùng `npm.cmd` thay cho `npm`.
 
 | Biến | Ý nghĩa | Local |
 |---|---|---|
-| `VITE_ADMIN_URL` | URL đầy đủ của trang công ty | `http://localhost:8080/admin/` |
-| `VITE_BRANCH_URL` | URL đầy đủ của một trang chi nhánh | `http://localhost:8081/branch/` |
+| `VITE_ADMIN_URL` | URL đầy đủ của trang công ty | Để trống |
+| `VITE_BRANCH_URL` | URL đầy đủ của một trang chi nhánh | Để trống |
 | `VITE_SITE_URL` | URL gốc landing sau deploy, tạo canonical/ảnh Open Graph tuyệt đối | Để trống |
 
-Lâm thay URL local bằng các URL HTTPS thực tế trong `.env.local` hoặc biến môi trường của tiến trình build.
+Điền các URL HTTPS thực tế trong `.env.local` hoặc biến môi trường của tiến trình build.
 Các biến `VITE_*` là thông tin công khai và được chốt vào file JavaScript/HTML **lúc build**.
 Đổi URL sau đó phải build lại; đổi trong development thì khởi động lại Vite.
 Link công ty/chi nhánh không hiển thị nếu biến tương ứng trống hoặc không phải URL HTTP(S).
 Không đặt mật khẩu, token hoặc khóa SSH vào biến Vite. Không commit file `.env.local`.
 
 Landing hiện thiết kế phục vụ tại đường dẫn gốc `/`, như phương án Caddy của nhóm.
-`VITE_SITE_URL` nên là URL gốc có dấu `/` cuối, ví dụ `https://demo.example.org/`.
+`VITE_SITE_URL` là URL gốc thực tế của landing, có dấu `/` cuối.
 Khi có biến này, HTML build có canonical, `og:url` và `og:image` tuyệt đối.
 Khi chưa có tên miền, giữ ảnh OG tương đối `/social-preview.png`; metadata công khai cần nghiệm thu lại sau deploy.
 
@@ -53,7 +53,8 @@ Khi chưa có tên miền, giữ ảnh OG tương đối `/social-preview.png`; 
 - Thông tin liên hệ từ `ui/lib/company.ts`; dữ liệu chi nhánh và chính sách phân phối phục vụ demo.
 - Model/giá của TB29–TB31 là giả định theo ghi chú seed.
 - Ảnh Wikimedia là ảnh minh họa, có thể khác hãng/model. Không dùng chúng để cam kết đặc tính thật.
-- Footer ghi rõ “Trang demo cho bài tập lớn môn Lập trình mạng”.
+- Trang chỉ hiển thị giới thiệu thiết bị, danh mục, sản phẩm, chi nhánh và liên hệ.
+- Không hiển thị quy trình nghiệp vụ, ghi chú demo, trích dẫn hoặc nguồn ảnh.
 
 Nguồn trích:
 
@@ -116,15 +117,14 @@ Thành phần bàn giao:
 |---|---|
 | `src/App.tsx` | Ghép các section, giữ danh mục đang chọn |
 | `src/components/Header.tsx` | Menu responsive; Escape đóng menu và trả focus |
-| `src/components/Hero.tsx` | Tiêu đề, hai CTA và bộ trình chiếu 31 sản phẩm; nút trước/sau cập nhật ảnh, tên, model, nguồn ảnh và bộ đếm |
+| `src/components/Hero.tsx` | Tiêu đề, hai CTA và bộ trình chiếu 31 sản phẩm; nút trước/sau cập nhật ảnh, tên, model và bộ đếm |
 | `src/components/Categories.tsx` | 7 thẻ danh mục chính và 3 nhóm mới |
 | `src/components/ProductCatalog.tsx` | Lọc dữ liệu tại trình duyệt, xem thêm/thu gọn |
-| `src/components/ProductCard.tsx` | Tên, model, định dạng tiền Việt, nguồn ảnh |
+| `src/components/ProductCard.tsx` | Tên, model và định dạng tiền Việt |
 | `src/components/ProductImage.tsx` | Ảnh responsive Cloudinary, lazy-load, alt và fallback |
-| `src/components/Distribution.tsx` | Quy mô dữ liệu và luồng báo thiếu → điều phối → xác nhận |
 | `src/components/Branches.tsx` | Danh sách 15 chi nhánh |
-| `src/components/Footer.tsx` | Liên hệ mẫu, demo disclaimer và đầy đủ ghi công ảnh |
-| `src/lib/catalog.ts` | Danh sách nổi bật, format giá, biến URL và link giấy phép |
+| `src/components/Footer.tsx` | Thông tin liên hệ và liên kết điều hướng |
+| `src/lib/catalog.ts` | Danh sách nổi bật, format giá và biến URL |
 | `src/index.css` | Tailwind, bố cục desktop/mobile, focus và reduced-motion |
 | `scripts/extract-data.mjs` | Trích SQL sang JSON có kiểm tra nguồn |
 | `vite.config.ts` | React + Tailwind plugin, metadata theo URL deploy |
@@ -136,7 +136,7 @@ Các icon và ảnh chia sẻ thương hiệu được dựng bằng SVG trong r
 
 ## 6. Ghi công ảnh
 
-Xem khối “Ghi công ảnh” ở footer hoặc `src/data/image-credits.json`.
+Hồ sơ ảnh được lưu tại `src/data/image-credits.json`, không hiển thị trên landing page.
 Mỗi ảnh có tác giả, link trang nguồn và giấy phép; source `scripts/images/credits.json` được giữ nguyên.
 Ảnh đã được chuyển WebP/thu nhỏ theo pipeline có sẵn của repo, không khẳng định là ảnh chụp sản phẩm TOBOKI.
 `public/social-preview.svg` là bản vector gốc của ảnh chia sẻ `public/social-preview.png`.

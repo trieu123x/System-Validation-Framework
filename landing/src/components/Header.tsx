@@ -16,7 +16,7 @@ export default function Header() {
 
   return (
     <>
-      <div className="announcement"><div className="page-width"><span>THIẾT BỊ & GIẢI PHÁP PHÂN PHỐI</span><span className="announcement-note">Bản demo · Lập trình mạng</span></div></div>
+      <div className="announcement"><div className="page-width"><span>MÁY MÓC & THIẾT BỊ TOBOKI</span></div></div>
       <header className="site-header" onKeyDown={(event) => {
         if (event.key === 'Escape' && open) {
           setOpen(false)

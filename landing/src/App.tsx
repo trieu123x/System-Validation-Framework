@@ -3,7 +3,6 @@ import Header from './components/Header'
 import Hero from './components/Hero'
 import Categories from './components/Categories'
 import ProductCatalog from './components/ProductCatalog'
-import Distribution from './components/Distribution'
 import Branches from './components/Branches'
 import Footer from './components/Footer'
 
@@ -28,7 +27,6 @@ export default function App() {
       <Hero />
       <Categories onSelect={selectCategory} />
       <ProductCatalog selectedCategory={category} onSelect={selectCategory} />
-      <Distribution />
       <Branches />
     </main>
     <Footer />

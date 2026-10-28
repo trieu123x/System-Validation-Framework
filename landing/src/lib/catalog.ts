@@ -14,13 +14,6 @@ export function imageUrl(url: string, width: number) {
   return url.replace('/image/upload/', `/image/upload/c_limit,w_${width},f_auto,q_auto/`)
 }
 
-export function licenseUrl(license: string) {
-  if (license === 'CC0') return 'https://creativecommons.org/publicdomain/zero/1.0/'
-  if (license === 'Public domain') return 'https://creativecommons.org/publicdomain/mark/1.0/'
-  const match = /^CC (BY(?:-SA)?) ([\d.]+)(?: (us))?$/.exec(license)
-  return match ? `https://creativecommons.org/licenses/${match[1].toLowerCase()}/${match[2]}/${match[3] ? 'us/' : ''}` : undefined
-}
-
 function publicLink(value: string | undefined) {
   if (!value) return undefined
   try {

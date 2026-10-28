@@ -1,3 +1,15 @@
+# Cập nhật nội dung ngày 28/10/2026
+
+- Đã bỏ khối quy trình nghiệp vụ và các ghi chú demo, trích dẫn, nguồn ảnh khỏi giao diện.
+- Đã cập nhật metadata, ảnh chia sẻ PNG/SVG và cấu hình URL mặc định trống.
+- `npm run data:check`: đạt; dữ liệu sản phẩm, danh mục và chi nhánh giữ nguyên.
+- Kiểm tra cú pháp TS/TSX, import nội bộ, liên kết neo và nội dung giao diện: đạt.
+- `node --check scripts/verify-browser.mjs`: đạt.
+- Chưa chạy build, lint, browser QA hoặc Lighthouse cho bản này: `npm ci` bị HTTP 403 khi tải thư viện từ npm.
+- Các báo cáo và ảnh chụp bên dưới thuộc bản cũ, không xác nhận giao diện sau chỉnh sửa này.
+
+---
+
 # Biên bản kiểm tra landing TOBOKI
 
 Kiểm tra trên **bản build production**, phục vụ bằng Vite Preview tại

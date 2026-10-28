@@ -11,7 +11,6 @@ export default function ProductCard({ product }: { product: Product }) {
       <h3>{product.name}</h3>
       <p className="product-model">{product.model ? `Model: ${product.model}` : 'Phụ kiện thiết bị'}</p>
       <div className="product-price"><span>Giá bán lẻ tham khảo</span><strong>{formatPrice(product.retailPrice)}</strong></div>
-      <a className="product-credit" href={product.image.source} target="_blank" rel="noreferrer">Ảnh minh họa: {product.image.artist} ↗</a>
     </div>
   </article>
 }

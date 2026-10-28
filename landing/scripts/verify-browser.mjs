@@ -31,7 +31,6 @@ async function carouselState(page) {
       caption: element.querySelector('#hero-product-caption')?.textContent,
       image: image?.getAttribute('src'),
       alt: image?.getAttribute('alt'),
-      source: element.querySelector('.hero-visual-footer a')?.getAttribute('href'),
     }
   })
 }
@@ -43,7 +42,7 @@ function matchesProduct(state, index) {
     && state.caption?.includes(product.model ?? product.name)
     && state.caption?.includes(product.name)
     && state.image?.endsWith(product.image.url.split('/').at(-1))
-    && state.alt?.includes(product.name) && state.source === product.image.source
+    && state.alt?.includes(product.name)
 }
 
 async function verifyCarousel(page) {
@@ -73,7 +72,7 @@ async function verifyCarousel(page) {
     await page.waitForFunction(id => document.querySelector('.hero-visual')?.dataset.productId === id, products[expectedIndex].id)
     await settleImage()
     const state = await carouselState(page)
-    check(`Carousel ${label}: counter, caption, image and credit match ${products[expectedIndex].id}`, matchesProduct(state, expectedIndex), JSON.stringify(state))
+    check(`Carousel ${label}: counter, caption and image match ${products[expectedIndex].id}`, matchesProduct(state, expectedIndex), JSON.stringify(state))
     const after = await catalogSnapshot()
     check(`Carousel ${label}: keeps scroll, hash, filter and product list`, Math.abs(after.y - before.y) <= 1 && before.hash === after.hash && before.selected === after.selected && JSON.stringify(before.ids) === JSON.stringify(after.ids))
     check(`Carousel ${label}: keeps focus on its control`, await button.evaluate(element => element === document.activeElement))
@@ -194,10 +193,7 @@ try {
       check('Keyboard skip link focuses main', await page.locator('#main').evaluate(element => element === document.activeElement))
       const unsafe = await page.locator('a[href]').evaluateAll(links => links.map(link => link.getAttribute('href')).filter(href => /^(javascript|data):/i.test(href)))
       check('Links have no unsafe URL schemes', unsafe.length === 0)
-      await page.locator('#ghi-cong-anh summary').click()
       await verifyCarousel(page)
-      check('Image credits expand', await page.locator('#ghi-cong-anh').getAttribute('open') !== null && await page.locator('#ghi-cong-anh li').count() > 0)
-      await page.locator('#ghi-cong-anh summary').click()
     }
     await context.close()
   }

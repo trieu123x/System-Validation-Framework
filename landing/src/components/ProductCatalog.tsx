@@ -14,7 +14,7 @@ export default function ProductCatalog({ selectedCategory, onSelect }: { selecte
 
   return <section id="san-pham" className="section products-section" aria-labelledby="products-title">
     <div className="page-width">
-      <div className="section-heading"><div><p className="eyebrow">02 / SẢN PHẨM</p><h2 id="products-title" tabIndex={-1}>Thiết bị nổi bật.</h2></div><p>Khám phá 12 lựa chọn từ danh mục. Lọc theo nhóm để xem đầy đủ sản phẩm cùng loại.</p></div>
+      <div className="section-heading"><div><p className="eyebrow">02 / SẢN PHẨM</p><h2 id="products-title" tabIndex={-1}>Thiết bị nổi bật.</h2></div><p>Tìm thiết bị theo danh mục và xem thông tin từng sản phẩm.</p></div>
       <div className="catalog-toolbar">
         <div className="filter-list" role="group" aria-label="Lọc sản phẩm theo danh mục">
           <button type="button" aria-pressed={selectedCategory === 'all'} onClick={() => select('all')}>Tất cả</button>
@@ -24,7 +24,6 @@ export default function ProductCatalog({ selectedCategory, onSelect }: { selecte
       </div>
       <div className="product-grid">{visible.map((product) => <ProductCard key={product.id} product={product} />)}</div>
       {selectedCategory === 'all' && <div className="catalog-more"><button className="button button-outline" type="button" onClick={() => setShowAll(!showAll)}>{showAll ? 'Thu gọn về 12 sản phẩm' : `Xem toàn bộ ${products.length} sản phẩm`}<Icon name="arrow" size={18} /></button></div>}
-      <p className="catalog-note">Giá và thông tin lấy từ dữ liệu mẫu của nhóm, không phải báo giá hiện hành. Model và giá của TB29–TB31 là giả định; toàn bộ ảnh chỉ mang tính minh họa.</p>
     </div>
   </section>
 }
