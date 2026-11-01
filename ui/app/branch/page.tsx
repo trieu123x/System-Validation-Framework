@@ -106,7 +106,7 @@ export default function BranchPage() {
 
   return (
     <>
-      <Shell<Tab> brand={s.tenCn ?? ""} sub={`TOBOKI · ${s.maCn} · server ${s.server || "—"}`} value={tab} onChange={setTab}
+      <Shell<Tab> brand={s.tenCn ?? ""} sub={`TOBOKI · ${s.maCn}`} value={tab} onChange={setTab}
         title={TITLES[tab]}
         nav={[
           { id: "stock", label: "Bán hàng", count: low, tone: "danger" },
