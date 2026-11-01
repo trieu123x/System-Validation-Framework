@@ -17,12 +17,11 @@ export default function Hero() {
       <div className="hero-copy">
         <p className="eyebrow"><span className="eyebrow-line" /> THIẾT BỊ CHO TỪNG CÔNG VIỆC</p>
         <h1 id="hero-title">Vững thiết bị.<br /><span>Tiếp sức</span><br />mọi công trình.</h1>
-        <p className="hero-description">TOBOKI cung cấp máy móc và thiết bị cho công trình, nhà xưởng và nhu cầu thương mại.</p>
+        <p className="hero-description">Khám phá máy móc và thiết bị TOBOKI: máy hút bụi, máy tời, máy rửa xe, thiết bị thi công và phụ kiện.</p>
         <div className="hero-actions">
           <a className="button button-orange" href="#san-pham">Xem sản phẩm <Icon name="arrow" /></a>
           {systemLinks.admin && <a className="text-link" href={systemLinks.admin}>Đăng nhập quản trị <span aria-hidden="true">↗</span></a>}
         </div>
-        
       </div>
       <div className="hero-visual" role="region" aria-roledescription="bộ trình chiếu" aria-label="Sản phẩm TOBOKI" data-product-id={product.id} onKeyDown={(event) => {
         if (!(event.target instanceof HTMLButtonElement)) return
@@ -48,7 +47,6 @@ export default function Hero() {
             <button type="button" className="carousel-next" aria-label="Sản phẩm tiếp theo" aria-controls="hero-product-caption" onClick={() => moveSlide(1)}><Icon name="arrow" size={20} /></button>
           </div>
         </div>
-        <div className="hero-visual-footer"><span>Ảnh thiết bị mang tính minh họa</span><a href={product.image.source} target="_blank" rel="noreferrer">Nguồn ảnh ↗</a></div>
       </div>
     </div>
   </section>
