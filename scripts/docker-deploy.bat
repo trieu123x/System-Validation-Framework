@@ -24,7 +24,7 @@ echo [STEP 3] Build and start server and shared client...
 docker compose up -d --build --remove-orphans server client
 if errorlevel 1 exit /b 1
 call "%~dp0docker-status.bat"
+if errorlevel 1 exit /b 1
 echo.
-echo Admin  http://localhost:8080/admin/
-echo Client http://localhost:8081/branch/ (all branches)
 echo NOTE: configure real SMTP in .env and run this file again.
+exit /b 0

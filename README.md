@@ -131,6 +131,8 @@ Tài khoản mẫu: `CN01`, `CN02`, `CN03`, mật khẩu `123456`. Ô "Server" �
 
 Không cần cài JDK, Maven, Node hay PostgreSQL; chỉ cần Docker Desktop (hoặc Docker Engine + Compose v2).
 
+Trên Windows, mở Docker Desktop rồi nhấp đúp `run-project.bat` ở thư mục gốc để chuẩn bị database, build và chạy hệ thống. Cửa sổ sẽ giữ lại thông báo khi hoàn tất hoặc gặp lỗi.
+
 ```bat
 :: (tuỳ chọn) đổi mật khẩu CSDL, mật khẩu admin, cổng: copy .env.example thành .env rồi sửa
 docker compose up --build -d
@@ -140,13 +142,15 @@ docker compose up --build -d
 |---|---|---|
 | `db` (PostgreSQL 17) | `127.0.0.1:5433` | Lần đầu tạo volume `pgdata` thì nạp `schema.sql`, `seed.sql`, `seed_loadsim.sql` và dữ liệu demo (`SEED_DEMO=1`) |
 | `server` | TCP `5000`, http://localhost:8080/admin/ | Đăng nhập `admin` / `admin123`; trang công ty chỉ mở trên `127.0.0.1` |
-| `cn01`, `cn02` | http://localhost:8081/branch/, http://localhost:8082/branch/ | Đăng nhập `CN01` / `123456`, `CN02` / `123456`; đã trỏ sẵn tới `server:5000` |
+| `client` | http://localhost:8081/branch/ | Gateway chung cho mọi chi nhánh; đăng nhập ví dụ `CN01` / `123456` hoặc `CN02` / `123456`; đã trỏ sẵn tới `server:5000` |
 | `loadsim` (profile `tools`) | — | `docker compose run --rm loadsim clients=100 duration=60` |
 
-- Một image `phanphoi` dùng cho cả ba vai: build giao diện Next.js, build 4 module Maven, rồi đóng vào JRE 17. Lệnh `server`, `client`, `loadsim` chọn tiến trình; tham số `key=value` phía sau ghi đè cấu hình như khi chạy `.bat`, ví dụ `docker compose run --rm cn01 client http.port=8083`.
+- Một image `phanphoi` dùng cho cả ba vai: build giao diện Next.js, build 4 module Maven, rồi đóng vào JRE 17. Lệnh `server`, `client`, `loadsim` chọn tiến trình; tham số `key=value` phía sau ghi đè cấu hình như khi chạy `.bat`, ví dụ `docker compose run --rm loadsim clients=100 duration=60`.
 - Mật khẩu CSDL đi qua biến môi trường `DB_PASSWORD`; `docker/entrypoint.sh` ghi nó vào `config/server.local.properties` bên trong container, không nằm trong image.
-- Chi nhánh chạy ngoài Docker (máy khác trong LAN) nối vào `server=<ip máy chạy Docker>:5000`. UDP discovery không đi qua mạng NAT của Docker Desktop nên phải ghi rõ địa chỉ.
-- Cổng 5000/8080/8081/8082 trùng với lúc chạy bằng `.bat`: tắt bản đang chạy, hoặc đổi `SERVER_TCP_PORT`, `ADMIN_HTTP_PORT`, `CN01_HTTP_PORT`, `CN02_HTTP_PORT` trong `.env`.
+- Cổng TCP của Docker chỉ bind trên localhost. Chi nhánh chạy trên máy khác kết nối qua IP Tailscale của server, cổng 5000; xem [hướng dẫn Tailnet TCP](docs/TAILNET_TCP.md). UDP discovery không đi qua Tailscale nên phải ghi rõ địa chỉ.
+- Cổng 5000/8080/8081 trùng với lúc chạy bằng `.bat`: tắt bản đang chạy, hoặc đổi `SERVER_TCP_PORT`, `ADMIN_HTTP_PORT`, `CLIENT_HTTP_PORT` trong `.env`.
+- Nếu cổng 8080 bị ứng dụng khác sử dụng, đặt `ADMIN_HTTP_PORT=18080` trong `.env` rồi chạy lại; trang công ty chuyển sang `http://localhost:18080/admin/`. Script hiển thị địa chỉ và cấu hình Funnel theo cổng Docker thực tế.
+- Triển khai public bằng `deploy.bat`; tắt HTTPS Funnel bằng `stop_public_web.bat`. Cấu hình origin được cập nhật trong `.env` bởi `scripts/set-tailscale-host.ps1`.
 - Nạp lại dữ liệu từ đầu: `docker compose down -v` (xoá volume `pgdata`) rồi `docker compose up -d`.
 - Chi nhánh ngoài Docker nối qua NAT của Docker Desktop hiện cùng một IP với server (IP gateway), và `loadsim` mở nhiều kết nối từ một container: dễ chạm `CONN_FLOOD`. Khi đó nâng `security.conn.max.per.ip` hoặc chạy server với `security.mode=detect`. Quy tắc theo IP không bao giờ chặn IP đang có phiên đăng nhập hợp lệ.
 

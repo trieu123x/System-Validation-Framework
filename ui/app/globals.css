@@ -284,7 +284,7 @@ label.field input, label.field select { color: var(--text); width: 100%; }
 
 /* ---------- thanh lọc ngang (tổng quan) ---------- */
 .filterbar {
-  display: flex; flex-wrap: wrap; gap: 10px; align-items: end; padding: 10px 12px; margin-bottom: 12px;
+  display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end; padding: 10px 12px; margin-bottom: 12px;
   background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
 }
 .filterbar label.field { flex: 1 1 150px; }

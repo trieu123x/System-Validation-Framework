@@ -1,6 +1,6 @@
 # Chạy cả hệ thống: scripts\docker-deploy.bat; client chung cho moi chi nhanh
 #   trang công ty  http://localhost:8080/admin/   (admin / admin123)
-#   chi nhánh      http://localhost:8081/branch/  (CN01 / 123456), http://localhost:8082/branch/ (CN02 / 123456)
+#   chi nhánh      http://localhost:8081/branch/  (mọi chi nhánh, ví dụ CN01 / 123456)
 # Đổi mật khẩu, cổng... trong file .env (xem .env.example).
 name: phanphoi
 

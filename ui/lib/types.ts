@@ -102,7 +102,7 @@ export type ClientSecurityInfo = {
   serverDoi: string | null;
 };
 
-export type DebtState = "DA_TRA_DU" | "CON_NO" | "VUOT_HAN_MUC" | "CHUA_PHAT_SINH";
+type DebtState = "DA_TRA_DU" | "CON_NO" | "VUOT_HAN_MUC" | "CHUA_PHAT_SINH";
 
 export type BranchDebt = {
   maCn: string; tenCn: string; giaLap: boolean;
@@ -143,7 +143,7 @@ export type TransferRow = {
 
 export type LogRow = { id?: number; maCn: string | null; chieu: string; lenh: string; noiDung: string | null; thoiGian: string };
 
-export type Runtime = {
+type Runtime = {
   threads: number;
   peakThreads: number;
   heapUsedMb: number;
@@ -199,7 +199,7 @@ export type BranchTransfer = {
   capNhat: string;
 };
 
-export type HistoryRow = { maYc: string; maHang: string; tenHang: string; soLuong: number; soLuongNhan: number | null; thoiGian: string; nguon: string };
+type HistoryRow = { maYc: string; maHang: string; tenHang: string; soLuong: number; soLuongNhan: number | null; thoiGian: string; nguon: string };
 
 export type BranchSnapshot = {
   status: "DISCONNECTED" | "CONNECTING" | "CONNECTED" | "ONLINE";
@@ -226,7 +226,7 @@ export type BranchSnapshot = {
 };
 
 export type NoticeType = "TIN" | "HOI_NHU_CAU" | "SP_MOI";
-export type NoticeState = "DA_GUI" | "DA_XEM" | "CAN_HANG" | "KHONG_CAN" | "MUON_NHAP" | "BO_QUA";
+type NoticeState = "DA_GUI" | "DA_XEM" | "CAN_HANG" | "KHONG_CAN" | "MUON_NHAP" | "BO_QUA";
 
 /** Thông báo trong hộp thư chi nhánh (client.jar). */
 export type InboxItem = {

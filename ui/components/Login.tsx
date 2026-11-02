@@ -5,7 +5,7 @@ import { api } from "@/lib/api";
 import { COMPANY } from "@/lib/company";
 import { PasswordRecovery, useRecoveryToken } from "@/components/PasswordRecovery";
 
-export type Side = "company" | "branch";
+type Side = "company" | "branch";
 
 const SIDES: Record<Side, { label: string; app: string; port: number; path: string }> = {
   company: { label: "Công ty", app: "server.jar", port: 8080, path: "/admin/" },

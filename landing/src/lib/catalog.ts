@@ -4,7 +4,7 @@ import categoriesData from '../data/categories.json'
 export type Product = (typeof productsData)[number]
 export const products = productsData
 export const categories = categoriesData
-export const featuredIds = ['TB01', 'TB02', 'TB06', 'TB09', 'TB16', 'TB17', 'TB22', 'TB26', 'TB28', 'TB29', 'TB30', 'TB31']
+const featuredIds = ['TB01', 'TB02', 'TB06', 'TB09', 'TB16', 'TB17', 'TB22', 'TB26', 'TB28', 'TB29', 'TB30', 'TB31']
 export const featuredProducts = featuredIds.map((id) => products.find((product) => product.id === id)!)
 
 const priceFormatter = new Intl.NumberFormat('vi-VN', { maximumFractionDigits: 0 })

@@ -40,16 +40,30 @@ if errorlevel 1 (
     exit /b 1
 )
 
+rem Resolve Docker host bindings, including custom ports from .env.
+set "ADMIN_TARGET="
+set "CLIENT_TARGET="
+for /f "delims=" %%A in ('docker compose port server 8080 2^>nul') do set "ADMIN_TARGET=%%A"
+for /f "delims=" %%A in ('docker compose port client 8081 2^>nul') do set "CLIENT_TARGET=%%A"
+if not defined ADMIN_TARGET (
+    echo [ERROR] Cannot resolve the Admin Docker port. Check docker compose ps.
+    exit /b 1
+)
+if not defined CLIENT_TARGET (
+    echo [ERROR] Cannot resolve the Client Docker port. Check docker compose ps.
+    exit /b 1
+)
+
 echo.
 echo [FUNNEL 1/2] Admin on HTTPS port 443 (PUBLIC)...
-"%TAILSCALE%" funnel --bg --https=443 http://127.0.0.1:8080
+"%TAILSCALE%" funnel --bg --https=443 "http://%ADMIN_TARGET%"
 if errorlevel 1 (
     echo [ERROR] Admin Funnel failed. Enable Funnel and HTTPS in Tailscale.
     exit /b 1
 )
 echo.
 echo [FUNNEL 2/2] All branches on HTTPS port 8443 (PUBLIC)...
-"%TAILSCALE%" funnel --bg --https=8443 http://127.0.0.1:8081
+"%TAILSCALE%" funnel --bg --https=8443 "http://%CLIENT_TARGET%"
 if errorlevel 1 (
     echo [ERROR] Client Funnel failed. Check Funnel approval and Tailscale policy.
     exit /b 1

@@ -63,7 +63,7 @@ export function Stat({ label, value, tone, hint, onClick }: {
   return onClick ? <button type="button" className={cls} onClick={onClick}>{body}</button> : <div className={cls}>{body}</div>;
 }
 
-export type NavItem<T extends string> = { id: T; label: string; count?: number; tone?: string };
+type NavItem<T extends string> = { id: T; label: string; count?: number; tone?: string };
 
 /** Khung trang kiểu phần mềm quản lý: thanh menu ngang trên cùng, dưới là thanh tiêu đề trang và nội dung. */
 export function Shell<T extends string>({ brand, sub, nav, value, onChange, status, title, actions, children }: {
@@ -201,7 +201,7 @@ export function Empty({ children }: { children: ReactNode }) {
   return <p className="empty">{children}</p>;
 }
 
-export type Toast = { id: number; level: string; text: string };
+type Toast = { id: number; level: string; text: string };
 
 export function useToasts() {
   const [toasts, setToasts] = useState<Toast[]>([]);

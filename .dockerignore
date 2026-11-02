@@ -19,3 +19,7 @@ report/
 docs/
 *.log
 loadsim-result.csv
+send-to-dat/
+landing/
+.claude/
+.vscode/

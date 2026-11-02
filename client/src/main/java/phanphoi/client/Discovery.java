@@ -37,12 +37,6 @@ public final class Discovery {
     public record Here(InetSocketAddress server, String source, boolean local) {
     }
 
-    /** @return địa chỉ TCP của server, hoặc null nếu không ai trả lời trong timeoutMs. */
-    public static InetSocketAddress find(int udpPort, int timeoutMs) {
-        List<Here> all = findAll(udpPort, timeoutMs);
-        return all.isEmpty() ? null : all.get(0).server();
-    }
-
     /** Địa chỉ thuộc chính máy này (loopback hoặc của một card mạng). */
     public static boolean isLocal(InetAddress a) {
         try {

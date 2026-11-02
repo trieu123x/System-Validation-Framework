@@ -29,6 +29,9 @@ target/
 *.ear
 !.mvn/wrapper/maven-wrapper.jar
 
+# Generated handoff bundles; rebuild from source when needed
+/send-to-dat/
+
 # Node.js / Next.js / Vite build output
 node_modules/
 .next/
