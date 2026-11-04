@@ -39,7 +39,7 @@ public final class ClientHandler {
 
     /** Lệnh chỉ đi từ chi nhánh lên server. */
     private static final Set<Command> FROM_CLIENT = EnumSet.of(
-            Command.LOGIN, Command.INVENTORY_GET, Command.SALE, Command.SET_THRESHOLD, Command.LOW_STOCK,
+            Command.LOGIN, Command.INVENTORY_GET, Command.SALE, Command.CHECKOUT, Command.SET_THRESHOLD, Command.LOW_STOCK,
             Command.ACCEPT, Command.REJECT, Command.RECEIVED, Command.HISTORY_GET, Command.PING, Command.PONG,
             Command.LOGOUT, Command.TRANSFER_ACCEPT, Command.TRANSFER_REJECT, Command.DEBT_GET, Command.SECURITY_REPORT,
             Command.NOTICE_REPLY, Command.BROWSER_PRESENCE, Command.BROWSER_EXIT);
@@ -193,6 +193,38 @@ public final class ClientHandler {
         ctx.security().onClose(stats, ip());
     }
 
+    private void checkout(String branch, Message m) {
+        if (!m.param(0).matches("[a-f0-9]{32}")) {
+            sendError(ErrorCode.E01, "Mã thao tác thanh toán không hợp lệ");
+            return;
+        }
+        String json;
+        try {
+            var body = phanphoi.common.web.Http.GSON.fromJson(m.param(2), com.google.gson.JsonObject.class);
+            Object result = new phanphoi.server.service.CheckoutService(ctx.db(), ctx.events())
+                    .execute(branch, m.param(1), body);
+            json = phanphoi.common.web.Http.GSON.toJson(result);
+        } catch (SQLException e) {
+            send(Message.of(Command.CHECKOUT_RESULT, m.param(0), "ERROR", "Không thể lưu đơn hàng. Vui lòng thử lại."));
+            return;
+        } catch (RuntimeException e) {
+            send(Message.of(Command.CHECKOUT_RESULT, m.param(0), "ERROR",
+                    e instanceof ServiceException || e instanceof phanphoi.common.web.Http.ApiException
+                            ? e.getMessage() : "Dữ liệu đơn hàng không hợp lệ"));
+            return;
+        }
+        // 600 UTF-16 units stay below the 4096-byte line limit even after protocol escaping.
+        for (int start = 0; start < json.length();) {
+            int end = Math.min(json.length(), start + 600);
+            if (end < json.length() && Character.isHighSurrogate(json.charAt(end - 1))) end--;
+            send(Message.of(Command.CHECKOUT_RESULT, m.param(0), end == json.length() ? "OK" : "MORE", json.substring(start, end)));
+            start = end;
+        }
+        if ("CONFIRM".equals(m.param(1))) {
+            try { send(ctx.stock().inventoryMessage(branch)); } catch (SQLException ignored) { }
+        }
+    }
+
     private void dispatch(Message m) throws ProtocolException, SQLException {
         Command cmd = m.command();
         if (!FROM_CLIENT.contains(cmd)) {
@@ -217,6 +249,7 @@ public final class ClientHandler {
             case LOGOUT -> logout();
             case INVENTORY_GET -> send(ctx.stock().inventoryMessage(cn));
             case SALE -> send(ctx.stock().sale(cn, m.param(0).trim(), m.intParam(1)));
+            case CHECKOUT -> checkout(cn, m);
             case SET_THRESHOLD -> {
                 ctx.stock().setThreshold(cn, m.param(0).trim(), m.intParam(1));
                 send(ctx.stock().inventoryMessage(cn));

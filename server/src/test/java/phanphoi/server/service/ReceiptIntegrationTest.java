@@ -55,6 +55,8 @@ class ReceiptIntegrationTest {
         });
         ReceiptSchema.ensure(db);
         ReceiptSchema.ensure(db);
+        phanphoi.server.db.CheckoutSchema.ensure(db);
+        phanphoi.server.db.CheckoutSchema.ensure(db);
         db.tx(c -> {
             Db.update(c, "INSERT INTO chi_nhanh (ma_cn, ten, mat_khau_hash, salt) VALUES ('CN01','Test','x','x'), ('CN02','Other','x','x')");
             Db.update(c, "INSERT INTO danh_muc (ma_dm, ten) VALUES ('DM','Test')");
@@ -83,6 +85,72 @@ class ReceiptIntegrationTest {
 
     private int quantity() throws SQLException {
         return db.read(c -> Db.one(c, "SELECT so_luong FROM kho_chi_nhanh WHERE ma_cn='CN01' AND ma_sp='SP01'", r -> r.getInt(1)));
+    }
+
+    private com.google.gson.JsonObject basket(String id, int quantity) {
+        return phanphoi.common.web.Http.GSON.fromJson("""
+                {"id":"%s","customer":"Khách thử nghiệm","items":[{"maHang":"SP01","soLuong":%d}]}""".formatted(id, quantity), com.google.gson.JsonObject.class);
+    }
+
+    @Test void checkoutIsQuotedWithoutDeductionAndPaidExactlyOnce() throws Exception {
+        var checkout = new CheckoutService(db, new Events());
+        String id = "HD" + UUID.randomUUID().toString().replace("-", "");
+        db.read(c -> Db.update(c, "UPDATE san_pham SET gia_ban_le=250 WHERE ma_sp='SP01'"));
+        var quote = (com.google.gson.JsonObject) checkout.execute("CN01", "CREATE", basket(id, 2));
+        assertEquals("PENDING", quote.get("status").getAsString());
+        assertEquals(500, quote.get("total").getAsLong());
+        assertEquals(3, quantity());
+        assertEquals(quote, checkout.execute("CN01", "CREATE", basket(id, 2)));
+        db.read(c -> Db.update(c, "UPDATE san_pham SET gia_ban_le=999,ten='Changed' WHERE ma_sp='SP01'"));
+        var paid = (com.google.gson.JsonObject) checkout.execute("CN01", "CONFIRM", basket(id, 2));
+        assertEquals("PAID", paid.get("status").getAsString());
+        assertEquals(500, paid.get("total").getAsLong());
+        assertEquals("Product", paid.getAsJsonArray("items").get(0).getAsJsonObject().get("tenHang").getAsString());
+        assertEquals(1, quantity());
+        assertEquals(paid, checkout.execute("CN01", "CONFIRM", basket(id, 2)));
+        assertEquals(paid, checkout.execute("CN01", "GET", basket(id, 2)));
+        assertEquals(1, quantity());
+        assertEquals(1, (int) db.read(c -> Db.one(c, "SELECT count(*) FROM ban_hang", r -> r.getInt(1))));
+        assertEquals(1, ((java.util.List<?>) checkout.execute("CN01", "LIST", new com.google.gson.JsonObject())).size());
+        assertTrue(((java.util.List<?>) checkout.execute("CN02", "LIST", new com.google.gson.JsonObject())).isEmpty());
+        assertThrows(ServiceException.class, () -> checkout.execute("CN02", "GET", basket(id, 2)));
+        assertThrows(ServiceException.class, () -> checkout.execute("CN02", "CONFIRM", basket(id, 2)));
+        assertThrows(ServiceException.class, () -> checkout.execute("CN01", "CREATE", basket(id, 1)));
+    }
+
+    @Test void checkoutRollsBackEveryLineIfAnotherSaleConsumesStock() throws Exception {
+        db.tx(c -> {
+            Db.update(c, "INSERT INTO san_pham (ma_sp,ten,don_vi,ma_dm) VALUES ('SP02','Second','cai','DM')");
+            Db.update(c, "INSERT INTO kho_chi_nhanh (ma_cn,ma_sp,so_luong) VALUES ('CN01','SP02',2)");
+            return null;
+        });
+        var checkout = new CheckoutService(db, new Events());
+        String id = "HD" + UUID.randomUUID().toString().replace("-", "");
+        var body = basket(id, 2);
+        var second = new com.google.gson.JsonObject(); second.addProperty("maHang", "SP02"); second.addProperty("soLuong", 2);
+        body.getAsJsonArray("items").add(second);
+        checkout.execute("CN01", "CREATE", body);
+        stock.sale("CN01", "SP02", 1);
+        assertThrows(ServiceException.class, () -> checkout.execute("CN01", "CONFIRM", body));
+        assertEquals(3, quantity());
+        var pending = (com.google.gson.JsonObject) checkout.execute("CN01", "GET", body);
+        assertEquals("PENDING", pending.get("status").getAsString());
+        assertEquals(1, (int) db.read(c -> Db.one(c, "SELECT count(*) FROM ban_hang", r -> r.getInt(1))));
+    }
+
+    @Test void concurrentPaymentClicksDeductOnlyOnce() throws Exception {
+        var checkout = new CheckoutService(db, new Events());
+        String id = "HD" + UUID.randomUUID().toString().replace("-", "");
+        var body = basket(id, 2);
+        checkout.execute("CN01", "CREATE", body);
+        var executor = Executors.newFixedThreadPool(2);
+        try {
+            var a = executor.submit(() -> checkout.execute("CN01", "CONFIRM", body));
+            var b = executor.submit(() -> checkout.execute("CN01", "CONFIRM", body));
+            assertEquals(a.get(10, TimeUnit.SECONDS), b.get(10, TimeUnit.SECONDS));
+            assertEquals(1, quantity());
+            assertEquals(1, (int) db.read(c -> Db.one(c, "SELECT count(*) FROM ban_hang", r -> r.getInt(1))));
+        } finally { executor.shutdownNow(); }
     }
 
     @ParameterizedTest

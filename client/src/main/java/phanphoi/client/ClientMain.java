@@ -257,6 +257,18 @@ public final class ClientMain {
             agent.sale(Http.str(b, "maHang"), Http.integer(b, "soLuong"));
             Http.ok(ex, ok);
         });
+        r.post("/api/checkout", (ex, p) -> Http.ok(ex, agent.checkout("CREATE", Http.body(ex))));
+        r.post("/api/checkout/{id}/confirm", (ex, p) -> {
+            JsonObject body = new JsonObject();
+            body.addProperty("id", p.get(0));
+            Http.ok(ex, agent.checkout("CONFIRM", body));
+        });
+        r.get("/api/invoices", (ex, p) -> Http.ok(ex, agent.checkout("LIST", new JsonObject())));
+        r.get("/api/invoices/{id}", (ex, p) -> {
+            JsonObject body = new JsonObject();
+            body.addProperty("id", p.get(0));
+            Http.ok(ex, agent.checkout("GET", body));
+        });
         r.post("/api/threshold", (ex, p) -> {
             JsonObject b = Http.body(ex);
             agent.setThreshold(Http.str(b, "maHang"), Http.integer(b, "nguong"));

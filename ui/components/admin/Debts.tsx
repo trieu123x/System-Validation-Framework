@@ -3,13 +3,14 @@
 import { FormEvent, useEffect, useState } from "react";
 import { api, DEBT_LABEL, DEBT_TONE, ENTRY_LABEL, fmtMoney } from "@/lib/api";
 import type { BranchDebt, DebtEntry, DebtSummary, SupplierDebt } from "@/lib/types";
-import { Badge, Card, Empty, Stat, useAction } from "@/components/ui";
+import { Badge, Card, Empty, Stat, useAction, type BackAction } from "@/components/ui";
 
 type Push = (l: string, t: string) => void;
 type Ledger<T> = { tongHop: T; butToan: DebtEntry[] };
+type BackProps = { onBackChange: (back: BackAction | null) => void };
 
 /** Tab Công nợ: chi nhánh nợ công ty (phiếu thu, hạn mức) và công ty nợ nhà cung cấp (phiếu chi). */
-export function Debts({ version, showSim, push }: { version: number; showSim: boolean; push: Push }) {
+export function Debts({ version, showSim, push, onBackChange }: { version: number; showSim: boolean; push: Push } & BackProps) {
   const [part, setPart] = useState<"branches" | "suppliers">("branches");
   const [sum, setSum] = useState<DebtSummary | null>(null);
   const [mine, setMine] = useState(0);
@@ -35,16 +36,21 @@ export function Debts({ version, showSim, push }: { version: number; showSim: bo
         <button className={`btn ${part === "suppliers" ? "btn-primary" : ""}`} onClick={() => setPart("suppliers")}>Nhà cung cấp</button>
       </div>
       {part === "branches"
-        ? <BranchDebts version={version + mine} showSim={showSim} push={push} changed={reload} />
-        : <SupplierDebts version={version + mine} push={push} changed={reload} />}
+        ? <BranchDebts version={version + mine} showSim={showSim} push={push} changed={reload} onBackChange={onBackChange} />
+        : <SupplierDebts version={version + mine} push={push} changed={reload} onBackChange={onBackChange} />}
     </>
   );
 }
 
-function BranchDebts({ version, showSim, push, changed }: { version: number; showSim: boolean; push: Push; changed: () => void }) {
+function BranchDebts({ version, showSim, push, changed, onBackChange }: { version: number; showSim: boolean; push: Push; changed: () => void } & BackProps) {
   const [rows, setRows] = useState<BranchDebt[]>([]);
   const [state, setState] = useState("");
   const [sel, setSel] = useState<string | null>(null);
+
+  useEffect(() => {
+    onBackChange(sel ? { label: "Danh sách công nợ chi nhánh", onClick: () => setSel(null) } : null);
+    return () => onBackChange(null);
+  }, [sel, onBackChange]);
 
   useEffect(() => {
     api<BranchDebt[]>(`/api/debts/branches?sim=${showSim}`).then(setRows).catch(() => {});
@@ -124,7 +130,7 @@ function BranchLedger({ maCn, version, push, changed }: { maCn: string; version:
 
   return (
     <Card title={<>Sổ công nợ {maCn} {t && <span className="muted">· {t.tenCn}</span>}</>}
-      actions={t && (
+      actions={t && !form && (
         <>
           <button className="btn btn-sm btn-success" disabled={t.conNo <= 0}
             onClick={() => { setForm("pay"); setSoTien(String(t.conNo)); }}>Ghi phiếu thu</button>{" "}
@@ -163,9 +169,14 @@ function BranchLedger({ maCn, version, push, changed }: { maCn: string; version:
   );
 }
 
-function SupplierDebts({ version, push, changed }: { version: number; push: Push; changed: () => void }) {
+function SupplierDebts({ version, push, changed, onBackChange }: { version: number; push: Push; changed: () => void } & BackProps) {
   const [rows, setRows] = useState<SupplierDebt[]>([]);
   const [sel, setSel] = useState<string | null>(null);
+
+  useEffect(() => {
+    onBackChange(sel ? { label: "Danh sách công nợ nhà cung cấp", onClick: () => setSel(null) } : null);
+    return () => onBackChange(null);
+  }, [sel, onBackChange]);
 
   useEffect(() => {
     api<SupplierDebt[]>("/api/debts/suppliers").then(setRows).catch(() => {});
@@ -228,7 +239,7 @@ function SupplierLedger({ maNcc, version, push, changed }: { maNcc: string; vers
 
   return (
     <Card title={<>Sổ nhà cung cấp {maNcc} {t && <span className="muted">· {t.ten}</span>}</>}
-      actions={t && (
+      actions={t && !open && (
         <button className="btn btn-sm btn-success" disabled={t.conNo <= 0}
           onClick={() => { setOpen(true); setSoTien(String(t.conNo)); }}>Ghi phiếu chi</button>
       )}>

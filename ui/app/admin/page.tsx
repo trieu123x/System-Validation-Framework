@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { api, UNAUTHORIZED, useDebounced, useEvents } from "@/lib/api";
 import type { Branch, LogRow, Product, RequestRow, SecurityEventRow, Stats } from "@/lib/types";
-import { Dot, Shell, Toasts, useToasts } from "@/components/ui";
+import { Dot, Shell, Toasts, useToasts, type BackAction } from "@/components/ui";
 import { CompanyFooter, CompanyLogin, LoginScreen } from "@/components/Login";
 import { COMPANY } from "@/lib/company";
 import { NO_FILTER, Overview, type OverviewFilter } from "@/components/admin/Overview";
@@ -13,8 +13,9 @@ import { Warehouses } from "@/components/admin/Warehouses";
 import { Notices } from "@/components/admin/Notices";
 import { Security } from "@/components/admin/Security";
 import { Debts } from "@/components/admin/Debts";
+import { AdminThresholds } from "@/components/admin/Thresholds";
 
-type Tab = "overview" | "products" | "stock" | "debts" | "history" | "transfers" | "broadcast" | "monitor" | "reconcile";
+type Tab = "overview" | "products" | "stock" | "thresholds" | "debts" | "history" | "transfers" | "broadcast" | "monitor" | "reconcile";
 
 /** Cổng đăng nhập công ty: chưa có phiên (hoặc phiên hết hạn) thì hiện trang đăng nhập. */
 export default function AdminPage() {
@@ -48,6 +49,8 @@ export default function AdminPage() {
 
 function AdminApp({ user, onLogout }: { user: string; onLogout: () => void }) {
   const [tab, setTab] = useState<Tab>("overview");
+  const [trail, setTrail] = useState<Tab[]>([]);
+  const [contextBack, setContextBack] = useState<BackAction | null>(null);
   const { toasts, push, dismiss } = useToasts();
   const [branches, setBranches] = useState<Branch[]>([]);
   const [alerts, setAlerts] = useState<RequestRow[]>([]);
@@ -87,6 +90,20 @@ function AdminApp({ user, onLogout }: { user: string; onLogout: () => void }) {
   const refreshDebts = useDebounced(() => bump("debts"), 800);
   const refreshSecurity = useDebounced(() => bump("security"), 500);
   const [highCount, setHighCount] = useState(0);
+  const navigate = (next: Tab) => {
+    if (next === tab) return;
+    setTrail((previous) => [...previous, tab].slice(-20));
+    setContextBack(null);
+    setTab(next);
+    if (next === "monitor") setHighCount(0);
+  };
+  const goBack = () => {
+    const previous = trail[trail.length - 1] ?? "overview";
+    setContextBack(null);
+    setTab(previous);
+    setTrail((history) => history.slice(0, -1));
+    if (previous === "monitor") setHighCount(0);
+  };
   const [duplicateAlert, setDuplicateAlert] = useState<SecurityEventRow | null>(null);
   const isSim = (maCn: string) => maCn.startsWith("SIM");
 
@@ -133,6 +150,7 @@ function AdminApp({ user, onLogout }: { user: string; onLogout: () => void }) {
   const shownAlerts = alerts.filter((a) => showSim || !isSim(a.maCn));
   const TITLES: Record<Tab, string> = {
     overview: "Tổng quan", products: "Hàng hóa & kho tổng", stock: "Quản lý kho chi nhánh", debts: "Công nợ",
+    thresholds: "Ngưỡng tối thiểu của chi nhánh",
     history: "Yêu cầu cấp hàng",
     transfers: "Điều chuyển hàng", broadcast: "Thông báo tới chi nhánh", monitor: "Giám sát hệ thống", reconcile: "Đối soát kho",
   };
@@ -140,11 +158,13 @@ function AdminApp({ user, onLogout }: { user: string; onLogout: () => void }) {
   return (
     <>
       <Shell<Tab> brand={COMPANY.brand} sub="Quản trị công ty" value={tab} title={TITLES[tab]}
-        onChange={(t) => { setTab(t); if (t === "monitor") setHighCount(0); }}
+        menu menuLabel="Chức năng quản trị" onChange={navigate}
+        back={tab !== "overview" ? contextBack ?? { label: "Quay lại", onClick: goBack } : undefined}
         nav={[
           { id: "overview", label: "Tổng quan", count: shownAlerts.length, tone: "danger" },
           { id: "products", label: "Hàng hóa" },
           { id: "stock", label: "Kho chi nhánh" },
+          { id: "thresholds", label: "Ngưỡng tối thiểu" },
           { id: "debts", label: "Công nợ" },
           { id: "history", label: "Yêu cầu cấp hàng", count: requests.filter((r) => r.chenhLech != null && r.chenhLech !== 0 && (showSim || !isSim(r.maCn))).length, tone: "danger" },
           { id: "transfers", label: "Điều chuyển", count: shortage, tone: "warn" },
@@ -154,15 +174,15 @@ function AdminApp({ user, onLogout }: { user: string; onLogout: () => void }) {
         ]}
         status={
           <>
-            <span>{online} chi nhánh online</span>
+            <span className="admin-status-extra">{online} chi nhánh online</span>
             <span title={connected ? "Đang nhận thông báo trực tiếp" : "Không nhận được thông báo trực tiếp"}>
               <Dot on={connected} />{connected ? "Đã nối server" : "Mất kết nối server"}
             </span>
-            <span>{user}</span>
+            <span className="admin-status-extra">{user}</span>
             <button className="btn btn-sm" onClick={onLogout}>Đăng xuất</button>
           </>
         }
-        actions={(tab === "overview" || tab === "debts") && (
+        actions={(tab === "overview" || tab === "debts" || tab === "thresholds") && (
           <label className="row muted">
             <input type="checkbox" checked={showSim} onChange={(e) => setShowSim(e.target.checked)} /> Hiện chi nhánh kiểm thử
           </label>
@@ -172,19 +192,20 @@ function AdminApp({ user, onLogout }: { user: string; onLogout: () => void }) {
             <strong>Cảnh báo đăng nhập trùng: {duplicateAlert.maCn || "Admin"}</strong>
             {" — "}Thiết bị khác đã thử đăng nhập nhưng bị từ chối. Phiên đang sử dụng vẫn được giữ nguyên.
             <div className="row" style={{ marginTop: 8, gap: 8 }}>
-              <button type="button" className="btn btn-sm" onClick={() => { setTab("monitor"); setHighCount(0); }}>Xem sự kiện</button>
+              <button type="button" className="btn btn-sm" onClick={() => navigate("monitor")}>Xem sự kiện</button>
               <button type="button" className="btn btn-sm" onClick={() => setDuplicateAlert(null)}>Đóng</button>
             </div>
           </div>
         )}
         {tab === "overview" && (
           <Overview branches={branches} products={products} alerts={shownAlerts} requests={requests} stats={stats}
-            freshIds={fresh} showSim={showSim} push={push} live={live} go={setTab}
+            freshIds={fresh} showSim={showSim} push={push} live={live} go={navigate}
             filter={overviewFilter} setFilter={setOverviewFilter} />
         )}
-        {tab === "products" && <Products products={products} version={v.products} push={push} />}
-        {tab === "stock" && <Warehouses products={products} version={v.stock + v.requests + v.debts} push={push} />}
-        {tab === "debts" && <Debts version={v.debts + v.requests} showSim={showSim} push={push} />}
+        {tab === "products" && <Products products={products} version={v.products} push={push} onBackChange={setContextBack} />}
+        {tab === "stock" && <Warehouses products={products} version={v.stock + v.requests + v.debts} push={push} onBackChange={setContextBack} />}
+        {tab === "thresholds" && <AdminThresholds products={products} branches={realBranches} version={v.stock + v.requests} />}
+        {tab === "debts" && <Debts version={v.debts + v.requests} showSim={showSim} push={push} onBackChange={setContextBack} />}
         {tab === "history" && <RequestHistory branches={realBranches} products={products} version={v.requests} />}
         {tab === "transfers" && <Transfers version={v.transfers} />}
         {tab === "broadcast" && (

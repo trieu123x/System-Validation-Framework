@@ -3,7 +3,7 @@
 import { Fragment, useEffect, useState } from "react";
 import { api, confirmCredit, fmtMoney, fmtNumber, STATE_LABEL } from "@/lib/api";
 import type { Product, Warehouse, WarehouseDetail, WarehouseItem } from "@/lib/types";
-import { Badge, Card, Dot, Empty, LEVEL_LABEL, ProductImage, StockBar, stockLevel, useAction, type StockLevel } from "@/components/ui";
+import { Badge, Card, Dot, Empty, LEVEL_LABEL, ProductImage, StockBar, stockLevel, useAction, type StockLevel, type BackAction } from "@/components/ui";
 
 type Push = (l: string, t: string) => void;
 type Sort = "thieu" | "giaTriTon" | "conNo" | "maCn";
@@ -12,7 +12,7 @@ type FlatRow = { maCn: string; tenCn: string; maSp: string; tenSp: string; soLuo
 const LEVEL_TONE: Record<StockLevel, string> = { critical: "danger", warning: "warn", ok: "success", unset: "muted" };
 
 /** Quản lý kho chi nhánh: lưới thẻ mỗi chi nhánh một thẻ, bấm vào xem chi tiết; hoặc ma trận mặt hàng × chi nhánh. */
-export function Warehouses({ products, version, push }: { products: Product[]; version: number; push: Push }) {
+export function Warehouses({ products, version, push, onBackChange }: { products: Product[]; version: number; push: Push; onBackChange: (back: BackAction | null) => void }) {
   const [view, setView] = useState<"cards" | "matrix">("cards");
   const [rows, setRows] = useState<Warehouse[]>([]);
   const [sort, setSort] = useState<Sort>("thieu");
@@ -20,11 +20,16 @@ export function Warehouses({ products, version, push }: { products: Product[]; v
   const [mine, setMine] = useState(0);
 
   useEffect(() => {
+    onBackChange(sel ? { label: "Tất cả chi nhánh", onClick: () => setSel(null) } : null);
+    return () => onBackChange(null);
+  }, [sel, onBackChange]);
+
+  useEffect(() => {
     api<Warehouse[]>("/api/warehouses").then(setRows).catch(() => {});
   }, [version, mine]);
 
   if (sel) {
-    return <WarehouseView maCn={sel} version={version + mine} push={push} back={() => setSel(null)}
+    return <WarehouseView maCn={sel} version={version + mine} push={push}
       changed={() => setMine((x) => x + 1)} />;
   }
 
@@ -77,8 +82,8 @@ export function Warehouses({ products, version, push }: { products: Product[]; v
   );
 }
 
-function WarehouseView({ maCn, version, push, back, changed }: {
-  maCn: string; version: number; push: Push; back: () => void; changed: () => void;
+function WarehouseView({ maCn, version, push, changed }: {
+  maCn: string; version: number; push: Push; changed: () => void;
 }) {
   const [d, setD] = useState<WarehouseDetail | null>(null);
   const [level, setLevel] = useState<"" | StockLevel>("");
@@ -94,8 +99,7 @@ function WarehouseView({ maCn, version, push, back, changed }: {
   const over = d.conNo > d.hanMuc;
 
   return (
-    <Card title={<><Dot on={d.online} />Kho {d.maCn} <span className="muted">· {d.ten}{d.diaChi ? `, ${d.diaChi}` : ""}</span></>}
-      actions={<button className="btn btn-sm" onClick={back}>← Tất cả chi nhánh</button>}>
+    <Card title={<><Dot on={d.online} />Kho {d.maCn} <span className="muted">· {d.ten}{d.diaChi ? `, ${d.diaChi}` : ""}</span></>}>
       <div className="row" style={{ marginBottom: 10 }}>
         {(["", "critical", "warning", "ok", "unset"] as const).map((l) => (
           <button key={l} className={`btn btn-sm ${level === l ? "btn-primary" : ""}`} onClick={() => setLevel(l)}>
@@ -111,14 +115,14 @@ function WarehouseView({ maCn, version, push, back, changed }: {
           <table>
             <thead>
               <tr>
-                <th>Mã hàng</th><th>Tên hàng</th><th className="num">Tồn</th><th className="num">Ngưỡng</th><th>Mức tồn</th>
-                <th className="num">Bán 7 ngày</th><th className="num">Giá trị</th><th>YC đang mở</th><th>Bổ sung</th>
+                <th>Mã hàng</th><th>Tên hàng</th><th className="num">Tồn</th><th>Mức tồn</th>
+                <th className="num">Số lượng bán (7 ngày)</th><th className="num">Giá trị</th><th>YC đang mở</th><th>Số lượng bổ sung</th>
               </tr>
             </thead>
             <tbody>
               {groups.map((g) => (
                 <Fragment key={g}>
-                  <tr><td colSpan={9} style={{ background: "var(--surface-2)", fontWeight: 600 }}>{g}</td></tr>
+                  <tr><td colSpan={8} style={{ background: "var(--surface-2)", fontWeight: 600 }}>{g}</td></tr>
                   {shown.filter((m) => m.tenDm === g).map((m) => (
                     <ItemRow key={m.maSp} maCn={d.maCn} m={m} push={push} changed={changed} />
                   ))}
@@ -166,7 +170,6 @@ function ItemRow({ maCn, m, push, changed }: { maCn: string; m: WarehouseItem; p
         </div>
       </td>
       <td className="num"><b>{fmtNumber(m.soLuong)}</b></td>
-      <td className="num">{m.nguong ? fmtNumber(m.nguong) : "—"}</td>
       <td className="nowrap">
         <StockBar soLuong={m.soLuong} nguong={m.nguong} />
         {m.muc !== "ok" && <Badge tone={LEVEL_TONE[m.muc]}>{LEVEL_LABEL[m.muc]}</Badge>}

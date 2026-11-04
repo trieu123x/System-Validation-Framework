@@ -56,6 +56,8 @@ final class BranchAgent implements ServerLink.Handler {
     private String attemptId;
     private String attemptPw;
     private CompletableFuture<Message> pendingLogin;
+    private final Map<String, CompletableFuture<String>> checkoutCalls = new LinkedHashMap<>();
+    private final Map<String, StringBuilder> checkoutChunks = new LinkedHashMap<>();
     private long nextAttemptAt;
     /** Số lần thử kết nối lại liên tiếp đã thất bại (đặt lại khi LOGIN_OK). */
     private int attempt;
@@ -314,6 +316,32 @@ final class BranchAgent implements ServerLink.Handler {
         send(Message.of(Command.SALE, maHang, soLuong));
     }
 
+    Object checkout(String action, com.google.gson.JsonObject body) {
+        String requestId = java.util.UUID.randomUUID().toString().replace("-", "");
+        Message message = Message.of(Command.CHECKOUT, requestId, action, Http.GSON.toJson(body));
+        if (message.toLine().getBytes(java.nio.charset.StandardCharsets.UTF_8).length >= Protocol.MAX_LINE_BYTES)
+            throw new Http.ApiException(400, "Giỏ hàng quá lớn, vui lòng giảm số mặt hàng");
+        CompletableFuture<String> result = new CompletableFuture<>();
+        synchronized (lock) {
+            if (checkoutCalls.size() >= 8) throw new Http.ApiException(429, "Có quá nhiều thao tác đang xử lý");
+            checkoutCalls.put(requestId, result);
+            checkoutChunks.put(requestId, new StringBuilder());
+        }
+        try {
+            send(message);
+            return Http.GSON.fromJson(result.get(20, TimeUnit.SECONDS), com.google.gson.JsonElement.class);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new Http.ApiException(503, "Thao tác bị gián đoạn. Vui lòng thử lại cùng đơn hàng.");
+        } catch (TimeoutException e) {
+            throw new Http.ApiException(504, "Chưa nhận được kết quả. Vui lòng thử lại cùng đơn hàng để kiểm tra.");
+        } catch (ExecutionException e) {
+            throw new Http.ApiException(409, e.getCause().getMessage());
+        } finally {
+            synchronized (lock) { checkoutCalls.remove(requestId); checkoutChunks.remove(requestId); }
+        }
+    }
+
     void setThreshold(String maHang, int nguong) {
         if (nguong < 0) {
             throw new Http.ApiException(400, "Nguong phai >= 0");
@@ -412,7 +440,7 @@ final class BranchAgent implements ServerLink.Handler {
         try {
             synchronized (lock) {
                 handle(l, m);
-                publish();
+                if (m.command() != Command.CHECKOUT_RESULT) publish();
             }
         } catch (ProtocolException | RuntimeException e) {
             notice("error", "Tin tu server khong hop le: " + m + " (" + e.getMessage() + ")");
@@ -421,6 +449,18 @@ final class BranchAgent implements ServerLink.Handler {
 
     private void handle(ServerLink l, Message m) throws ProtocolException {
         switch (m.command()) {
+            case CHECKOUT_RESULT -> {
+                CompletableFuture<String> call = checkoutCalls.get(m.param(0));
+                if (call != null) {
+                    if ("ERROR".equals(m.param(1))) call.completeExceptionally(new IllegalStateException(m.param(2)));
+                    else {
+                        StringBuilder chunks = checkoutChunks.get(m.param(0));
+                        chunks.append(m.param(2));
+                        if (chunks.length() > 2_000_000) call.completeExceptionally(new IllegalStateException("Kết quả quá lớn"));
+                        else if ("OK".equals(m.param(1))) call.complete(chunks.toString());
+                    }
+                }
+            }
             case PING -> l.send(Message.of(Command.PONG));
             case PONG -> { }
             case LOGIN_OK -> onLoginOk(l, m.params().size() >= 2 ? m.param(0) : attemptId, m.params().size() >= 2 ? m.param(1) : m.param(0));

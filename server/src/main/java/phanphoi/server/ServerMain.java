@@ -37,6 +37,7 @@ public final class ServerMain {
                 cfg.getInt("db.pool.size", 20));
         db.read(c -> c.isValid(3)); // báo lỗi sớm nếu sai thông tin CSDL
         phanphoi.server.db.ReceiptSchema.ensure(db);
+        phanphoi.server.db.CheckoutSchema.ensure(db);
         AuditLog.ensure(db);
         NetworkLog.ensure(db);
         System.out.println("[server] da ket noi CSDL");

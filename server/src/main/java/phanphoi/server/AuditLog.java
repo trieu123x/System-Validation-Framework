@@ -79,6 +79,7 @@ public final class AuditLog implements AutoCloseable {
     public static String tcpDetail(Message m) {
         Command cmd = m.command();
         return switch (cmd) {
+            case CHECKOUT -> "requestId=" + safeParam(m, 0) + "; action=" + safeParam(m, 1);
             case SALE, LOW_STOCK, SET_THRESHOLD ->
                     "maSp=" + safeParam(m, 0) + "; soLuong=" + safeParam(m, 1)
                             + (cmd == Command.LOW_STOCK ? "; ton=" + safeParam(m, 2) : "");

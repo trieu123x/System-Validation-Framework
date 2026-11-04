@@ -3,7 +3,7 @@
 import { FormEvent, useEffect, useState } from "react";
 import { api, fmtMoney, fmtNumber } from "@/lib/api";
 import type { Category, Product, Supplier } from "@/lib/types";
-import { Card, Empty, ProductImage, useAction } from "@/components/ui";
+import { Card, Empty, ProductImage, useAction, type BackAction } from "@/components/ui";
 
 type Import = {
   maPn: number; maSp: string; ten: string; soLuong: number; maNcc: string; tenNcc: string;
@@ -12,8 +12,8 @@ type Import = {
 
 const EMPTY = { maSp: "", ten: "", donVi: "cái", model: "", maDm: "", giaNhap: "", giaXuat: "", giaBanLe: "" };
 
-export function Products({ products, version, push }: {
-  products: Product[]; version: number; push: (l: string, t: string) => void;
+export function Products({ products, version, push, onBackChange }: {
+  products: Product[]; version: number; push: (l: string, t: string) => void; onBackChange: (back: BackAction | null) => void;
 }) {
   const { run, busy } = useAction(push);
   const [form, setForm] = useState(EMPTY);
@@ -23,6 +23,11 @@ export function Products({ products, version, push }: {
   const [categories, setCategories] = useState<Category[]>([]);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [dm, setDm] = useState("");
+
+  useEffect(() => {
+    onBackChange(editing ? { label: "Hủy chỉnh sửa", onClick: () => { setEditing(null); setForm(EMPTY); } } : null);
+    return () => onBackChange(null);
+  }, [editing, onBackChange]);
 
   useEffect(() => {
     api<Import[]>("/api/imports").then(setImports).catch(() => {});
@@ -187,7 +192,6 @@ export function Products({ products, version, push }: {
             )}
             <div className="form-actions">
               <button className="btn btn-success" disabled={busy}>{editing ? "Lưu" : "Thêm mới"}</button>
-              {editing && <button type="button" className="btn" onClick={() => { setEditing(null); setForm(EMPTY); }}>Bỏ qua</button>}
             </div>
           </form>
         </Card>

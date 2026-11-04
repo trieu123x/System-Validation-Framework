@@ -14,8 +14,11 @@ import {
 } from "@/components/ui";
 import { LoginScreen } from "@/components/Login";
 import { EntryTable } from "@/components/admin/Debts";
+import { CartIcon, Checkout, InvoiceHistory } from "@/components/branch/Checkout";
+import { Thresholds } from "@/components/branch/Thresholds";
+import type { CartLine } from "@/lib/checkout";
 
-type Tab = "stock" | "offers" | "transfers" | "debt" | "news" | "history" | "activity" | "security";
+type Tab = "stock" | "cart" | "invoices" | "thresholds" | "offers" | "transfers" | "debt" | "news" | "history" | "activity" | "security";
 type Push = (level: string, text: string) => void;
 
 const STATUS_TEXT: Record<BranchSnapshot["status"], string> = {
@@ -29,8 +32,37 @@ export default function BranchPage() {
   const [s, setS] = useState<BranchSnapshot | null>(null);
   const [forceRecovery, setForceRecovery] = useState(false);
   const [tab, setTab] = useState<Tab>("stock");
+  const [cart, setCart] = useState<CartLine[]>([]);
+  const [cartBranch, setCartBranch] = useState<string | null>(null);
+  const [checkoutBusy, setCheckoutBusy] = useState(false);
+  const [trail, setTrail] = useState<Tab[]>([]);
+  const navigate = (next: Tab) => {
+    if (checkoutBusy || next === tab) return;
+    setTrail((previous) => [...previous, tab].slice(-20));
+    setTab(next);
+  };
+  const goBack = () => {
+    if (checkoutBusy) return;
+    setTab(trail[trail.length - 1] ?? "stock");
+    setTrail((previous) => previous.slice(0, -1));
+  };
   const { toasts, push, dismiss } = useToasts();
   const [duplicateAlert, setDuplicateAlert] = useState<{ maCn: string; time: string; message: string } | null>(null);
+
+  useEffect(() => {
+    if (!s?.maCn) return;
+    try {
+      const stored: unknown = JSON.parse(localStorage.getItem(`toboki-cart:${s.maCn}`) ?? "[]");
+      setCart(Array.isArray(stored) ? stored.filter((line): line is CartLine => !!line && typeof line.maHang === "string" && Number.isSafeInteger(line.soLuong) && line.soLuong > 0) : []);
+    } catch { setCart([]); }
+    setCartBranch(s.maCn);
+  }, [s?.maCn]);
+
+  useEffect(() => {
+    if (cartBranch && cartBranch === s?.maCn) {
+      try { localStorage.setItem(`toboki-cart:${cartBranch}`, JSON.stringify(cart)); } catch { /* The cart still works for this browser session. */ }
+    }
+  }, [cart, cartBranch, s?.maCn]);
 
   const agentUp = useEvents({
     state: (snap: BranchSnapshot) => setS(snap),
@@ -99,6 +131,8 @@ export default function BranchPage() {
   const spoof = !!sec && sec.discovery.length >= 2;
 
   const TITLES: Record<Tab, string> = {
+    cart: "Giỏ hàng & thanh toán", invoices: "Hóa đơn bán hàng",
+    thresholds: "Ngưỡng tối thiểu",
     stock: "Bán hàng & tồn kho", offers: "Nhận hàng từ công ty", transfers: "Yêu cầu điều chuyển hàng",
     debt: "Công nợ với công ty", news: "Thông báo từ công ty", history: "Lịch sử nhập hàng", activity: "Nhật ký hoạt động",
     security: "An ninh máy chi nhánh",
@@ -106,10 +140,14 @@ export default function BranchPage() {
 
   return (
     <>
-      <Shell<Tab> brand={s.tenCn ?? ""} sub={`TOBOKI · ${s.maCn}`} value={tab} onChange={setTab}
+      <Shell<Tab> brand={s.tenCn ?? ""} sub={`TOBOKI · ${s.maCn}`} value={tab} onChange={navigate}
+        menu navigationDisabled={checkoutBusy}
+        back={!["stock", "cart", "invoices"].includes(tab) ? { label: "Quay lại", onClick: goBack } : undefined}
         title={TITLES[tab]}
         nav={[
           { id: "stock", label: "Bán hàng", count: low, tone: "danger" },
+          { id: "invoices", label: "Hóa đơn" },
+          { id: "thresholds", label: "Ngưỡng tối thiểu" },
           { id: "offers", label: "Nhận hàng", count: actionable, tone: "warn" },
           { id: "transfers", label: "Điều chuyển", count: pendingTransfers, tone: "warn" },
           { id: "debt", label: "Công nợ", count: overLimit ? 1 : 0, tone: "danger" },
@@ -121,7 +159,7 @@ export default function BranchPage() {
         status={
           <>
             <span title={s.statusDetail}><Dot on={online} />{STATUS_TEXT[s.status]}</span>
-            <button className="btn btn-sm" onClick={() => api("/api/logout", {}).then(() => window.location.reload()).catch(() => {})}>Đăng xuất</button>
+            <button className="btn btn-sm" disabled={checkoutBusy} onClick={() => api("/api/logout", {}).then(() => window.location.reload()).catch(() => {})}>Đăng xuất</button>
           </>
         }>
         {duplicateAlert && (
@@ -141,10 +179,23 @@ export default function BranchPage() {
           <div className="banner banner-danger">
             {spoof && <>Có {sec!.discovery.length} server cùng trả lời tìm server: {sec!.discovery.join(", ")}. Đang dùng {sec!.discovery[0]}; nếu không đúng server công ty, hãy nhập IP server khi đăng nhập. </>}
             {sec?.serverDoi && <>Server đã đổi địa chỉ ({sec.serverDoi}). </>}
-            <button className="btn btn-sm" onClick={() => setTab("security")}>Xem chi tiết</button>
+            <button className="btn btn-sm" onClick={() => navigate("security")}>Xem chi tiết</button>
           </div>
         )}
-        {tab === "stock" && <Stock items={s.inventory} requests={s.requests} reported={s.daBao ?? []} online={online} push={push} />}
+        {tab === "stock" && <Stock items={s.inventory} requests={s.requests} reported={s.daBao ?? []} online={online} push={push}
+          cart={cart} onCart={() => navigate("cart")} onAdd={(item, quantity) => {
+            const previous = cart.find((line) => line.maHang === item.maHang)?.soLuong ?? 0;
+            if (!Number.isSafeInteger(quantity) || quantity < 1 || previous + quantity > item.soLuong) {
+              push("error", `Chỉ có thể thêm tối đa ${Math.max(0, item.soLuong - previous)} sản phẩm ${item.tenHang}.`); return;
+            }
+            if (previous === 0 && cart.length >= 100) { push("error", "Mỗi giỏ tối đa 100 mặt hàng."); return; }
+            try { localStorage.removeItem(`toboki-checkout:${s.maCn}`); } catch { }
+            setCart((current) => previous ? current.map((line) => line.maHang === item.maHang ? { ...line, soLuong: line.soLuong + quantity } : line) : [...current, { maHang: item.maHang, soLuong: quantity }]);
+            push("success", `Đã thêm ${quantity} ${item.tenHang} vào giỏ.`);
+          }} />}
+        {tab === "cart" && <Checkout cart={cart} setCart={setCart} items={s.inventory} online={online} push={push} branch={s.maCn} onShop={() => navigate("stock")} onBusyChange={setCheckoutBusy} />}
+        {tab === "invoices" && <InvoiceHistory online={online} push={push} onBack={goBack} />}
+        {tab === "thresholds" && <Thresholds items={s.inventory} online={online} push={push} />}
         {tab === "offers" && <Offers requests={s.requests} items={s.inventory} online={online} push={push} />}
         {tab === "transfers" && <TransferList transfers={s.transfers} online={online} push={push} />}
         {tab === "debt" && <Debt debt={s.debt} />}
@@ -227,7 +278,7 @@ function Login({ snapshot }: { snapshot: BranchSnapshot }) {
 
 type Filter = "all" | "critical" | "warning" | "unset";
 type SupplyFilter = "all" | "waiting" | "none";
-type StockSort = "maHang" | "tenHang" | "giaBanLe" | "soLuong" | "muc" | "nguong";
+type StockSort = "maHang" | "tenHang" | "giaBanLe" | "soLuong" | "muc";
 
 /** Giá trị để sắp xếp bảng tồn kho; "muc" = tồn / ngưỡng, chưa đặt ngưỡng thì xếp cuối. */
 const stockSortValue = (i: BranchItem, k: StockSort) =>
@@ -302,8 +353,9 @@ function Debt({ debt }: { debt: BranchDebtInfo | null }) {
   );
 }
 
-function Stock({ items, requests, reported, online, push }: {
+function Stock({ items, requests, reported, online, push, cart, onAdd, onCart }: {
   items: BranchItem[]; requests: BranchRequest[]; reported: string[]; online: boolean; push: Push;
+  cart: CartLine[]; onAdd: (item: BranchItem, quantity: number) => void; onCart: () => void;
 }) {
   const { run } = useAction(push);
   const [q, setQ] = useState("");
@@ -358,7 +410,7 @@ function Stock({ items, requests, reported, online, push }: {
         </FilterGroup>
         <FilterGroup title="Ghi chú">
           <p className="note" style={{ margin: 0 }}>
-            Sau mỗi lần bán, nếu tồn &lt; ngưỡng thì ứng dụng tự gửi LOW_STOCK lên công ty.
+            Thêm sản phẩm vào giỏ và thanh toán nhiều mặt hàng cùng lúc. Tồn kho được cập nhật sau khi xác nhận thanh toán.
             Mặt hàng chưa đặt ngưỡng sẽ không được cảnh báo.
           </p>
         </FilterGroup>
@@ -366,6 +418,9 @@ function Stock({ items, requests, reported, online, push }: {
       <section className="card">
         <div className="card-head">
           <h2>Tồn kho tại chi nhánh <span className="muted">· {shown.length} mặt hàng</span></h2>
+          <button type="button" className="btn btn-primary cart-shortcut" onClick={onCart}>
+            <CartIcon /> Giỏ hàng ({cart.reduce((sum, line) => sum + line.soLuong, 0)})
+          </button>
           <button className="btn btn-sm" disabled={!online} onClick={() => run(() => api("/api/inventory/refresh", {}))}>
             Tải lại
           </button>
@@ -377,14 +432,13 @@ function Stock({ items, requests, reported, online, push }: {
                 <tr>
                   <SortTh k="maHang" {...th}>Mã hàng</SortTh><SortTh k="tenHang" {...th}>Tên hàng</SortTh>
                   {hasPrice && <SortTh k="giaBanLe" num {...th}>Giá bán lẻ</SortTh>}
-                  <SortTh k="soLuong" num {...th}>Tồn</SortTh><SortTh k="muc" {...th}>Mức tồn</SortTh><th>Bán hàng</th>
-                  <SortTh k="nguong" {...th}>Ngưỡng tối thiểu</SortTh>
+                  <SortTh k="soLuong" num {...th}>Tồn</SortTh><SortTh k="muc" {...th}>Mức tồn</SortTh><th scope="col">Số lượng</th>
                 </tr>
               </thead>
               <tbody>
                 {shown.map((it) => (
-                  <StockRow key={it.maHang} it={it} online={online} push={push} supply={supply.get(it.maHang)}
-                    showPrice={hasPrice} />
+                  <StockRow key={it.maHang} it={it} online={online} supply={supply.get(it.maHang)}
+                    showPrice={hasPrice} inCart={cart.find((line) => line.maHang === it.maHang)?.soLuong ?? 0} onAdd={onAdd} />
                 ))}
               </tbody>
             </table>
@@ -395,16 +449,13 @@ function Stock({ items, requests, reported, online, push }: {
   );
 }
 
-function StockRow({ it, online, push, supply, showPrice }: {
-  it: BranchItem; online: boolean; push: Push; supply?: [string, string]; showPrice: boolean;
+function StockRow({ it, online, supply, showPrice, inCart, onAdd }: {
+  it: BranchItem; online: boolean; supply?: [string, string]; showPrice: boolean;
+  inCart: number; onAdd: (item: BranchItem, quantity: number) => void;
 }) {
-  const [qty, setQty] = useState("");
-  const [nguong, setNguong] = useState(String(it.nguong));
-  const { run, busy } = useAction(push);
+  const [qty, setQty] = useState("1");
   const level = stockLevel(it.soLuong, it.nguong);
-  const sell = (n: number) => run(() => api("/api/sale", { maHang: it.maHang, soLuong: n }));
 
-  useEffect(() => setNguong(String(it.nguong)), [it.nguong]);
 
   return (
     <tr className={level === "critical" ? "low" : ""}>
@@ -429,22 +480,12 @@ function StockRow({ it, online, push, supply, showPrice }: {
       </td>
       <td className="nowrap">
         <span className="qty-group">
-          <button className="btn btn-sm btn-quick" disabled={!online || busy || it.soLuong < 1} onClick={() => sell(1)}>−1</button>
-          <button className="btn btn-sm btn-quick" disabled={!online || busy || it.soLuong < 5} onClick={() => sell(5)}>−5</button>
-          <input type="number" min={1} placeholder="SL" value={qty} style={{ height: 26 }}
+          <input type="number" min={1} max={Math.max(0, it.soLuong - inCart)} placeholder="SL" value={qty} style={{ height: 28 }}
             onChange={(e) => setQty(e.target.value)} aria-label={`Số lượng bán ${it.maHang}`} />
-          <button className="btn btn-sm btn-primary" disabled={!online || busy || !(Number(qty) > 0)}
-            onClick={async () => { if (await sell(Number(qty))) setQty(""); }}>Bán</button>
+          <button className="btn btn-sm btn-primary" disabled={!online || it.giaBanLe == null || !Number.isSafeInteger(Number(qty)) || Number(qty) < 1 || Number(qty) + inCart > it.soLuong}
+            onClick={() => { onAdd(it, Number(qty)); setQty("1"); }}>+ Thêm vào giỏ</button>
         </span>
-      </td>
-      <td className="nowrap">
-        <span className="qty-group">
-          <input type="number" min={0} value={nguong} style={{ height: 26 }} onChange={(e) => setNguong(e.target.value)}
-            aria-label={`Ngưỡng ${it.maHang}`} />
-          <button className="btn btn-sm" disabled={!online || busy || nguong === String(it.nguong) || Number(nguong) < 0}
-            onClick={() => run(() => api("/api/threshold", { maHang: it.maHang, nguong: Number(nguong) }),
-              `Đã đặt ngưỡng ${it.maHang} = ${nguong}`)}>Lưu</button>
-        </span>
+        {inCart > 0 && <div className="muted" style={{ fontSize: 12, marginTop: 4 }}>Trong giỏ: {inCart}</div>}
       </td>
     </tr>
   );

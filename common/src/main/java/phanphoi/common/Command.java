@@ -17,6 +17,9 @@ public enum Command {
     INVENTORY(1),
     SALE(2),
     SALE_OK(2),
+    // Correlated checkout RPC; JSON response is split into bounded MORE/OK chunks.
+    CHECKOUT(3), // requestId, CREATE | CONFIRM | GET | LIST, JSON
+    CHECKOUT_RESULT(3), // requestId, MORE | OK | ERROR, JSON chunk
     SET_THRESHOLD(2),
     LOW_STOCK(3),
     OFFER(3),
