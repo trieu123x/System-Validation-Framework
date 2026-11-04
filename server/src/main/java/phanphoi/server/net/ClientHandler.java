@@ -39,7 +39,7 @@ public final class ClientHandler {
 
     /** Lệnh chỉ đi từ chi nhánh lên server. */
     private static final Set<Command> FROM_CLIENT = EnumSet.of(
-            Command.LOGIN, Command.INVENTORY_GET, Command.SALE, Command.CHECKOUT, Command.SET_THRESHOLD, Command.LOW_STOCK,
+            Command.LOGIN, Command.INVENTORY_GET, Command.SPECS_GET, Command.SALE, Command.CHECKOUT, Command.SET_THRESHOLD, Command.LOW_STOCK,
             Command.ACCEPT, Command.REJECT, Command.RECEIVED, Command.HISTORY_GET, Command.PING, Command.PONG,
             Command.LOGOUT, Command.TRANSFER_ACCEPT, Command.TRANSFER_REJECT, Command.DEBT_GET, Command.SECURITY_REPORT,
             Command.NOTICE_REPLY, Command.BROWSER_PRESENCE, Command.BROWSER_EXIT);
@@ -248,6 +248,8 @@ public final class ClientHandler {
             case PONG -> { } // đã cập nhật lastReadAt
             case LOGOUT -> logout();
             case INVENTORY_GET -> send(ctx.stock().inventoryMessage(cn));
+            // gửi kèm sau mỗi INVENTORY_GET: không tính vào SCRAPING, chỉ chịu giới hạn tin chung (onMessage)
+            case SPECS_GET -> send(ctx.stock().specsMessage());
             case SALE -> send(ctx.stock().sale(cn, m.param(0).trim(), m.intParam(1)));
             case CHECKOUT -> checkout(cn, m);
             case SET_THRESHOLD -> {

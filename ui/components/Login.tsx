@@ -24,9 +24,16 @@ export function LoginScreen({ side, children }: { side: Side; children: ReactNod
 
   return (
     <div className="login-page">
+      {/* dưới 900px: dải logo graphite trên form; từ 900px ẩn đi vì đã có panel bên trái */}
       <header className="appbar">
-        <div className="appbar-brand"><b>{COMPANY.brand}</b><span>Đăng nhập</span></div>
+        <div className="appbar-brand"><span className="brand-monogram" aria-hidden="true">T</span><b>{COMPANY.brand}</b><span>Đăng nhập</span></div>
       </header>
+      <div className="login-layout">
+      <aside className="login-hero" aria-label={COMPANY.brand}>
+        <div className="login-hero-brand"><span className="brand-monogram" aria-hidden="true">T</span><div><b>{COMPANY.brand}</b><small>QUẢN LÝ PHÂN PHỐI MÁY XÂY DỰNG</small></div></div>
+        <p>Theo dõi tồn kho công ty và chi nhánh, cấp hàng khi dưới ngưỡng và bán máy tại cửa hàng.</p>
+        <div className="login-hero-meta">{SIDES[side].app.toUpperCase()} · {SIDES[side].label.toUpperCase()}</div>
+      </aside>
       <main className="center">
         <section className="card login">
           <div className="login-tabs" role="tablist">
@@ -54,6 +61,7 @@ export function LoginScreen({ side, children }: { side: Side; children: ReactNod
           </div>
         </section>
       </main>
+      </div>
       <CompanyFooter />
     </div>
   );

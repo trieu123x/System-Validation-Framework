@@ -88,6 +88,7 @@ public final class AuditLog implements AutoCloseable {
             case NOTICE_REPLY -> "noticeId=" + safeParam(m, 0) + "; soLuong=" + safeParam(m, 2);
             case HISTORY_GET -> "tu=" + safeParam(m, 0) + "; den=" + safeParam(m, 1);
             case INVENTORY_GET -> "xem ton kho";
+            case SPECS_GET -> "xem thong so";
             case DEBT_GET -> "xem cong no";
             default -> "";
         };

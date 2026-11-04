@@ -15,6 +15,9 @@ public enum Command {
     DUPLICATE_LOGIN_ALERT(2),
     INVENTORY_GET(0),
     INVENTORY(1),
+    // danh sách thông số số của mọi mặt hàng: maSp, congSuatW, dienApV, trongLuongKg (rỗng = chưa có)
+    SPECS_GET(0),
+    SPECS(1),
     SALE(2),
     SALE_OK(2),
     // Correlated checkout RPC; JSON response is split into bounded MORE/OK chunks.

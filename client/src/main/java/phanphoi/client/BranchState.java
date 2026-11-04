@@ -6,6 +6,7 @@ import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.Deque;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -30,6 +31,14 @@ final class BranchState {
         Long giaBanLe;
         // tham chiếu ảnh Cloudinary (phần sau /image/upload/), rỗng = chưa có ảnh
         String anh = "";
+        // thông số nhận qua tin SPECS; null = chưa có (hoặc server cũ không hỗ trợ SPECS_GET)
+        Integer congSuatW;
+        Integer dienApV;
+        Double trongLuongKg;
+    }
+
+    /** Một bản ghi của tin SPECS. */
+    record Spec(Integer congSuatW, Integer dienApV, Double trongLuongKg) {
     }
 
     static final class Request {
@@ -76,6 +85,10 @@ final class BranchState {
     String maCn;
     String tenCn;
     final Map<String, Item> inventory = new TreeMap<>();
+    /** Tin SPECS gần nhất; giữ lại để gán cho INVENTORY về sau (hai tin có thể tới theo thứ tự bất kỳ). */
+    final Map<String, Spec> specs = new HashMap<>();
+    /** Đã nhận ít nhất một tin SPECS trong phiên này (server cũ không hỗ trợ thì giao diện ẩn chip và bộ lọc công suất). */
+    boolean specsReceived;
     final Map<Integer, Request> requests = new TreeMap<>(Comparator.reverseOrder());
     final Map<Integer, Transfer> transfers = new TreeMap<>(Comparator.reverseOrder());
     final Deque<Notice> broadcasts = new ArrayDeque<>();
@@ -91,6 +104,8 @@ final class BranchState {
         maCn = null;
         tenCn = null;
         inventory.clear();
+        specs.clear();
+        specsReceived = false;
         requests.clear();
         transfers.clear();
         broadcasts.clear();
@@ -99,6 +114,16 @@ final class BranchState {
         history = new ArrayList<>();
         historyRange = "";
         debt = null;
+    }
+
+    /** Gán thông số cho mọi mặt hàng đang có; mã không có trong {@link #specs} (hoặc bị cắt khỏi tin) thì để null. */
+    void applySpecs() {
+        for (Item it : inventory.values()) {
+            Spec s = specs.get(it.maHang);
+            it.congSuatW = s == null ? null : s.congSuatW();
+            it.dienApV = s == null ? null : s.dienApV();
+            it.trongLuongKg = s == null ? null : s.trongLuongKg();
+        }
     }
 
     Request request(int maYc) {
@@ -155,6 +180,7 @@ final class BranchState {
         m.put("tenCn", tenCn);
         m.put("slug", BranchSlug.of(tenCn));
         m.put("inventory", new ArrayList<>(inventory.values()));
+        m.put("coThongSo", specsReceived);
         m.put("requests", new ArrayList<>(requests.values()));
         m.put("transfers", new ArrayList<>(transfers.values()));
         m.put("broadcasts", new ArrayList<>(broadcasts));

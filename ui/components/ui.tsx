@@ -3,6 +3,7 @@
 import { ReactNode, useCallback, useEffect, useId, useRef, useState } from "react";
 import { STATE_LABEL, STATE_TONE, TRANSFER_LABEL } from "@/lib/api";
 import { imageUrl } from "@/lib/images";
+import type { Specs } from "@/lib/types";
 
 export function Badge({ tone = "muted", children }: { tone?: string; children: ReactNode }) {
   return <span className={`badge badge-${tone}`}>{children}</span>;
@@ -26,6 +27,20 @@ export function ProductImage({ src, alt, category, size = 40, fit = "cover" }: {
   }
   // eslint-disable-next-line @next/next/no-img-element -- export tĩnh, ảnh đã thu nhỏ sẵn trên Cloudinary
   return <img className="thumb" style={box} src={url} alt={alt} loading="lazy" onError={() => setFailed(true)} />;
+}
+
+/** Chuỗi hiển thị của từng thông số (dùng chung cho chip, bảng, hóa đơn); null/undefined → null. */
+export const fmtSpec = {
+  w: (v: number | null | undefined) => v == null ? null : `${v} W`,
+  v: (v: number | null | undefined) => v == null ? null : `${v} V`,
+  kg: (v: number | null | undefined) => v == null ? null : `${v.toFixed(1)} kg`,
+};
+
+/** Tối đa 3 chip mono: công suất, điện áp, trọng lượng. Trường null không hiện; cả 3 null thì không render gì. */
+export function SpecChips({ congSuatW, dienApV, trongLuongKg }: Specs) {
+  const chips = [fmtSpec.w(congSuatW), fmtSpec.v(dienApV), fmtSpec.kg(trongLuongKg)].filter((c): c is string => c != null);
+  if (!chips.length) return null;
+  return <div className="spec-chips" aria-label="Thông số kỹ thuật">{chips.map((c) => <span key={c} className="spec-chip">{c}</span>)}</div>;
 }
 
 export function Dot({ on }: { on: boolean }) {
@@ -67,9 +82,10 @@ type NavItem<T extends string> = { id: T; label: string; count?: number; tone?: 
 export type BackAction = { label: string; onClick: () => void };
 
 /** Workspace nội bộ: sidebar desktop thu gọn; drawer cho tablet và điện thoại. */
-export function Shell<T extends string>({ brand, sub, nav, value, onChange, status, title, actions, children, menu = false, navigationDisabled = false, back, menuLabel = "Chức năng chi nhánh", notificationId }: {
+export function Shell<T extends string>({ brand, sub, nav, value, onChange, status, title, kicker, actions, children, menu = false, navigationDisabled = false, back, menuLabel = "Chức năng chi nhánh", notificationId }: {
   brand: string; sub?: ReactNode; nav: NavItem<T>[]; value: T; onChange: (t: T) => void;
-  status?: ReactNode; title: ReactNode; actions?: ReactNode; children: ReactNode;
+  /** kicker: nhãn phụ in hoa dưới tiêu đề, lấy từ dữ liệu màn hình đang có (VD "KHO TỔNG · 31 MÃ HÀNG"). */
+  status?: ReactNode; title: ReactNode; kicker?: ReactNode; actions?: ReactNode; children: ReactNode;
   menu?: boolean; navigationDisabled?: boolean; back?: BackAction; menuLabel?: string;
   notificationId?: T;
 }) {
@@ -139,6 +155,7 @@ export function Shell<T extends string>({ brand, sub, nav, value, onChange, stat
       <div className="subbar">
         <div className="page-heading">
           <div className="page-title-row">{back && <button type="button" className="btn btn-back" disabled={navigationDisabled} onClick={back.onClick}>← {back.label}</button>}<h1>{title}</h1></div>
+          {kicker && <span className="page-kicker">{kicker}</span>}
         </div>
         {actions && <div className="page-header-actions">{actions}</div>}
       </div>

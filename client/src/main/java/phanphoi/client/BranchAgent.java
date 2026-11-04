@@ -305,8 +305,25 @@ final class BranchAgent implements ServerLink.Handler {
         }
     }
 
+    /**
+     * Server cũ không có SPECS_GET: sau E01 đầu tiên của phiên thì thôi gửi, để mỗi lần tải lại tồn kho
+     * không bị server cũ đếm thêm một dòng sai định dạng (FUZZING). Đặt lại mỗi lần đăng nhập.
+     */
+    private volatile boolean specsUnsupported;
+
     void refreshInventory() {
         send(Message.of(Command.INVENTORY_GET));
+        if (!specsUnsupported) {
+            send(Message.of(Command.SPECS_GET));
+        }
+    }
+
+    /** Tải lại tồn kho kèm thông số kỹ thuật (SPECS_GET đi ngay sau INVENTORY_GET). */
+    private void requestInventory(ServerLink l) {
+        l.send(Message.of(Command.INVENTORY_GET));
+        if (!specsUnsupported) {
+            l.send(Message.of(Command.SPECS_GET));
+        }
     }
 
     void sale(String maHang, int soLuong) {
@@ -411,6 +428,16 @@ final class BranchAgent implements ServerLink.Handler {
         }
     }
 
+    /** Số thực có thể để rỗng; rỗng, sai định dạng hoặc không hữu hạn → null. */
+    private static Double optDouble(String s) {
+        try {
+            Double d = s == null || s.isEmpty() ? null : Double.valueOf(s.trim());
+            return d == null || d.isNaN() || d.isInfinite() ? null : d;
+        } catch (NumberFormatException e) {
+            return null;
+        }
+    }
+
     void history(String tu, String den) {
         synchronized (lock) {
             state.historyRange = tu + " → " + den;
@@ -494,7 +521,21 @@ final class BranchAgent implements ServerLink.Handler {
                     }
                     state.inventory.put(it.maHang, it);
                 }
+                // SPECS có thể đã về trước INVENTORY
+                state.applySpecs();
                 state.inventory.values().forEach(it -> checkLowStock(l, it));
+            }
+            case SPECS -> {
+                state.specsReceived = true;
+                state.specs.clear();
+                for (List<String> r : m.listParam(0)) {
+                    if (r.size() < 4) {
+                        continue;
+                    }
+                    state.specs.put(r.get(0), new BranchState.Spec(optInt(r.get(1)), optInt(r.get(2)), optDouble(r.get(3))));
+                }
+                // mã không có trong inventory thì bỏ qua (applySpecs chỉ duyệt các mặt hàng đang có)
+                state.applySpecs();
             }
             case SALE_OK -> {
                 BranchState.Item it = state.inventory.get(m.param(0));
@@ -623,10 +664,17 @@ final class BranchAgent implements ServerLink.Handler {
                 if (!it.maSp.isEmpty() && !state.inventory.isEmpty() && !state.inventory.containsKey(it.maSp)
                         && now - noticeInventoryAt > 10_000) {
                     noticeInventoryAt = now;
-                    l.send(Message.of(Command.INVENTORY_GET));
+                    requestInventory(l);
                 }
             }
-            case ERROR -> toast("error", m.param(0) + ": " + m.param(1));
+            case ERROR -> {
+                // server cũ chưa có lệnh SPECS_GET ("Lenh khong ton tai: SPECS_GET"): bỏ qua lặng lẽ, POS hiện không có thông số
+                if ("E01".equals(m.param(0)) && m.param(1).contains(Command.SPECS_GET.name())) {
+                    specsUnsupported = true;
+                } else {
+                    toast("error", m.param(0) + ": " + m.param(1));
+                }
+            }
             case TRANSFER_REQ -> {
                 BranchState.Transfer t = state.transfer(m.intParam(0));
                 t.maHang = m.param(1);
@@ -674,7 +722,11 @@ final class BranchAgent implements ServerLink.Handler {
         state.status = Status.ONLINE;
         state.statusDetail = "Da dang nhap";
         addNotice("success", "Dang nhap thanh cong: " + tenCn);
-        l.send(Message.of(Command.INVENTORY_GET));
+        // server sau lần nối lại có thể là bản khác: bỏ thông số cũ, chờ SPECS mới (hoặc E01 nếu server cũ)
+        specsUnsupported = false;
+        state.specs.clear();
+        state.specsReceived = false;
+        requestInventory(l);
         // server chỉ đẩy DEBT khi chi nhánh đang online, nên sau mỗi lần đăng nhập tự xin lại
         l.send(Message.of(Command.DEBT_GET));
         if (pendingLogin != null) {

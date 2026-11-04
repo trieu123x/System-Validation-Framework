@@ -82,7 +82,7 @@ public final class CheckoutService {
             int count = 0;
             for (var entry : quantities.entrySet()) {
                 JsonObject line = Db.one(c, """
-                        SELECT sp.ten, sp.model, sp.don_vi, sp.gia_ban_le, COALESCE(k.so_luong,0) AS ton
+                        SELECT sp.ten, sp.model, sp.don_vi, sp.gia_ban_le, COALESCE(k.so_luong,0) AS ton, sp.cong_suat_w
                         FROM san_pham sp LEFT JOIN kho_chi_nhanh k ON k.ma_sp=sp.ma_sp AND k.ma_cn=?
                         WHERE sp.ma_sp=?""", r -> {
                     if (r.getInt("ton") < entry.getValue()) throw bad("Không đủ tồn kho: " + entry.getKey());
@@ -90,6 +90,8 @@ public final class CheckoutService {
                     item.addProperty("maHang", entry.getKey());
                     item.addProperty("tenHang", r.getString("ten"));
                     item.addProperty("model", r.getString("model"));
+                    // hóa đơn cũ không có trường này vẫn hiển thị được (giao diện coi như chưa có)
+                    item.addProperty("congSuatW", (Integer) r.getObject("cong_suat_w"));
                     item.addProperty("donVi", r.getString("don_vi"));
                     item.addProperty("giaBanLe", r.getLong("gia_ban_le"));
                     item.addProperty("soLuong", entry.getValue());

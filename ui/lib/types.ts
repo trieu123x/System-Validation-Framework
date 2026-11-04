@@ -20,7 +20,16 @@ export type Product = {
   giaBanLe: number;
   tonTong: number;
   anhUrl: string | null;
+  /** Thông số kỹ thuật; null = chưa có (phụ kiện không dùng điện, hàng mới thêm). */
+  congSuatW: number | null;
+  dienApV: number | null;
+  trongLuongKg: number | null;
+  /** Tối đa 10 cặp thông số tự do, chỉ hiện ở admin và hóa đơn. */
+  thongSo: Record<string, string>;
 };
+
+/** Ba thông số số dùng chung cho chip ở admin và POS chi nhánh. */
+export type Specs = { congSuatW?: number | null; dienApV?: number | null; trongLuongKg?: number | null };
 
 export type Category = { maDm: string; ten: string; soMatHang: number };
 
@@ -176,6 +185,10 @@ export type BranchItem = {
   giaBanLe: number | null;
   /** Tham chiếu ảnh Cloudinary rút gọn (xem imageUrl), rỗng = chưa có ảnh. */
   anh: string;
+  /** Nhận qua tin SPECS; không có khi server cũ chưa hỗ trợ SPECS_GET. */
+  congSuatW?: number | null;
+  dienApV?: number | null;
+  trongLuongKg?: number | null;
 };
 
 export type BranchRequest = {
@@ -210,6 +223,8 @@ export type BranchSnapshot = {
   /** Đường dẫn trang theo tên chi nhánh ("da-nang"); null khi chưa đăng nhập. */
   slug: string | null;
   inventory: BranchItem[];
+  /** Server đã trả tin SPECS (false/thiếu: server cũ, ẩn chip và bộ lọc công suất). */
+  coThongSo?: boolean;
   requests: BranchRequest[];
   transfers: BranchTransfer[];
   broadcasts: Notice[];

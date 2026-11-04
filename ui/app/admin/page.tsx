@@ -162,6 +162,10 @@ function AdminApp({ user, onLogout }: { user: string; onLogout: () => void }) {
   return (
     <>
       <Shell<Tab> brand={COMPANY.brand} sub="Quản trị công ty" value={tab} title={TITLES[tab]}
+        kicker={tab === "overview" ? `${online} / ${realBranches.filter((b) => !b.giaLap).length} chi nhánh online · ${shownAlerts.length} cảnh báo`
+          : tab === "products" ? `Kho tổng · ${products.length} mã hàng`
+          : tab === "stock" || tab === "thresholds" ? `${realBranches.length} chi nhánh · ${products.length} mã hàng`
+          : tab === "transfers" ? `${shortage} yêu cầu thiếu hàng` : undefined}
         menu menuLabel="Chức năng quản trị" onChange={navigate} notificationId="broadcast"
         back={tab !== "overview" ? contextBack ?? { label: "Quay lại", onClick: goBack } : undefined}
         nav={[

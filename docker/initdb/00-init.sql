@@ -16,6 +16,8 @@
 -- 3 mặt hàng mới (không có ở chi nhánh thật) và ảnh trên Cloudinary; chạy sau seed_demo
 \i /db/seed_hang_moi.sql
 \i /db/seed_images.sql
+-- thông số kỹ thuật TB01..TB31 (công suất, điện áp, trọng lượng, thông số tự do)
+\i /db/seed_specs.sql
 \i /db/migrate_branch_emails.sql
 
 \i /db/migrate_password_recovery.sql

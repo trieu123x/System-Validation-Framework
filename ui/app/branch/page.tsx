@@ -151,6 +151,9 @@ export default function BranchPage() {
         menu navigationDisabled={checkoutBusy} notificationId="news"
         back={!["stock", "cart", "invoices"].includes(tab) ? { label: "Quay lại", onClick: goBack } : undefined}
         title={TITLES[tab]}
+        kicker={tab === "stock" ? `${s.maCn} · ${s.inventory.length} mã hàng · ${low} dưới ngưỡng`
+          : tab === "offers" ? `${s.maCn} · ${actionable} yêu cầu cần xử lý`
+          : tab === "transfers" ? `${s.maCn} · ${pendingTransfers} điều chuyển chờ` : s.maCn}
         nav={[
           { id: "stock", label: "Bán hàng", count: low, tone: "danger" },
           { id: "invoices", label: "Hóa đơn" },
@@ -189,7 +192,7 @@ export default function BranchPage() {
             <button className="btn btn-sm" onClick={() => navigate("security")}>Xem chi tiết</button>
           </div>
         )}
-        {tab === "stock" && <Stock items={s.inventory} requests={s.requests} reported={s.daBao ?? []} online={online}
+        {tab === "stock" && <Stock items={s.inventory} requests={s.requests} reported={s.daBao ?? []} online={online} hasSpecs={!!s.coThongSo}
           cart={cart} onCart={() => navigate("cart")} onAdd={(item, quantity) => {
             const previous = cart.find((line) => line.maHang === item.maHang)?.soLuong ?? 0;
             if (!Number.isSafeInteger(quantity) || quantity < 1 || previous + quantity > item.soLuong) {

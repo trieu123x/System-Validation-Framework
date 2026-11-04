@@ -161,6 +161,23 @@ class ProtocolTest {
     }
 
     @Test
+    void specsRoundTrip() throws Exception {
+        assertEquals(0, Command.SPECS_GET.paramCount());
+        assertEquals(1, Command.SPECS.paramCount());
+        // trường rỗng = chưa có thông số (phụ kiện không dùng điện), trọng lượng có 1 chữ số thập phân
+        List<List<String>> rows = List.of(
+                List.of("TB22", "1100", "220", "3.5"),
+                List.of("TB26", "", "", ""),
+                List.of("TB29", "750", "", ""));
+        Message got = Protocol.decode(Message.of(Command.SPECS, Protocol.encodeList(rows)).toLine());
+        assertEquals(Command.SPECS, got.command());
+        assertEquals(rows, got.listParam(0));
+        assertEquals("3.5", got.listParam(0).get(0).get(3));
+        assertEquals("", got.listParam(0).get(1).get(1));
+        assertEquals(Command.SPECS_GET, Protocol.decode("SPECS_GET").command());
+    }
+
+    @Test
     void noticeRoundTripKeepsEmptyFieldsAndSeparators() throws Exception {
         Message sent = Message.of(Command.NOTICE, 7, "HOI_NHU_CAU", "DA_GUI", "2026-10-22 09:30:00",
                 "Chi nhánh có cần thêm Máy tời TK400/25?", "Tồn 4 | ngưỡng 3\nĐề xuất 2 cái; giao trong tuần", "TB10",

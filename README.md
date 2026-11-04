@@ -229,6 +229,7 @@ Cấu hình đọc từ file `.properties`, rồi file `*.local.properties` cùn
 - `phieu_nhap` ghi `ma_ncc` và `don_gia`; `phieu_xuat`, `dieu_chuyen` có `don_gia` chốt lúc gửi hàng.
 - `cong_no_cn` (sổ công nợ chi nhánh), `thanh_toan_ncc` (phiếu chi nhà cung cấp), `chi_nhanh.han_muc_no`, `su_kien_bao_mat` (giám sát an ninh).
 - `thong_bao`, `thong_bao_cn` (thông báo và trạng thái từng chi nhánh: đã xem, cần hàng, ... kèm mã YC tạo ra); `san_pham.anh_url`; `yeu_cau.so_luong_xin` (số chi nhánh xin khi trả lời thông báo).
+- Thông số kỹ thuật trên `san_pham`: `cong_suat_w`, `dien_ap_v`, `trong_luong_kg` (NULL = chưa có) và `thong_so` JSONB (tối đa 10 cặp tự do). Server tự thêm cột khi khởi động (`SpecSchema`); dữ liệu mẫu có ghi nguồn nằm ở `db/seed_specs.sql`.
 
 Các ràng buộc quan trọng:
 - `kho_tong.so_luong >= 0`: kho tổng không âm.
@@ -260,6 +261,7 @@ UTF-8, mỗi tin một dòng tối đa 4096 byte, dạng `LENH|thamSo1|thamSo2`.
 |---|---|---|
 | `LOGIN` / `LOGIN_OK` / `LOGIN_FAIL` | CN→S / S→CN | maCN, matKhau / tên CN / lý do |
 | `INVENTORY_GET` / `INVENTORY` | CN→S / S→CN | — / danh sách maHang,tenHang,soLuong,nguong,model,danhMuc,giaXuat,giaBanLe,anh (các trường sau trường 4 thêm sau, client cũ chỉ đọc 4 trường đầu vẫn chạy; tiền là số nguyên đồng; `anh` là phần URL Cloudinary sau `/image/upload/`, ví dụ `v1792609532/toboki/TB01.webp`, rỗng nếu chưa có ảnh: 31 mặt hàng thật dài 3358 byte, URL đầy đủ sẽ vượt 4096) |
+| `SPECS_GET` / `SPECS` | CN→S / S→CN | — / danh sách maHang,congSuatW,dienApV,trongLuongKg của mọi mặt hàng (trường rỗng = chưa có thông số; trọng lượng tối đa 1 chữ số thập phân). Client gửi ngay sau mỗi `INVENTORY_GET` và gán thông số vào tồn kho, hai tin về theo thứ tự nào cũng được. Không tính vào giới hạn SCRAPING. Thông số tự do (`san_pham.thong_so`) không đi qua TCP. 31 mặt hàng khoảng 700 byte; trên khoảng 180 mặt hàng thì bản ghi cuối bị cắt như `INVENTORY`. Server cũ trả `ERROR\|E01` thì client bỏ qua lặng lẽ |
 | `SALE` / `SALE_OK` | CN→S / S→CN | maHang, soLuong / maHang, soLuongCon |
 | `SET_THRESHOLD` | CN→S | maHang, nguong (server trả `INVENTORY`) |
 | `LOW_STOCK` | CN→S | maHang, soLuongCon, nguong |

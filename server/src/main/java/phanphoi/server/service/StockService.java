@@ -1,21 +1,28 @@
 package phanphoi.server.service;
 
+import com.google.gson.JsonParseException;
+import com.google.gson.reflect.TypeToken;
 import phanphoi.common.Command;
 import phanphoi.common.ErrorCode;
 import phanphoi.common.Message;
+import phanphoi.common.web.Http;
 import phanphoi.server.Events;
 import phanphoi.server.ServiceException;
 import phanphoi.server.db.Db;
 
+import java.lang.reflect.Type;
+import java.math.BigDecimal;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeParseException;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Pattern;
 
 /** Kho tổng, kho chi nhánh, bán hàng, ngưỡng, lịch sử nhập (FR-07..FR-12, FR-24). */
 public final class StockService {
@@ -47,6 +54,29 @@ public final class StockService {
                         rs.getString(5), rs.getString(6), rs.getLong(7), rs.getLong(8), imageRef(rs.getString(9))),
                 maCn));
         return Lists.fit(Command.INVENTORY, rows);
+    }
+
+    /**
+     * SPECS|maSp,congSuatW,dienApV,trongLuongKg;... cho mọi mặt hàng; trường null để rỗng.
+     * Chỉ 3 trường số, thong_so (JSONB tự do) không đi qua TCP.
+     */
+    public Message specsMessage() throws SQLException {
+        return specsLine(db.read(c -> Db.list(c, """
+                SELECT ma_sp, cong_suat_w, dien_ap_v, trong_luong_kg FROM san_pham ORDER BY ma_sp""",
+                rs -> {
+                    List<Object> r = new ArrayList<>(4);
+                    r.add(rs.getString(1));
+                    r.add(rs.getObject(2));
+                    r.add(rs.getObject(3));
+                    BigDecimal kg = rs.getBigDecimal(4);
+                    r.add(kg == null ? null : kg.stripTrailingZeros().toPlainString());
+                    return r;
+                })));
+    }
+
+    /** Ghép tin SPECS, không vượt 4096 byte (thừa thì {@link Lists#fit} bỏ bản ghi cuối). */
+    static Message specsLine(List<? extends List<?>> rows) {
+        return Lists.fit(Command.SPECS, rows);
     }
 
     /** Phải trùng CLOUDINARY_BASE trong ui/lib/images.ts (giao diện ghép tham chiếu rút gọn vào đây). */
@@ -150,33 +180,68 @@ public final class StockService {
 
     // ================= phía admin =================
 
-    /** Mặt hàng với 3 giá (đồng): nhập từ NCC, xuất cho chi nhánh, bán lẻ. */
+    /**
+     * Mặt hàng với 3 giá (đồng): nhập từ NCC, xuất cho chi nhánh, bán lẻ; kèm thông số kỹ thuật (null = chưa có)
+     * và tối đa {@link #MAX_SPECS} cặp thông số tự do.
+     */
     public record Product(String maSp, String ten, String donVi, String model, String maDm,
-                          long giaNhap, long giaXuat, long giaBanLe) {
+                          long giaNhap, long giaXuat, long giaBanLe,
+                          Integer congSuatW, Integer dienApV, BigDecimal trongLuongKg, Map<String, String> thongSo) {
+        public Product {
+            thongSo = thongSo == null ? Map.of() : thongSo;
+        }
     }
 
+    static final int MAX_SPECS = 10;
+    private static final Type SPEC_MAP = new TypeToken<LinkedHashMap<String, String>>() { }.getType();
+
     public List<Map<String, Object>> products() throws SQLException {
-        return db.read(c -> Db.rows(c, """
+        List<Map<String, Object>> rows = db.read(c -> Db.rows(c, """
                 SELECT sp.ma_sp, sp.ten, sp.don_vi, sp.model, sp.ma_dm, dm.ten AS ten_dm,
-                       sp.gia_nhap, sp.gia_xuat, sp.gia_ban_le, COALESCE(kt.so_luong, 0) AS ton_tong, sp.anh_url
+                       sp.gia_nhap, sp.gia_xuat, sp.gia_ban_le, COALESCE(kt.so_luong, 0) AS ton_tong, sp.anh_url,
+                       sp.cong_suat_w, sp.dien_ap_v, sp.trong_luong_kg, sp.thong_so::text AS thong_so
                 FROM san_pham sp
                 JOIN danh_muc dm ON dm.ma_dm = sp.ma_dm
                 LEFT JOIN kho_tong kt ON kt.ma_sp = sp.ma_sp
                 ORDER BY sp.ma_sp"""));
+        // JSONB về dạng chuỗi; đổi lại thành object để giao diện đọc thẳng
+        for (Map<String, Object> r : rows) {
+            r.put("thongSo", parseSpecs((String) r.get("thongSo"), (String) r.get("maSp")));
+        }
+        return rows;
+    }
+
+    /**
+     * thong_so dạng {tên: chuỗi}. Dòng bị sửa tay bằng SQL thành dạng khác (object lồng, mảng) thì trả {} cho dòng đó,
+     * không làm hỏng cả danh sách hàng hóa.
+     */
+    static Map<String, String> parseSpecs(String json, String maSp) {
+        if (json == null) {
+            return Map.of();
+        }
+        try {
+            Map<String, String> specs = Http.GSON.fromJson(json, SPEC_MAP);
+            return specs == null ? Map.of() : specs;
+        } catch (JsonParseException | IllegalStateException e) {
+            System.err.println("[server] thong_so cua " + maSp + " khong dung dang {ten: chuoi}, bo qua");
+            return Map.of();
+        }
     }
 
     /** FR-07: thêm sản phẩm, tạo luôn dòng kho tổng = 0. */
     public void addProduct(Product p) throws SQLException {
-        validateProduct(p);
+        Map<String, String> specs = validateProduct(p);
         db.tx(c -> {
             if (Db.one(c, "SELECT 1 FROM san_pham WHERE ma_sp = ?", rs -> 1, p.maSp()) != null) {
                 throw new ServiceException(ErrorCode.E03, "Ma hang " + p.maSp() + " da ton tai");
             }
             requireCategory(c, p.maDm());
             Db.update(c, """
-                    INSERT INTO san_pham (ma_sp, ten, don_vi, model, ma_dm, gia_nhap, gia_xuat, gia_ban_le)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
-                    p.maSp(), p.ten(), p.donVi(), emptyToNull(p.model()), p.maDm(), p.giaNhap(), p.giaXuat(), p.giaBanLe());
+                    INSERT INTO san_pham (ma_sp, ten, don_vi, model, ma_dm, gia_nhap, gia_xuat, gia_ban_le,
+                                          cong_suat_w, dien_ap_v, trong_luong_kg, thong_so)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?::jsonb)""",
+                    p.maSp(), p.ten(), p.donVi(), emptyToNull(p.model()), p.maDm(), p.giaNhap(), p.giaXuat(), p.giaBanLe(),
+                    p.congSuatW(), p.dienApV(), p.trongLuongKg(), Http.GSON.toJson(specs));
             return Db.update(c, "INSERT INTO kho_tong (ma_sp, so_luong) VALUES (?, 0)", p.maSp());
         });
         events.publish(Events.PRODUCTS, null);
@@ -184,13 +249,15 @@ public final class StockService {
 
     /** Đổi giá không làm đổi nợ của YC đã gửi (đã chốt ở phieu_xuat.don_gia). */
     public void updateProduct(Product p) throws SQLException {
-        validateProduct(p);
+        Map<String, String> specs = validateProduct(p);
         int n = db.tx(c -> {
             requireCategory(c, p.maDm());
             return Db.update(c, """
-                    UPDATE san_pham SET ten = ?, don_vi = ?, model = ?, ma_dm = ?, gia_nhap = ?, gia_xuat = ?, gia_ban_le = ?
+                    UPDATE san_pham SET ten = ?, don_vi = ?, model = ?, ma_dm = ?, gia_nhap = ?, gia_xuat = ?, gia_ban_le = ?,
+                           cong_suat_w = ?, dien_ap_v = ?, trong_luong_kg = ?, thong_so = ?::jsonb
                     WHERE ma_sp = ?""",
-                    p.ten(), p.donVi(), emptyToNull(p.model()), p.maDm(), p.giaNhap(), p.giaXuat(), p.giaBanLe(), p.maSp());
+                    p.ten(), p.donVi(), emptyToNull(p.model()), p.maDm(), p.giaNhap(), p.giaXuat(), p.giaBanLe(),
+                    p.congSuatW(), p.dienApV(), p.trongLuongKg(), Http.GSON.toJson(specs), p.maSp());
         });
         if (n == 0) {
             throw new ServiceException(ErrorCode.E04, "Khong tim thay ma hang " + p.maSp());
@@ -222,7 +289,8 @@ public final class StockService {
         events.publish(Events.PRODUCTS, null);
     }
 
-    private static void validateProduct(Product p) {
+    /** Kiểm tra mặt hàng; trả thông số tự do đã trim (đúng thứ tự nhập) để ghi vào thong_so. */
+    static Map<String, String> validateProduct(Product p) {
         if (p.maSp().isEmpty() || p.maSp().length() > 10 || !p.maSp().matches("[A-Za-z0-9_-]+")) {
             throw new ServiceException(ErrorCode.E01, "Ma hang 1-10 ky tu chu, so, _ hoac -");
         }
@@ -241,6 +309,47 @@ public final class StockService {
         if (p.giaNhap() < 0 || p.giaXuat() < 0 || p.giaBanLe() < 0) {
             throw new ServiceException(ErrorCode.E05, "Gia phai >= 0");
         }
+        if (p.congSuatW() != null && (p.congSuatW() < 1 || p.congSuatW() > 100_000)) {
+            throw new ServiceException(ErrorCode.E05, "Cong suat phai tu 1 den 100000 W");
+        }
+        if (p.dienApV() != null && (p.dienApV() < 1 || p.dienApV() > 1000)) {
+            throw new ServiceException(ErrorCode.E05, "Dien ap phai tu 1 den 1000 V");
+        }
+        BigDecimal kg = p.trongLuongKg();
+        if (kg != null && (kg.compareTo(MIN_KG) < 0 || kg.compareTo(MAX_KG) > 0 || kg.stripTrailingZeros().scale() > 1)) {
+            throw new ServiceException(ErrorCode.E05, "Trong luong phai tu 0.1 den 99999.9 kg, toi da 1 chu so thap phan");
+        }
+        return cleanSpecs(p.thongSo());
+    }
+
+    private static final BigDecimal MIN_KG = new BigDecimal("0.1");
+    private static final BigDecimal MAX_KG = new BigDecimal("99999.9");
+    /** Ký tự điều khiển, định dạng ẩn (VD đảo chiều RLO U+202E) và ngắt dòng/đoạn Unicode: tránh giả mạo trên giấy in. */
+    private static final Pattern CONTROL = Pattern.compile("[\\p{Cc}\\p{Cf}\\p{Zl}\\p{Zp}]");
+
+    /** Tối đa 10 cặp; key 1-40, value 1-60 ký tự sau trim; không trùng key sau trim, không ký tự điều khiển/định dạng ẩn. */
+    private static Map<String, String> cleanSpecs(Map<String, String> raw) {
+        if (raw.size() > MAX_SPECS) {
+            throw new ServiceException(ErrorCode.E05, "Toi da " + MAX_SPECS + " thong so tu do");
+        }
+        Map<String, String> out = new LinkedHashMap<>();
+        for (Map.Entry<String, String> e : raw.entrySet()) {
+            if (e.getKey() == null || e.getValue() == null) {
+                throw new ServiceException(ErrorCode.E05, "Thong so phai co ten va gia tri");
+            }
+            String key = e.getKey().trim();
+            String value = e.getValue().trim();
+            if (key.isEmpty() || key.length() > 40 || value.isEmpty() || value.length() > 60) {
+                throw new ServiceException(ErrorCode.E05, "Ten thong so 1-40 ky tu, gia tri 1-60 ky tu");
+            }
+            if (CONTROL.matcher(key).find() || CONTROL.matcher(value).find()) {
+                throw new ServiceException(ErrorCode.E05, "Thong so khong duoc chua ky tu dieu khien");
+            }
+            if (out.put(key, value) != null) {
+                throw new ServiceException(ErrorCode.E05, "Trung ten thong so: " + key);
+            }
+        }
+        return out;
     }
 
     private static void requireCategory(Connection c, String maDm) throws SQLException {

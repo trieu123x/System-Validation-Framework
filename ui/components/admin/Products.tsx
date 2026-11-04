@@ -3,20 +3,78 @@
 import { FormEvent, useEffect, useState } from "react";
 import { api, fmtMoney, fmtNumber } from "@/lib/api";
 import type { Category, Product, Supplier } from "@/lib/types";
-import { Card, Empty, ProductImage, useAction, type BackAction } from "@/components/ui";
+import { Card, Empty, fmtSpec, ProductImage, SortTh, sortRows, SpecChips, useAction, type BackAction, type Sort } from "@/components/ui";
 
 type Import = {
   maPn: number; maSp: string; ten: string; soLuong: number; maNcc: string; tenNcc: string;
   donGia: number; thanhTien: number; thoiGian: string;
 };
 
-const EMPTY = { maSp: "", ten: "", donVi: "cái", model: "", maDm: "", giaNhap: "", giaXuat: "", giaBanLe: "" };
+type Pair = { k: string; v: string };
+const MAX_PAIRS = 10;
+const EMPTY = {
+  maSp: "", ten: "", donVi: "cái", model: "", maDm: "", giaNhap: "", giaXuat: "", giaBanLe: "",
+  congSuatW: "", dienApV: "", trongLuongKg: "", thongSo: [] as Pair[],
+};
+type Form = typeof EMPTY;
+
+/** Cùng tập ký tự server từ chối: điều khiển, định dạng ẩn (VD đảo chiều RLO), ngắt dòng/đoạn Unicode. */
+const CONTROL = /[\p{Cc}\p{Cf}\p{Zl}\p{Zp}]/u;
+/** Trọng lượng nhận cả dấu phẩy thập phân kiểu Việt ("11,5" → "11.5"). */
+const normKg = (s: string) => s.trim().replace(",", ".");
+const intIn = (s: string, min: number, max: number) => /^\d+$/.test(s.trim()) && Number(s) >= min && Number(s) <= max;
+
+/**
+ * Cùng quy tắc với StockService.validateProduct (server vẫn kiểm lại, sai trả E05).
+ * Ô trống = chưa có thông số. Cặp thông số mới thêm còn trống chỉ báo lỗi sau khi bấm Lưu (submitted).
+ */
+function specErrors(form: Form, submitted: boolean): Record<string, string> {
+  const e: Record<string, string> = {};
+  if (form.congSuatW.trim() && !intIn(form.congSuatW, 1, 100000)) e.congSuatW = "Công suất là số nguyên từ 1 đến 100000 W.";
+  if (form.dienApV.trim() && !intIn(form.dienApV, 1, 1000)) e.dienApV = "Điện áp là số nguyên từ 1 đến 1000 V.";
+  const kg = normKg(form.trongLuongKg);
+  if (kg && !(/^\d+(\.\d)?0*$/.test(kg) && Number(kg) >= 0.1 && Number(kg) <= 99999.9)) e.trongLuongKg = "Trọng lượng từ 0,1 đến 99999,9 kg, tối đa 1 chữ số thập phân.";
+  const seen = new Set<string>();
+  form.thongSo.forEach((p, i) => {
+    const k = p.k.trim(), v = p.v.trim();
+    if (CONTROL.test(p.k) || CONTROL.test(p.v)) e[`pair${i}`] = "Không được chứa ký tự điều khiển.";
+    else if (k.length > 40) e[`pair${i}`] = "Tên thông số tối đa 40 ký tự.";
+    else if (v.length > 60) e[`pair${i}`] = "Giá trị tối đa 60 ký tự.";
+    else if (k && seen.has(k)) e[`pair${i}`] = `Trùng tên thông số "${k}".`;
+    else if (submitted && (!k || !v)) e[`pair${i}`] = "Nhập cả tên và giá trị, hoặc xóa dòng này.";
+    if (k) seen.add(k);
+  });
+  return e;
+}
+
+/** Body gửi POST/PUT /api/products: thông số tự do là object {tên: giá trị} đã trim. */
+const payload = (form: Form) => ({
+  ...form,
+  trongLuongKg: normKg(form.trongLuongKg),
+  thongSo: Object.fromEntries(form.thongSo.map((p) => [p.k.trim(), p.v.trim()])),
+});
+
+/** Ô số của nhóm thông số kỹ thuật; lỗi hiện ngay dưới ô. */
+function SpecField({ label, value, error, step, onChange }: {
+  label: string; value: string; error?: string; step: number; onChange: (value: string) => void;
+}) {
+  return (
+    <label className="field">{label}
+      {/* type="text": ô number của trình duyệt trả "" cho "11,5" và làm mất giá trị mà không báo lỗi */}
+      <input type="text" inputMode={step < 1 ? "decimal" : "numeric"} value={value} style={{ textAlign: "left" }}
+        aria-invalid={!!error} onChange={(e) => onChange(e.target.value)} />
+      {error && <span className="field-error" role="alert">{error}</span>}
+    </label>
+  );
+}
 
 export function Products({ products, version, push, onBackChange }: {
   products: Product[]; version: number; push: (l: string, t: string) => void; onBackChange: (back: BackAction | null) => void;
 }) {
   const { run, busy } = useAction(push);
-  const [form, setForm] = useState(EMPTY);
+  const [form, setForm] = useState<Form>(EMPTY);
+  const [submitted, setSubmitted] = useState(false);
+  const [sort, setSort] = useState<Sort<"congSuatW">>(null);
   const [editing, setEditing] = useState<string | null>(null);
   const [imp, setImp] = useState({ maSp: "", soLuong: "", maNcc: "", donGia: "" });
   const [imports, setImports] = useState<Import[]>([]);
@@ -28,7 +86,7 @@ export function Products({ products, version, push, onBackChange }: {
   const [reload, setReload] = useState(0);
 
   useEffect(() => {
-    onBackChange(editing ? { label: "Hủy chỉnh sửa", onClick: () => { setEditing(null); setForm(EMPTY); } } : null);
+    onBackChange(editing ? { label: "Hủy chỉnh sửa", onClick: () => { setEditing(null); setForm(EMPTY); setSubmitted(false); } } : null);
     return () => onBackChange(null);
   }, [editing, onBackChange]);
 
@@ -43,20 +101,29 @@ export function Products({ products, version, push, onBackChange }: {
   }, [version, reload]);
 
   const needle = query.trim().toLocaleLowerCase("vi");
-  const shown = products.filter((product) => (!dm || product.maDm === dm)
-    && (!needle || [product.maSp, product.ten, product.model].join(" ").toLocaleLowerCase("vi").includes(needle)));
+  const shown = sortRows(products.filter((product) => (!dm || product.maDm === dm)
+    && (!needle || [product.maSp, product.ten, product.model].join(" ").toLocaleLowerCase("vi").includes(needle))),
+  sort, (product) => product.congSuatW ?? null);
+  const errors = specErrors(form, submitted);
+  const pairs = form.thongSo;
+  const setPair = (index: number, pair: Pair) => setForm({ ...form, thongSo: pairs.map((p, i) => i === index ? pair : p) });
   // giá xuất cho chi nhánh thấp hơn giá nhập là bán lỗ: chỉ cảnh báo, vẫn cho lưu
   const belowCost = form.giaNhap !== "" && form.giaXuat !== "" && Number(form.giaXuat) < Number(form.giaNhap);
   const impProduct = products.find((p) => p.maSp === imp.maSp);
 
   const save = async (e: FormEvent) => {
     e.preventDefault();
+    setSubmitted(true);
+    // lỗi hiện ngay dưới ô; giữ nguyên dữ liệu đang nhập
+    if (Object.keys(specErrors(form, true)).length) return;
+    const body = payload(form);
     const ok = editing
-      ? await run(() => api(`/api/products/${encodeURIComponent(editing)}`, form, "PUT"), `Đã sửa ${editing}`)
-      : await run(() => api("/api/products", form), `Đã thêm ${form.maSp}`);
+      ? await run(() => api(`/api/products/${encodeURIComponent(editing)}`, body, "PUT"), `Đã sửa ${editing}`)
+      : await run(() => api("/api/products", body), `Đã thêm ${form.maSp}`);
     if (ok) {
       setForm(EMPTY);
       setEditing(null);
+      setSubmitted(false);
     }
   };
 
@@ -93,6 +160,7 @@ export function Products({ products, version, push, onBackChange }: {
                 <thead>
                   <tr>
                     <th>Mã hàng</th><th>Tên hàng</th><th>Danh mục</th><th>ĐV</th>
+                    <SortTh k="congSuatW" num sort={sort} onSort={setSort}>Công suất</SortTh>
                     <th className="num">Giá nhập</th><th className="num">Giá xuất CN</th><th className="num">Giá bán lẻ</th>
                     <th className="num">Tồn kho tổng</th><th scope="col">Thao tác</th>
                   </tr>
@@ -106,12 +174,14 @@ export function Products({ products, version, push, onBackChange }: {
                           <ProductImage src={p.anhUrl} alt={p.ten} category={p.tenDm} />
                           <div>
                             {p.ten}
-                            {p.model && <div className="muted" style={{ fontSize: 12 }}>Model {p.model}</div>}
+                            {p.model && <div className="muted" style={{ fontSize: 12 }}>Model <span className="code-mono">{p.model}</span></div>}
+                            <SpecChips dienApV={p.dienApV} trongLuongKg={p.trongLuongKg} />
                           </div>
                         </div>
                       </td>
                       <td className="nowrap">{p.tenDm}</td>
                       <td>{p.donVi}</td>
+                      <td className="num nowrap code-mono">{fmtSpec.w(p.congSuatW) ?? <span className="muted">—</span>}</td>
                       <td className="num nowrap">{fmtNumber(p.giaNhap)}</td>
                       <td className="num nowrap">{fmtNumber(p.giaXuat)}</td>
                       <td className="num nowrap">{fmtNumber(p.giaBanLe)}</td>
@@ -119,9 +189,14 @@ export function Products({ products, version, push, onBackChange }: {
                       <td className="right nowrap">
                         <button className="btn btn-sm" onClick={() => {
                           setEditing(p.maSp);
+                          setSubmitted(false);
                           setForm({
                             maSp: p.maSp, ten: p.ten, donVi: p.donVi, model: p.model ?? "", maDm: p.maDm,
                             giaNhap: String(p.giaNhap), giaXuat: String(p.giaXuat), giaBanLe: String(p.giaBanLe),
+                            congSuatW: p.congSuatW == null ? "" : String(p.congSuatW),
+                            dienApV: p.dienApV == null ? "" : String(p.dienApV),
+                            trongLuongKg: p.trongLuongKg == null ? "" : String(p.trongLuongKg),
+                            thongSo: Object.entries(p.thongSo ?? {}).map(([k, v]) => ({ k, v })),
                           });
                         }}>Sửa</button>{" "}
                         <button className="btn btn-sm btn-danger" onClick={() => remove(p)}>Xoá</button>
@@ -205,6 +280,32 @@ export function Products({ products, version, push, onBackChange }: {
                 Vẫn lưu được.
               </p>
             )}
+            <div className="form-section-label">Thông số kỹ thuật</div>
+            <p className="note" style={{ margin: 0 }}>Để trống nếu chưa có (VD phụ kiện không dùng điện). Ba số này hiện trên thẻ POS ở chi nhánh.</p>
+            <SpecField label="Công suất (W)" value={form.congSuatW} error={errors.congSuatW} step={1}
+              onChange={(value) => setForm({ ...form, congSuatW: value })} />
+            <SpecField label="Điện áp (V)" value={form.dienApV} error={errors.dienApV} step={1}
+              onChange={(value) => setForm({ ...form, dienApV: value })} />
+            <SpecField label="Trọng lượng (kg)" value={form.trongLuongKg} error={errors.trongLuongKg} step={0.1}
+              onChange={(value) => setForm({ ...form, trongLuongKg: value })} />
+            <fieldset className="spec-pairs">
+              <legend>Thông số khác <span className="muted">({pairs.length}/{MAX_PAIRS})</span></legend>
+              {pairs.map((pair, index) => (
+                <div key={index} className="spec-pair">
+                  <div className="spec-pair-inputs">
+                    <input aria-label={`Tên thông số ${index + 1}`} placeholder="Tên, VD: Áp lực" maxLength={40} value={pair.k}
+                      aria-invalid={!!errors[`pair${index}`]} onChange={(e) => setPair(index, { ...pair, k: e.target.value })} />
+                    <input aria-label={`Giá trị thông số ${index + 1}`} placeholder="Giá trị, VD: 100 bar" maxLength={60} value={pair.v}
+                      aria-invalid={!!errors[`pair${index}`]} onChange={(e) => setPair(index, { ...pair, v: e.target.value })} />
+                    <button type="button" className="btn btn-sm btn-danger" aria-label={`Xóa thông số ${index + 1}`}
+                      onClick={() => setForm({ ...form, thongSo: pairs.filter((_, i) => i !== index) })}>×</button>
+                  </div>
+                  {errors[`pair${index}`] && <p className="field-error" role="alert">{errors[`pair${index}`]}</p>}
+                </div>
+              ))}
+              <button type="button" className="btn btn-sm" disabled={pairs.length >= MAX_PAIRS}
+                onClick={() => setForm({ ...form, thongSo: [...pairs, { k: "", v: "" }] })}>+ Thêm thông số</button>
+            </fieldset>
             <div className="form-actions">
               <button className="btn btn-success" disabled={busy}>{editing ? "Lưu" : "Thêm mới"}</button>
             </div>

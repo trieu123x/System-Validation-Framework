@@ -1,7 +1,8 @@
 import type { BranchItem } from "./types";
 
 export type CartLine = { maHang: string; soLuong: number };
-export type InvoiceLine = CartLine & { tenHang: string; model: string | null; donVi: string; giaBanLe: number; thanhTien: number };
+/** congSuatW chốt lúc tạo đơn; hóa đơn tạo trước khi có thông số thì không có trường này. */
+export type InvoiceLine = CartLine & { tenHang: string; model: string | null; donVi: string; giaBanLe: number; thanhTien: number; congSuatW?: number | null };
 export type Invoice = {
   id: string; maCn: string; tenCn: string; customer: string; status: "PENDING" | "PAID";
   createdAt: string; paidAt?: string; total: number; quantity: number; items: InvoiceLine[];

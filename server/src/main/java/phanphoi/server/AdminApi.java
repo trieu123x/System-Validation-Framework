@@ -3,6 +3,7 @@ package phanphoi.server;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.sun.net.httpserver.HttpServer;
+import phanphoi.common.ErrorCode;
 import phanphoi.common.web.Http;
 import phanphoi.common.web.OriginGuard;
 import phanphoi.common.web.Router;
@@ -582,9 +583,67 @@ public final class AdminApi implements AutoCloseable {
         return ex.getRemoteAddress().getAddress().getHostAddress();
     }
 
-    private static StockService.Product product(String maSp, JsonObject b) {
+    /** 4 trường thông số đều optional: client cũ không gửi thì coi là null / {} (giới hạn giá trị do StockService kiểm). */
+    static StockService.Product product(String maSp, JsonObject b) {
         return new StockService.Product(maSp, Http.str(b, "ten"), Http.str(b, "donVi"), Http.str(b, "model"),
-                Http.str(b, "maDm"), money(b, "giaNhap"), money(b, "giaXuat"), money(b, "giaBanLe"));
+                Http.str(b, "maDm"), money(b, "giaNhap"), money(b, "giaXuat"), money(b, "giaBanLe"),
+                optInt(b, "congSuatW"), optInt(b, "dienApV"), optDecimal(b, "trongLuongKg"), specs(b));
+    }
+
+    /** Số nguyên hoặc null khi thiếu / rỗng. */
+    static Integer optInt(JsonObject b, String key) {
+        BigDecimal v = optDecimal(b, key);
+        if (v == null) {
+            return null;
+        }
+        try {
+            return v.intValueExact();
+        } catch (ArithmeticException e) {
+            throw new Http.ApiException(400, "Truong '" + key + "' phai la so nguyen");
+        }
+    }
+
+    static BigDecimal optDecimal(JsonObject b, String key) {
+        if (b.has(key) && !b.get(key).isJsonNull() && !b.get(key).isJsonPrimitive()) {
+            throw new Http.ApiException(400, "Truong '" + key + "' khong hop le");
+        }
+        String s = Http.str(b, key);
+        if (s.isEmpty()) {
+            return null;
+        }
+        // chặn số mũ cực lớn/nhỏ (1e999999999) trước khi tính toán trên BigDecimal
+        if (s.length() > 20) {
+            throw new Http.ApiException(400, "Truong '" + key + "' khong hop le");
+        }
+        try {
+            BigDecimal v = new BigDecimal(s);
+            // "1e999999999" ngắn nhưng có số mũ khổng lồ: thông số thật không cần quá 10 chữ số thập phân / số mũ
+            if (Math.abs(v.scale()) > 10) {
+                throw new Http.ApiException(400, "Truong '" + key + "' khong hop le");
+            }
+            return v;
+        } catch (NumberFormatException e) {
+            throw new Http.ApiException(400, "Truong '" + key + "' khong hop le");
+        }
+    }
+
+    /** thongSo: object { ten: giá trị } với giá trị là chuỗi; thiếu hoặc null = {}. Key giữ nguyên để StockService bắt trùng sau trim. */
+    static Map<String, String> specs(JsonObject b) {
+        if (!b.has("thongSo") || b.get("thongSo").isJsonNull()) {
+            return Map.of();
+        }
+        if (!b.get("thongSo").isJsonObject()) {
+            throw new ServiceException(ErrorCode.E05, "Thong so tu do phai la object {ten: gia tri}");
+        }
+        Map<String, String> out = new LinkedHashMap<>();
+        for (Map.Entry<String, JsonElement> e : b.getAsJsonObject("thongSo").entrySet()) {
+            JsonElement v = e.getValue();
+            if (!v.isJsonPrimitive() || !v.getAsJsonPrimitive().isString()) {
+                throw new ServiceException(ErrorCode.E05, "Gia tri thong so phai la chuoi");
+            }
+            out.put(e.getKey(), v.getAsString());
+        }
+        return out;
     }
 
     private static final BigDecimal MAX_MONEY = BigDecimal.TEN.pow(12);

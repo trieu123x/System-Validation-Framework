@@ -6,10 +6,17 @@ const path = require('node:path');
 
 (async () => {
   const root = path.resolve('ui/out');
-  const products = JSON.parse(await fs.readFile('landing/src/data/products.json', 'utf8')).slice(0, process.env.UI_FILTER_CHECK === '1' ? 31 : 6);
-  const inventory = products.map((p, i) => ({ maHang: p.id, tenHang: p.name, soLuong: [4,2,7,10,6,8][i % 6], nguong: [2,3,2,4,0,2][i % 6], model: p.model, danhMuc: p.category, giaBanLe: p.retailPrice, giaXuat: p.retailPrice, anh: p.image.url }));
-  const state = { status: 'ONLINE', statusDetail: 'Đã kết nối', server: 'localhost', maCn: 'CN01', tenCn: 'Chi nhánh Lĩnh Nam', inventory, requests: [], transfers: [], broadcasts: [], notices: [], inbox: [], history: [], historyRange: '', daBao: [], debt: null };
-  const adminProducts = products.map(p => ({ maSp: p.id, ten: p.name, donVi: 'cái', model: p.model, maDm: p.categoryId, tenDm: p.category, giaNhap: Math.round(p.retailPrice * .7), giaXuat: Math.round(p.retailPrice * .85), giaBanLe: p.retailPrice, tonTong: 100, anhUrl: p.image.url }));
+  const specsCheck = process.env.UI_SPECS_CHECK === '1';
+  const products = JSON.parse(await fs.readFile('landing/src/data/products.json', 'utf8')).slice(0, process.env.UI_FILTER_CHECK === '1' || specsCheck ? 31 : 6);
+  // Thông số mock lấy đúng từ db/seed_specs.sql (công suất, điện áp, trọng lượng; NULL = chưa có)
+  const seedSpecs = new Map([...(await fs.readFile('db/seed_specs.sql', 'utf8')).matchAll(
+    /cong_suat_w = (\w+), dien_ap_v = (\w+), trong_luong_kg = ([\w.]+),.*WHERE ma_sp = '(\w+)'/g)]
+    .map(([, w, v, kg, id]) => [id, { congSuatW: w === 'NULL' ? null : Number(w), dienApV: v === 'NULL' ? null : Number(v), trongLuongKg: kg === 'NULL' ? null : Number(kg) }]));
+  const specsOf = id => specsCheck ? (seedSpecs.get(id) ?? { congSuatW: null, dienApV: null, trongLuongKg: null }) : {};
+  const inventory = products.map((p, i) => ({ maHang: p.id, tenHang: p.name, soLuong: [4,2,7,10,6,8][i % 6], nguong: [2,3,2,4,0,2][i % 6], model: p.model, danhMuc: p.category, giaBanLe: p.retailPrice, giaXuat: p.retailPrice, anh: p.image.url, ...specsOf(p.id) }));
+  const state = { status: 'ONLINE', statusDetail: 'Đã kết nối', server: 'localhost', maCn: 'CN01', tenCn: 'Chi nhánh Lĩnh Nam', inventory, coThongSo: specsCheck, requests: [], transfers: [], broadcasts: [], notices: [], inbox: [], history: [], historyRange: '', daBao: [], debt: null };
+  const adminProducts = products.map(p => ({ maSp: p.id, ten: p.name, donVi: 'cái', model: p.model, maDm: p.categoryId, tenDm: p.category, giaNhap: Math.round(p.retailPrice * .7), giaXuat: Math.round(p.retailPrice * .85), giaBanLe: p.retailPrice, tonTong: 100, anhUrl: p.image.url, congSuatW: null, dienApV: null, trongLuongKg: null, thongSo: {}, ...specsOf(p.id) }));
+  const GRAPHITE = 'rgb(27, 31, 36)', YELLOW = 'rgb(242, 183, 5)', PAGE_BG = 'rgb(243, 244, 246)';
   const branches = [{ maCn: 'CN01', ten: state.tenCn, diaChi: 'Hà Nội', giaLap: false, ycMo: 0, tinCho: 0, online: true }];
   const warehouse = { maCn: 'CN01', ten: state.tenCn, diaChi: 'Hà Nội', online: true, thieu: 2, sapThieu: 0, du: 3, chuaDat: 1, giaTriTon: 20000000, ycMo: 0, conNo: 1000000, hanMuc: 2000000, vuotHanMuc: false };
   const branchDebt = { maCn: 'CN01', tenCn: state.tenCn, giaLap: false, tongNhan: 2000000, daTra: 1000000, conNo: 1000000, hanMuc: 2000000, trangThai: 'CON_NO' };
@@ -57,7 +64,7 @@ const path = require('node:path');
         let body = ''; for await (const chunk of req) body += chunk;
         const request = JSON.parse(body);
         createdBodies.push(request);
-        const items = request.items.map(line => { const item = inventory.find(i => i.maHang === line.maHang); return { ...line, tenHang: item.tenHang, model: item.model, donVi: 'cái', giaBanLe: item.giaBanLe, thanhTien: item.giaBanLe * line.soLuong }; });
+        const items = request.items.map(line => { const item = inventory.find(i => i.maHang === line.maHang); return { ...line, tenHang: item.tenHang, model: item.model, congSuatW: item.congSuatW ?? null, donVi: 'cái', giaBanLe: item.giaBanLe, thanhTien: item.giaBanLe * line.soLuong }; });
         const order = { id: request.id, customer: request.customer, maCn: 'CN01', tenCn: state.tenCn, status: 'PENDING', createdAt: new Date().toISOString(), total: items.reduce((n, i) => n + i.thanhTien, 0), quantity: items.reduce((n,i) => n + i.soLuong, 0), items };
         orders.set(order.id, order); return send(res, order);
       }
@@ -92,7 +99,7 @@ const path = require('node:path');
           await page.locator('.subbar h1').waitFor();
           await page.screenshot({path: `tools/ui-redesign/${phase}/${route}-${width}.png`, fullPage: true});
           assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false, `${route} ${width}px overflow`);
-          if (phase === 'after') assert.equal(await page.evaluate(() => getComputedStyle(document.body).backgroundColor), 'rgb(245, 247, 250)');
+          if (phase === 'after') assert.equal(await page.evaluate(() => getComputedStyle(document.body).backgroundColor), PAGE_BG);
         }
       }
       console.log(`${phase}: captured admin and branch at 1440, 1024, 768 and 390px; no horizontal overflow.`);
@@ -255,6 +262,99 @@ const path = require('node:path');
       console.log('PASS: browser Back/Forward navigates admin and branch views; refresh restores view; in-app back survives reload; direct-link fallback; cached pages recheck live/expired sessions; pending payment stays on screen; portal switch replaces chooser history; no browser exceptions.');
       return;
     }
+    if (specsCheck) {
+      const bg = selector => page.locator(selector).first().evaluate(el => getComputedStyle(el).backgroundColor);
+      const cards = () => page.locator('.product-card').evaluateAll(els => els.map(el => el.getAttribute('aria-label').split(' ')[0]));
+      const above1500 = inventory.filter(i => i.congSuatW != null && i.congSuatW > 1500).map(i => i.maHang);
+      const noSpecs = inventory.filter(i => i.congSuatW == null).map(i => i.maHang);
+      assert.ok(above1500.length > 3 && noSpecs.length > 0, 'seed_specs.sql phải có cả máy > 1500 W và mặt hàng chưa có công suất');
+      for (const width of [390, 768, 1024, 1440]) {
+        await page.setViewportSize({width, height: 1000});
+        await page.goto(`${baseUrl}/branch/`);
+        await page.locator('.product-card').first().waitFor();
+        assert.equal(await bg('body'), PAGE_BG, `${width}: nền trang sáng`);
+        assert.equal(await bg('.appbar'), GRAPHITE, `${width}: header graphite`);
+        if (width >= 1200) assert.equal(await bg('.app-sidebar'), GRAPHITE, `${width}: sidebar graphite`);
+        else {
+          await page.getByRole('button', {name: 'Mở menu', exact: true}).click();
+          await page.getByRole('dialog').waitFor();
+          assert.equal(await bg('.app-drawer'), GRAPHITE, `${width}: drawer graphite`);
+          await page.keyboard.press('Escape');
+          await page.getByRole('dialog').waitFor({state: 'hidden'});
+        }
+        assert.equal(await bg('.product-card .btn-primary'), YELLOW, `${width}: nút Thêm vào giỏ màu vàng`);
+        const tb22 = page.locator('.product-card[aria-label^="TB22 "]');
+        await tb22.locator('.spec-chip', {hasText: '1100 W'}).waitFor();
+        // phụ kiện không dùng điện: không có chip, không hiện "0 W"
+        assert.equal(await page.locator('.product-card[aria-label^="TB26 "] .spec-chip').count(), 0, `${width}: TB26 không có chip`);
+        const filters = page.getByRole('complementary', {name: 'Bộ lọc sản phẩm'});
+        if (width < 1000) await filters.locator('summary').click();
+        const power = filters.locator('.filter-group').filter({hasText: 'Công suất'});
+        await power.getByRole('radio', {name: /> 1500 W/}).check();
+        await page.waitForFunction(n => document.querySelectorAll('.product-card').length === n, above1500.length);
+        assert.deepEqual((await cards()).sort(), [...above1500].sort(), `${width}: lọc > 1500 W`);
+        await power.getByRole('radio', {name: /Chưa có thông số/}).check();
+        await page.waitForFunction(n => document.querySelectorAll('.product-card').length === n, noSpecs.length);
+        assert.deepEqual((await cards()).sort(), [...noSpecs].sort(), `${width}: lọc Chưa có thông số`);
+        await page.screenshot({path: `tools/ui-redesign/after/specs-${width}.png`, fullPage: true});
+        await power.getByRole('radio', {name: /^Tất cả/}).check();
+        assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false, `${width}: không tràn ngang`);
+      }
+      // chế độ Bảng: cột Công suất sắp xếp được
+      await page.setViewportSize({width: 1440, height: 1000});
+      await page.getByRole('button', {name: 'Xem dạng bảng', exact: true}).click();
+      await page.getByRole('columnheader', {name: /Công suất/}).getByRole('button').click();
+      const firstWatts = await page.locator('.sales-table tbody tr td:nth-child(3)').evaluateAll(els => els.slice(0, 3).map(el => el.innerText.trim()));
+      const sortedWatts = inventory.map(i => i.congSuatW).filter(w => w != null).sort((a, b) => a - b).slice(0, 3).map(w => `${w} W`);
+      assert.deepEqual(firstWatts, sortedWatts, 'bảng sắp xếp công suất tăng dần');
+      // Back/Forward giữa các mục vẫn đúng #view=
+      await page.getByRole('button', {name: 'Xem dạng thẻ', exact: true}).click();
+      await navigate('Đặt ngưỡng');
+      assert.equal(new URL(page.url()).hash, '#view=thresholds');
+      await navigate('Nhật ký');
+      await page.goBack();
+      await page.getByRole('heading', {name: 'Đặt ngưỡng', exact: true}).waitFor();
+      assert.equal(new URL(page.url()).hash, '#view=thresholds');
+      await page.goForward();
+      await page.getByRole('heading', {name: 'Nhật ký hoạt động', exact: true}).waitFor();
+      assert.equal(new URL(page.url()).hash, '#view=activity');
+      // hóa đơn có công suất cạnh model
+      await page.goto(`${baseUrl}/branch/`);
+      await page.locator('.product-card[aria-label^="TB22 "]').getByRole('button', {name: '+ Thêm vào giỏ', exact: true}).click();
+      await page.getByRole('button', {name: /Giỏ hàng/}).first().click();
+      await page.getByRole('button', {name: /Tiến hành thanh toán/}).click();
+      await page.getByRole('button', {name: 'Xác nhận thanh toán', exact: true}).click();
+      await page.locator('.invoice-paper .invoice-line-meta', {hasText: '· 1100 W ·'}).waitFor();
+      assert.equal(await bg('.invoice-header'), GRAPHITE, 'đầu hóa đơn graphite trên màn hình');
+      await page.emulateMedia({media: 'print'});
+      assert.equal(await bg('.invoice-header'), 'rgba(0, 0, 0, 0)', 'bản in không có nền màu');
+      assert.equal(await page.locator('.invoice-line-meta').first().evaluate(el => getComputedStyle(el).color), 'rgb(0, 0, 0)', 'bản in chữ đen');
+      await page.screenshot({path: 'tools/ui-redesign/after/invoice-print.png', fullPage: true});
+      await page.pdf({path: 'tools/ui-redesign/after/invoice-specs.pdf', format: 'A4', printBackground: false, preferCSSPageSize: true});
+      await page.emulateMedia({media: 'screen'});
+      // admin: header/sidebar graphite, cột Công suất và nhóm Thông số kỹ thuật trong form
+      await page.goto(`${baseUrl}/admin/#view=products`);
+      await page.getByRole('heading', {name: 'Hàng hóa & kho tổng', exact: true}).waitFor();
+      assert.equal(await bg('.appbar'), GRAPHITE);
+      assert.equal(await bg('.app-sidebar'), GRAPHITE);
+      await page.getByRole('columnheader', {name: /Công suất/}).waitFor();
+      await page.locator('tbody tr').filter({has: page.locator('td.code', {hasText: 'TB22'})}).getByRole('button', {name: 'Sửa', exact: true}).click();
+      await page.getByLabel('Công suất (W)').fill('0');
+      await page.getByText('Công suất là số nguyên từ 1 đến 100000 W.').waitFor();
+      assert.equal(await page.getByLabel('Công suất (W)').inputValue(), '0', 'lỗi không xóa dữ liệu đang nhập');
+      await page.getByLabel('Công suất (W)').fill('1200');
+      await page.getByRole('button', {name: '+ Thêm thông số', exact: true}).click();
+      await page.getByRole('button', {name: '+ Thêm thông số', exact: true}).click();
+      await page.getByLabel('Tên thông số 1').fill('Áp lực');
+      await page.getByLabel('Giá trị thông số 1').fill('100 bar');
+      await page.getByLabel('Tên thông số 2').fill(' Áp lực ');
+      await page.getByLabel('Giá trị thông số 2').fill('120 bar');
+      await page.getByText('Trùng tên thông số "Áp lực".').waitFor();
+      await page.screenshot({path: 'tools/ui-redesign/after/admin-specs-form.png', fullPage: true});
+      assert.deepEqual(errors, []);
+      console.log('PASS: graphite header/sidebar/drawer, yellow primary button, light page at 390/768/1024/1440; TB22 chip 1100 W; TB26 no chip; power filter > 1500 W and "Chưa có thông số"; table sorts by power; #view= Back/Forward; invoice shows 1100 W, graphite strip on screen and black/white print; admin power column + spec form validation without clearing input; no browser exceptions.');
+      return;
+    }
     if (process.env.UI_HEADER_CHECK === '1') {
       for (const width of [1440, 390]) {
         await page.setViewportSize({width, height: 1000});
@@ -283,7 +383,7 @@ const path = require('node:path');
     await page.goto(`${baseUrl}/branch/`);
     await page.locator('.product-card').first().waitFor();
     assert.equal(await page.locator('.product-card').count(), 6);
-    assert.equal(await page.evaluate(() => getComputedStyle(document.body).backgroundColor), 'rgb(245, 247, 250)');
+    assert.equal(await page.evaluate(() => getComputedStyle(document.body).backgroundColor), PAGE_BG);
     await page.getByRole('searchbox', {name: 'Tìm mặt hàng'}).fill('TB02');
     assert.equal(await page.locator('.product-card').count(), 1);
     await page.getByRole('searchbox', {name: 'Tìm mặt hàng'}).fill('nothing_matches');
@@ -296,7 +396,7 @@ const path = require('node:path');
     assert.equal(await page.locator('tbody tr').count(), 6);
     await page.getByRole('button', {name: 'Xem dạng thẻ', exact: true}).click();
     await page.getByRole('button', {name: 'Thu gọn menu', exact: true}).click();
-    assert.equal(await page.locator('.app-sidebar').evaluate(el => el.getBoundingClientRect().width), 80);
+    assert.equal(await page.locator('.app-sidebar').evaluate(el => el.getBoundingClientRect().width), 76);
     await page.getByRole('button', {name: 'Mở rộng menu', exact: true}).click();
     assert.equal(await page.getByRole('columnheader', { name: /Ngưỡng tối thiểu/ }).count(), 0);
     assert.equal(await page.getByRole('button', { name: /Giỏ hàng/ }).count(), 1);

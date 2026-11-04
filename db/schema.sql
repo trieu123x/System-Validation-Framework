@@ -34,7 +34,12 @@ CREATE TABLE san_pham (
     gia_xuat    NUMERIC(15,0) NOT NULL DEFAULT 0 CHECK (gia_xuat >= 0),
     gia_ban_le  NUMERIC(15,0) NOT NULL DEFAULT 0 CHECK (gia_ban_le >= 0),
     -- ảnh tượng trưng trên Cloudinary (scripts/images/upload_images.py); NULL = hiện icon danh mục
-    anh_url     VARCHAR(255)
+    anh_url     VARCHAR(255),
+    -- thông số kỹ thuật (db/seed_specs.sql); NULL = chưa có. thong_so: tối đa 10 cặp tự do, chỉ admin/hóa đơn dùng
+    cong_suat_w    INTEGER      CHECK (cong_suat_w BETWEEN 1 AND 100000),
+    dien_ap_v      INTEGER      CHECK (dien_ap_v BETWEEN 1 AND 1000),
+    trong_luong_kg NUMERIC(7,1) CHECK (trong_luong_kg > 0),
+    thong_so       JSONB        NOT NULL DEFAULT '{}'::jsonb
 );
 
 CREATE TABLE nha_cung_cap (
