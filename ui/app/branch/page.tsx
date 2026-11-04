@@ -9,7 +9,7 @@ import type {
   BranchDebtInfo, BranchItem, BranchRequest, BranchSnapshot, BranchTransfer, ClientSecurityInfo, InboxItem, Notice,
 } from "@/lib/types";
 import {
-  Badge, Card, Dot, Empty, FilterBar, LoadingWorkspace, Shell, Stat, StateBadge, stockLevel,
+  Badge, Card, Dot, Empty, FilterBar, LoadingWorkspace, Shell, Stat, StateBadge,
   ProductImage, Toasts, useAction, useToasts,
 } from "@/components/ui";
 import { LoginScreen } from "@/components/Login";
@@ -131,7 +131,6 @@ export default function BranchPage() {
   const online = s.status === "ONLINE";
   const actionable = s.requests.filter((r) => ["DA_DE_XUAT", "THIEU_HANG", "DA_GIAO"].includes(r.trangThai)).length;
   const pendingTransfers = s.transfers.filter((t) => t.trangThai === "CHO").length;
-  const low = s.inventory.filter((i) => stockLevel(i.soLuong, i.nguong) === "critical").length;
   const unread = (s.inbox ?? []).filter((n) => n.trangThai === "DA_GUI").length;
   const overLimit = !!s.debt && s.debt.conNo > s.debt.hanMuc;
   const sec = s.security;
@@ -152,7 +151,7 @@ export default function BranchPage() {
         back={!["stock", "cart", "invoices"].includes(tab) ? { label: "Quay lại", onClick: goBack } : undefined}
         title={TITLES[tab]}
         nav={[
-          { id: "stock", label: "Bán hàng", count: low, tone: "danger" },
+          { id: "stock", label: "Bán hàng", highlight: false },
           { id: "invoices", label: "Hóa đơn" },
           { id: "thresholds", label: "Đặt ngưỡng" },
           { id: "offers", label: "Nhận hàng", count: actionable, tone: "warn" },
@@ -203,7 +202,7 @@ export default function BranchPage() {
         {tab === "cart" && <Checkout cart={cart} setCart={setCart} items={s.inventory} online={online} push={push} branch={s.maCn} onShop={() => navigate("stock")} onBusyChange={setCheckoutBusy} />}
         {tab === "invoices" && <InvoiceHistory online={online} push={push} onBack={goBack} />}
         {tab === "thresholds" && <Thresholds items={s.inventory} online={online} push={push} />}
-        {tab === "offers" && <Offers requests={s.requests} items={s.inventory} online={online} push={push} />}
+        {tab === "offers" && <Offers requests={s.requests} items={s.inventory} online={online} canRejectDelivered={s.canRejectDelivered === true} push={push} />}
         {tab === "transfers" && <TransferList transfers={s.transfers} online={online} push={push} />}
         {tab === "debt" && <Debt debt={s.debt} />}
         {tab === "news" && <News items={s.broadcasts} inbox={s.inbox ?? []} inventory={s.inventory} online={online} push={push} />}
@@ -273,7 +272,7 @@ function Login() {
         <label className="field">Mật khẩu
           <input type="password" value={matKhau} onChange={(e) => setMatKhau(e.target.value)} autoFocus={!!fixedBranchId} required />
         </label>
-        {error && <p className="error">{error}</p>}
+        {error && <p className="error" role="alert">{error}</p>}
         <button className="btn btn-primary" disabled={busy}>{busy ? "Đang đăng nhập..." : "Đăng nhập"}</button>
         <button type="button" className="btn" onClick={() => setForgot(true)}>Quên mật khẩu?</button>
       </form>}
@@ -343,8 +342,8 @@ function Debt({ debt }: { debt: BranchDebtInfo | null }) {
   );
 }
 
-function Offers({ requests, items, online, push }: {
-  requests: BranchRequest[]; items: BranchItem[]; online: boolean; push: Push;
+function Offers({ requests, items, online, canRejectDelivered, push }: {
+  requests: BranchRequest[]; items: BranchItem[]; online: boolean; canRejectDelivered: boolean; push: Push;
 }) {
   const [q, setQ] = useState("");
   const [state, setState] = useState("");
@@ -374,13 +373,13 @@ function Offers({ requests, items, online, push }: {
       <div className="grid">
         <Card title={<>Hàng về và đề xuất cần xử lý <span className="muted">· {open.length} yêu cầu</span></>}>
           {open.length === 0 ? <Empty>{filtering ? "Không có yêu cầu nào khớp bộ lọc." : "Không có đề xuất nào đang chờ."}</Empty> : (
-            <div className="table-wrap">
+            <div className="table-wrap receiving-table">
               <table>
                 <thead>
-                  <tr><th>Mã YC</th><th>Mặt hàng</th><th>Trạng thái</th><th>Nội dung</th><th className="num">Số lượng nhận</th><th /></tr>
+                  <tr><th>Mã YC</th><th>Mặt hàng</th><th>Trạng thái</th><th>Nội dung</th><th className="num">Số lượng nhận</th><th>Thao tác</th></tr>
                 </thead>
                 <tbody>
-                  {open.map((r) => <OfferRow key={r.maYc} r={r} name={name(r.maHang)} online={online} push={push} />)}
+                  {open.map((r) => <OfferRow key={r.maYc} r={r} name={name(r.maHang)} online={online} canRejectDelivered={canRejectDelivered} push={push} />)}
                 </tbody>
               </table>
             </div>
@@ -413,7 +412,7 @@ function Offers({ requests, items, online, push }: {
   );
 }
 
-function OfferRow({ r, name, online, push }: { r: BranchRequest; name: string; online: boolean; push: Push }) {
+function OfferRow({ r, name, online, canRejectDelivered, push }: { r: BranchRequest; name: string; online: boolean; canRejectDelivered: boolean; push: Push }) {
   const initial = r.trangThai === "DA_GIAO" ? "" : r.trangThai === "THIEU_HANG" ? r.soLuongCoThe : r.soLuongDeXuat;
   const [qty, setQty] = useState(String(initial ?? ""));
   const { run, busy } = useAction(push);
@@ -441,7 +440,7 @@ function OfferRow({ r, name, online, push }: { r: BranchRequest; name: string; o
         {r.trangThai === "DA_DE_XUAT" && <>Công ty đề xuất cấp <b>{fmtNumber(r.soLuongDeXuat)}</b>. Đồng ý, sửa số lượng hoặc từ chối.</>}
         {r.trangThai === "THIEU_HANG" && <>Công ty báo không đủ hàng, kho tổng chỉ còn <b>{fmtNumber(r.soLuongCoThe)}</b>.
           Nhận số đó, chờ điều chuyển từ chi nhánh khác, hoặc từ chối.</>}
-        {r.trangThai === "DA_GIAO" && <>Công ty đã gửi <b>{fmtNumber(r.soLuongGiao)}</b>. Nhập số thực tế đã kiểm đếm (kể cả 0 nếu thiếu toàn bộ).</>}
+        {r.trangThai === "DA_GIAO" && <>Đã gửi <b>{fmtNumber(r.soLuongGiao)}</b> sản phẩm.</>}
         <div className="muted" style={{ fontSize: 12 }}>{r.capNhat}</div>
       </td>
       {r.trangThai === "DA_GIAO" ? (
@@ -453,19 +452,21 @@ function OfferRow({ r, name, online, push }: { r: BranchRequest; name: string; o
               {delta === 0 ? "Đủ hàng" : `${delta > 0 ? "Thừa" : "Thiếu"} ${Math.abs(delta)} — sẽ báo công ty`}
             </div>}
           </td>
-          <td className="right nowrap"><button className="btn btn-sm btn-success" disabled={off || !validReceipt} onClick={received}>Xác nhận thực nhận</button></td>
+          <td className="right"><div className="receiving-actions"><button className="btn btn-sm btn-success" disabled={off || !validReceipt} onClick={received}>Đồng ý nhận hàng</button><button className="btn btn-sm btn-danger" disabled={off || !canRejectDelivered} title={!canRejectDelivered ? "Mở lại ứng dụng chi nhánh bằng bản mới để từ chối hàng đã gửi" : undefined} onClick={() => {
+            if (window.confirm(`Từ chối toàn bộ hàng của YC #${r.maYc}? Hàng sẽ được hoàn về nơi gửi.`)) void reject();
+          }}>Từ chối</button></div></td>
         </>
       ) : (
         <>
           <td className="num">
             <input type="number" min={1} value={qty} style={{ height: 26 }} onChange={(e) => setQty(e.target.value)} aria-label="Số lượng nhận" />
           </td>
-          <td className="right nowrap">
+          <td className="right"><div className="receiving-actions">
             <button className="btn btn-sm btn-primary" disabled={off || !(n > 0)} onClick={accept}>
               {n === r.soLuongDeXuat ? "Đồng ý" : "Đồng ý số này"}
             </button>{" "}
             <button className="btn btn-sm btn-danger" disabled={off} onClick={reject}>Từ chối</button>
-          </td>
+          </div></td>
         </>
       )}
     </tr>

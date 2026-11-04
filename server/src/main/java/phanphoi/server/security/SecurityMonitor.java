@@ -70,6 +70,7 @@ public final class SecurityMonitor {
     private final phanphoi.common.security.ScrapingGuard scraping;
     public phanphoi.common.security.ScrapingGuard scraping() { return scraping; }
     private final BanList bans = new BanList();
+    private final phanphoi.common.web.LoginAttempts branchLogins;
     private final Map<String, IpStats> ips = new ConcurrentHashMap<>();
     /** maCn → (ip → lần đăng nhập sai cuối) cho CRED_STUFFING. */
     private final Map<String, Map<String, Long>> failsByBranch = new ConcurrentHashMap<>();
@@ -89,6 +90,7 @@ public final class SecurityMonitor {
 
     public SecurityMonitor(SecurityRules rules, Supplier<Mode> mode, EventSink sink) {
         this.rules = rules;
+        this.branchLogins = new phanphoi.common.web.LoginAttempts(rules.loginFailMax, rules.loginFailWindowSec, rules.loginBlockSeconds);
         this.scraping = new phanphoi.common.security.ScrapingGuard(rules.scraping);
         this.mode = mode;
         this.sink = sink;
@@ -268,10 +270,13 @@ public final class SecurityMonitor {
         }
     }
 
-    /**
-     * LOGIN_FAIL: BRUTE_FORCE theo IP, CRED_STUFFING theo mã chi nhánh.
-     * @return true nếu IP vừa bị chặn (đóng kết nối này).
-     */
+    public phanphoi.common.web.LoginAttempts branchLogins() { return branchLogins; }
+
+    public int branchLoginRetryAfter(String ip, String branch, long now) {
+        return blocking() ? branchLogins.retryAfter(ip, branch, now) : 0;
+    }
+
+    /** LOGIN_FAIL limits only this IP + branch, including on shared gateways. */
     public boolean onLoginFail(String ip, String maCn, long now) {
         if (off()) {
             return false;
@@ -279,7 +284,8 @@ public final class SecurityMonitor {
         IpStats s = ip(ip, now);
         s.loginFail.add(now);
         long n = s.loginFail.sum(now, rules.loginFailWindowSec);
-        String cn = maCn == null ? "" : maCn.length() > 10 ? maCn.substring(0, 10) : maCn;
+        String key = maCn == null ? "" : maCn;
+        String cn = key.length() > 10 ? key.substring(0, 10) : key;
         // CRED_STUFFING: một mã chi nhánh đăng nhập sai từ nhiều IP
         if (!cn.isEmpty() && failsByBranch.size() < MAX_TRACKED) {
             Map<String, Long> byIp = failsByBranch.computeIfAbsent(cn, k -> new ConcurrentHashMap<>());
@@ -294,17 +300,18 @@ public final class SecurityMonitor {
                         + " IP: " + byIp.keySet().stream().sorted().limit(10).toList(), GHI_NHAN);
             }
         }
-        if (n < rules.loginFailMax) {
+        int retry = branchLogins.retryAfter(ip, key, now);
+        if (retry == 0) retry = branchLogins.failed(ip, key, now);
+        if (retry == 0) {
             return false;
         }
         String detail = n + " lan LOGIN_FAIL trong " + rules.loginFailWindowSec + " s, ma thu gan nhat " + cn;
-        if (blocking() && !hasValidSession(ip)) {
-            long u = ban(ip, rules.banMinutes, now);
-            emit(ip, now, SERVER, "BRUTE_FORCE", HIGH, ip, cn, detail + "; chan den " + hhmm(u), CHAN_IP);
+        if (blocking()) {
+            emit(ip + "|" + key, now, SERVER, "BRUTE_FORCE", HIGH, ip, cn,
+                    "Khoa dang nhap IP + chi nhanh " + cn + " trong " + retry + " giay", KHOA_TK);
             return true;
         }
-        emit(ip, now, SERVER, "BRUTE_FORCE", HIGH, ip, cn,
-                detail + (hasValidSession(ip) ? "; IP co phien hop le nen khong chan" : ""), GHI_NHAN);
+        emit(ip + "|" + key, now, SERVER, "BRUTE_FORCE", HIGH, ip, cn, detail, GHI_NHAN);
         return false;
     }
 

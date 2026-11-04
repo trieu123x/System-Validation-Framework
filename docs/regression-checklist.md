@@ -2,6 +2,10 @@
 
 Ngày: 04/11/2026. Phạm vi: frontend admin và chi nhánh, trên mốc nguồn `92614b3`.
 
+Bổ sung sau đợt UI: [Nhận hoặc từ chối hàng đã gửi](receiving-refusal.md). Đợt bổ sung này có thay đổi Java/giao thức và loại bút toán hoàn hàng; kết quả PostgreSQL và yêu cầu cập nhật cả công ty/chi nhánh được ghi riêng trong tài liệu đó.
+
+Bổ sung đăng nhập: [Khóa IP + chi nhánh](login-ip-block.md). Đã kiểm tra ClientMain thật với TCP giả: CN06 sai 5 lần bị khóa 60 giây, thay cookie không vượt khóa, CN04 cùng IP vẫn đăng nhập được và phiên cũ được giữ. Đồng hồ giả kiểm tra tự mở sau 60 giây; PostgreSQL riêng kiểm tra mã/tên/email cùng chi nhánh dùng chung khóa. Menu Bán hàng đã bỏ nền active và badge đỏ, vẫn giữ nhãn truy cập `aria-current`.
+
 ## Kết quả
 
 | Kịch bản | Kết quả và bằng chứng |
@@ -22,6 +26,7 @@ Ngày: 04/11/2026. Phạm vi: frontend admin và chi nhánh, trên mốc nguồn
 | 20 mục theo role | 10 mục admin + 10 mục chi nhánh, mỗi mục tại 1440/1024/768/390px; 80 screenshot trong `tools/ui-redesign/screens/`; không tràn ngang toàn trang |
 | Lỗi đọc dữ liệu | Giả lập 503 `/api/products`: banner rõ ràng, Thử tải lại khôi phục; không xóa state ghi của người dùng |
 | Guard đăng nhập | Fixture `loggedIn:false` hiển thị form đăng nhập, không hiển thị workspace; chụp desktop/mobile |
+| Sai mật khẩu | Chi nhánh/admin trả 401 khi đăng nhập sai: giữ form và giá trị, hiện lỗi, không tải lại document; thử lại gửi đúng một request/lần; nhập đúng vẫn vào workspace; 401 từ thao tác được bảo vệ vẫn đưa phiên hết hạn về đăng nhập |
 | Lịch sử trình duyệt | Back/Forward giữa các mục admin và chi nhánh; refresh giữ mục, nút Quay lại sau refresh, liên kết trực tiếp quay về mục gốc; chuyển cổng thay thế trang chọn đăng nhập trong lịch sử |
 | Phục hồi trang / thanh toán | Giả lập `pageshow.persisted` kiểm tra phiên còn/hết hạn trước khi mở workspace; Back giữa các mục khi confirm đang chờ vẫn giữ màn hình thanh toán; không có browser exception |
 | JavaScript | Không phát hiện page exception trong toàn bộ kịch bản |
@@ -44,6 +49,9 @@ Remove-Item Env:UI_NAVIGATION_CHECK
 $env:UI_FILTER_CHECK = '1'
 node scripts/ui-redesign-smoke.cjs
 Remove-Item Env:UI_FILTER_CHECK
+$env:UI_LOGIN_CHECK = '1'
+node scripts/ui-redesign-smoke.cjs
+Remove-Item Env:UI_LOGIN_CHECK
 ```
 
 Nếu Edge ở vị trí khác, đặt biến `EDGE_EXECUTABLE` trỏ tới executable. Script tự mở cổng localhost trống, phục vụ `ui/out` cùng HTTP fixture, kiểm thử qua browser rồi đóng browser/server. Không đăng nhập hoặc ghi vào hệ thống thật. Playwright và ảnh kiểm tra ở `tools/`, không thêm dependency vào frontend production.

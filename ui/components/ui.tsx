@@ -63,7 +63,7 @@ export function Stat({ label, value, tone, hint, onClick }: {
   return onClick ? <button type="button" className={cls} onClick={onClick}>{body}</button> : <div className={cls}>{body}</div>;
 }
 
-type NavItem<T extends string> = { id: T; label: string; count?: number; tone?: string };
+type NavItem<T extends string> = { id: T; label: string; count?: number; tone?: string; highlight?: boolean };
 export type BackAction = { label: string; onClick: () => void };
 
 /** Workspace nội bộ: sidebar desktop thu gọn; drawer cho tablet và điện thoại. */
@@ -87,7 +87,7 @@ export function Shell<T extends string>({ brand, sub, nav, value, onChange, stat
   }, []);
   const notification = nav.find((item) => item.id === notificationId);
   const links = nav.filter((item) => item.id !== notificationId).map((n) => (
-    <button type="button" key={n.id} className={n.id === value ? "active" : ""} disabled={navigationDisabled} title={n.label}
+    <button type="button" key={n.id} className={n.id === value && n.highlight !== false ? "active" : ""} disabled={navigationDisabled} title={n.label}
       aria-label={n.count ? `${n.label} (${n.count})` : n.label}
       aria-current={n.id === value ? "page" : undefined} onClick={() => { onChange(n.id); drawer.current?.close(); }}>
       {menu && <NavigationIcon name={n.id} />}

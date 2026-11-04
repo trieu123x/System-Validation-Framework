@@ -70,6 +70,8 @@ public final class ClientMain {
         var scraping = new phanphoi.common.security.ScrapingGuard(phanphoi.common.security.ScrapingPolicy.from(cfg));
         boolean allowOverride = cfg.getBool("http.allow.server.override", false);
         Object loginLock = new Object();
+        var loginAttempts = new phanphoi.common.web.LoginAttempts(cfg.getInt("security.login.fail.max", 5),
+                cfg.getInt("security.login.fail.window.seconds", 60), cfg.getInt("security.login.block.seconds", 60));
         HttpServer http = HttpServer.create(new InetSocketAddress(host, port), 50);
         http.setExecutor(Executors.newCachedThreadPool(r -> {
             Thread th = new Thread(r, "branch-http"); th.setDaemon(true); return th;
@@ -156,6 +158,7 @@ public final class ClientMain {
                 String login = Http.str(body, "maCn").trim();
                 String hint = Http.str(body, "branchHint").trim();
                 if (!hint.isBlank()) login = login + "#" + hint.toUpperCase(java.util.Locale.ROOT);
+                String branchKey = !fixedBranchId.isEmpty() ? fixedBranchId : !hint.isBlank() ? hint : login;
                 BranchAgent agent = new BranchAgent(serverSetting, defaultPort, discoveryPort,
                         ReconnectPolicy.parse(cfg.get("reconnect.strategy", "jitter"),
                                 cfg.getInt("reconnect.base.ms", 500), cfg.getInt("reconnect.cap.ms", 5000)),
@@ -163,6 +166,7 @@ public final class ClientMain {
                 agent.start();
                 synchronized (loginLock) {
                     try {
+                        loginAttempts.check(clientIp, branchKey);
                         var snapshot = agent.login(login, Http.str(body, "matKhau"), chosenServer);
                         // Enforce on the server-side; a read-only input alone is not security.
                         // So sánh chi nhánh thật sau đăng nhập vì có thể đăng nhập bằng email.
@@ -171,10 +175,25 @@ public final class ClientMain {
                         }
                         String issued = browserSessions.issue(ex, System.currentTimeMillis(), agent.branchIdentity());
                         live.put(issued, new Session(agent, routes(agent, browserSessions)));
+                        loginAttempts.succeeded(clientIp, branchKey);
                         Http.ok(ex, snapshot);
                     } catch (Exception e) {
                         agent.stop();
-                        if (e instanceof Http.ApiException apiError) Http.error(ex, apiError.status(), apiError.getMessage());
+                        if (e instanceof Http.ApiException apiError) {
+                            int blocked = loginAttempts.retryAfter(clientIp, branchKey);
+                            if (apiError.status() == 401 && phanphoi.common.Protocol.LOGIN_FAIL_WRONG.equals(apiError.getMessage())) {
+                                blocked = loginAttempts.failed(clientIp, branchKey);
+                                if (blocked > 0) System.err.println("[SECURITY] BRANCH_LOGIN_IP_BLOCK | IP=" + safeLog(clientIp) + " | branch=" + safeLog(branchKey) + " | retry=" + blocked);
+                            }
+                            if (blocked > 0) {
+                                ex.getResponseHeaders().set("Retry-After", Integer.toString(blocked));
+                                Http.error(ex, 429, phanphoi.common.web.LoginAttempts.blocked(blocked).getMessage());
+                            } else {
+                                if (apiError instanceof BranchAgent.LoginBlocked blockedLogin)
+                                    ex.getResponseHeaders().set("Retry-After", Integer.toString(blockedLogin.seconds));
+                                Http.error(ex, apiError.status(), apiError.getMessage());
+                            }
+                        }
                         else Http.error(ex, 503, "Dang nhap that bai");
                     }
                 }

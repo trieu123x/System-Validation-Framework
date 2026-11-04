@@ -83,17 +83,20 @@ class SecurityRulesTest {
     // ---------- BRUTE_FORCE, CRED_STUFFING ----------
 
     @Test
-    void bruteForceBansAtThresholdInBlock() {
+    void bruteForceBlocksOnlyTheIpAndBranchForSixtySeconds() {
         for (int i = 0; i < 4; i++) {
             assertFalse(m.onLoginFail(EVIL, "CN01", T0 + i * 1000));
         }
         assertTrue(of("BRUTE_FORCE").isEmpty());
         assertTrue(m.onLoginFail(EVIL, "CN01", T0 + 5000));
-        assertEquals(SecurityEvent.CHAN_IP, of("BRUTE_FORCE").get(0).hanhDong());
+        assertEquals(SecurityEvent.KHOA_TK, of("BRUTE_FORCE").get(0).hanhDong());
         assertEquals(SecurityEvent.HIGH, of("BRUTE_FORCE").get(0).muc());
         String deny = m.onAccept(EVIL, T0 + 6000);
-        assertNotNull(deny);
-        assertTrue(deny.startsWith("IP bi chan den"));
+        assertNull(deny, "Other branches sharing this IP can still connect");
+        assertEquals(60, m.branchLoginRetryAfter(EVIL, "CN01", T0 + 5000));
+        assertEquals(0, m.branchLoginRetryAfter(EVIL, "CN02", T0 + 5000));
+        assertEquals(0, m.branchLoginRetryAfter("192.0.2.1", "CN01", T0 + 5000));
+        assertEquals(0, m.branchLoginRetryAfter(EVIL, "CN01", T0 + 65_000));
     }
 
     @Test
@@ -105,6 +108,18 @@ class SecurityRulesTest {
         assertEquals(1, of("BRUTE_FORCE").size());
         assertEquals(SecurityEvent.GHI_NHAN, of("BRUTE_FORCE").get(0).hanhDong());
         assertNull(m.onAccept(EVIL, T0 + 6000));
+    }
+
+    @Test void differentBranchesDoNotShareFailureCountAndOtherSuccessDoesNotUnlock() {
+        for (int i = 0; i < 4; i++) assertFalse(m.onLoginFail(EVIL, "CN06", T0 + i));
+        assertFalse(m.onLoginFail(EVIL, "CN04", T0 + 4));
+        assertEquals(0, m.branchLoginRetryAfter(EVIL, "CN04", T0 + 4));
+        assertTrue(m.onLoginFail(EVIL, "CN06", T0 + 5));
+        m.branchLogins().succeeded(EVIL, "CN04");
+        assertEquals(60, m.branchLoginRetryAfter(EVIL, "cn06", T0 + 5));
+        assertEquals(1, m.branchLoginRetryAfter(EVIL, "CN06", T0 + 59_005));
+        assertEquals(0, m.branchLoginRetryAfter(EVIL, "CN06", T0 + 60_005));
+        assertNull(m.onAccept(EVIL, T0 + 60_006));
     }
 
     @Test
@@ -134,20 +149,21 @@ class SecurityRulesTest {
         SessionStats a = open(nat, T0);
         m.onLogin(a, nat, T0);
         for (int i = 0; i < 5; i++) {
-            assertFalse(m.onLoginFail(nat, "CN02", T0 + i));
+            assertEquals(i == 4, m.onLoginFail(nat, "CN02", T0 + i));
         }
         for (int i = 0; i < 10; i++) {
             assertFalse(m.onMalformed(nat, null, "rac", T0 + i));
         }
         assertFalse(m.bans().isBanned(nat, T0 + 100));
-        assertEquals(SecurityEvent.GHI_NHAN, of("BRUTE_FORCE").get(0).hanhDong());
-        assertTrue(of("BRUTE_FORCE").get(0).chiTiet().contains("phien hop le"));
-        // phiên đăng xuất thì IP không còn được miễn
+        assertEquals(SecurityEvent.KHOA_TK, of("BRUTE_FORCE").get(0).hanhDong());
+        assertEquals(60, m.branchLoginRetryAfter(nat, "CN02", T0 + 4));
+        assertEquals(0, m.branchLoginRetryAfter(nat, "CN03", T0 + 4));
+        // Closing another session does not broaden a branch lock into an IP ban.
         m.onClose(a, nat);
         for (int i = 0; i < 5; i++) {
             m.onLoginFail(nat, "CN02", T0 + 20_000 + i);
         }
-        assertTrue(m.bans().isBanned(nat, T0 + 20_010));
+        assertFalse(m.bans().isBanned(nat, T0 + 20_010));
     }
 
     @Test

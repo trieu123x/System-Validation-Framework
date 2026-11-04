@@ -202,6 +202,7 @@ export type BranchTransfer = {
 type HistoryRow = { maYc: string; maHang: string; tenHang: string; soLuong: number; soLuongNhan: number | null; thoiGian: string; nguon: string };
 
 export type BranchSnapshot = {
+  canRejectDelivered?: boolean;
   status: "DISCONNECTED" | "CONNECTING" | "CONNECTED" | "ONLINE";
   statusDetail: string;
   server: string;

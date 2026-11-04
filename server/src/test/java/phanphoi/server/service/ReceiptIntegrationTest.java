@@ -185,6 +185,86 @@ class ReceiptIntegrationTest {
         assertEquals(3, quantity());
     }
 
+    @Test void rejectShippedGoodsRestoresCentralOnceAndPreservesVoucher() throws Exception {
+        Message ack = requests.reject("CN01", 1);
+        assertEquals(Command.REJECT_RESULT, ack.command());
+        assertEquals("OK", ack.param(1));
+        assertEquals(ack, requests.reject("CN01", 1));
+        assertEquals(110, (int) db.read(c -> Db.one(c, "SELECT so_luong FROM kho_tong WHERE ma_sp='SP01'", r -> r.getInt(1))));
+        assertEquals(3, quantity());
+        assertEquals(0, (int) db.read(c -> Db.one(c, "SELECT count(*) FROM cong_no_cn", r -> r.getInt(1))));
+        assertEquals(10, (int) db.read(c -> Db.one(c, "SELECT so_luong FROM phieu_xuat WHERE ma_yc=1", r -> r.getInt(1))));
+        assertTrue(stock.historyMessage("CN01", "", "").listParam(0).isEmpty());
+        assertTrue((Boolean) stock.reconcile().get("khop"));
+        assertTrue(requests.resync("CN01").contains(ack));
+        assertEquals(ErrorCode.E03, assertThrows(ServiceException.class, () -> requests.received("CN01", 1, 10)).code());
+    }
+
+    @Test void loginLimitUsesSameCanonicalBranchForCodeNameAndEmail() throws Exception {
+        db.read(c -> Db.update(c, "UPDATE chi_nhanh SET email='branch@example.test' WHERE ma_cn='CN01'"));
+        var auth = new AuthService(db);
+        assertEquals("CN01", auth.loginKey(" CN01 "));
+        assertEquals("CN01", auth.loginKey("cn01"));
+        assertEquals("CN01", auth.loginKey("TEST"));
+        assertEquals("CN01", auth.loginKey("BRANCH@example.test"));
+        assertEquals("CN01", auth.loginKey("branch@example.test#cn01"));
+        assertNull(auth.verify("CN01", "wrong-password"));
+        var monitor = new phanphoi.server.security.SecurityMonitor(
+                new phanphoi.server.security.SecurityRules(phanphoi.common.Config.load("missing-login-test.properties", new String[0])),
+                () -> phanphoi.server.security.SecurityRules.Mode.BLOCK, event -> {});
+        long now = System.currentTimeMillis();
+        for (var input : java.util.List.of("CN01", "cn01", "Test", "branch@example.test", "branch@example.test#CN01"))
+            monitor.onLoginFail("192.0.2.1", auth.loginKey(input), now);
+        assertEquals(60, monitor.branchLoginRetryAfter("192.0.2.1", auth.loginKey("Test"), now));
+        assertEquals(0, monitor.branchLoginRetryAfter("192.0.2.1", auth.loginKey("CN02"), now));
+    }
+
+    @Test void rejectCannotUndoReceivedGoodsOrAnotherBranch() throws Exception {
+        assertEquals(ErrorCode.E04, assertThrows(ServiceException.class, () -> requests.reject("CN02", 1)).code());
+        requests.received("CN01", 1, 10);
+        assertEquals(ErrorCode.E03, assertThrows(ServiceException.class, () -> requests.reject("CN01", 1)).code());
+        assertEquals(13, quantity());
+    }
+
+    @Test void concurrentRejectionsAndReceiptCannotBothSucceed() throws Exception {
+        var executor = Executors.newFixedThreadPool(2);
+        try {
+            var a = executor.submit(() -> { try { requests.reject("CN01", 1); return "reject"; } catch (ServiceException e) { return "error"; } });
+            var b = executor.submit(() -> { try { requests.received("CN01", 1, 10); return "receive"; } catch (ServiceException e) { return "error"; } });
+            String first = a.get(10, TimeUnit.SECONDS), second = b.get(10, TimeUnit.SECONDS);
+            assertTrue(first.equals("error") ^ second.equals("error"));
+            boolean rejected = first.equals("reject");
+            assertEquals(rejected ? 3 : 13, quantity());
+            assertEquals(rejected ? 110 : 100, (int) db.read(c -> Db.one(c, "SELECT so_luong FROM kho_tong WHERE ma_sp='SP01'", r -> r.getInt(1))));
+        } finally { executor.shutdownNow(); }
+    }
+
+    @Test void rejectTransferredGoodsReturnsSourceStockAndReversesOriginalDebt() throws Exception {
+        db.tx(c -> {
+            Db.update(c, "DELETE FROM phieu_xuat WHERE ma_yc=1");
+            Db.update(c, "INSERT INTO kho_chi_nhanh (ma_cn,ma_sp,so_luong) VALUES ('CN02','SP01',20)");
+            Db.update(c, "INSERT INTO dieu_chuyen (ma_dc,ma_yc,tu_cn,den_cn,ma_sp,so_luong,don_gia,trang_thai) VALUES (1,1,'CN02','CN01','SP01',10,100,'HOAN_TAT')");
+            DebtService.recordTransfer(c, 1);
+            Db.update(c, "UPDATE san_pham SET gia_xuat=999 WHERE ma_sp='SP01'");
+            return null;
+        });
+        requests.reject("CN01", 1);
+        requests.reject("CN01", 1);
+        assertEquals(30, (int) db.read(c -> Db.one(c, "SELECT so_luong FROM kho_chi_nhanh WHERE ma_cn='CN02'", r -> r.getInt(1))));
+        assertEquals(3, quantity());
+        assertEquals(4, (int) db.read(c -> Db.one(c, "SELECT count(*) FROM cong_no_cn", r -> r.getInt(1))));
+        var debt = new DebtService(db, new SessionRegistry(new Events()), new Events());
+        assertTrue(debt.branchSummary("", true).stream().allMatch(row -> ((Number) row.get("conNo")).doubleValue() == 0));
+        assertTrue((Boolean) stock.reconcile().get("khop"));
+    }
+
+    @Test void failedReturnRollsBackRejection() throws Exception {
+        db.read(c -> Db.update(c, "UPDATE kho_tong SET so_luong=2147483647"));
+        assertThrows(SQLException.class, () -> requests.reject("CN01", 1));
+        assertEquals("DA_GIAO", requests.search("CN01", "", "", "", "", false).get(0).get("trangThai"));
+        assertEquals(3, quantity());
+    }
+
     @Test
     void concurrentRetriesCreditOnlyOnce() throws Exception {
         var executor = Executors.newFixedThreadPool(2);

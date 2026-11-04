@@ -256,7 +256,16 @@ public final class ClientHandler {
             }
             case LOW_STOCK -> ctx.requests().lowStock(cn, m.param(0).trim(), m.intParam(1), m.intParam(2));
             case ACCEPT -> ctx.requests().accept(cn, m.intParam(0), m.intParam(1)).forEach(this::send);
-            case REJECT -> ctx.requests().reject(cn, m.intParam(0));
+            case REJECT -> {
+                int requestId = m.intParam(0);
+                try {
+                    send(ctx.requests().reject(cn, requestId));
+                } catch (ServiceException e) {
+                    send(Message.of(Command.REJECT_RESULT, requestId, "ERROR", e.getMessage()));
+                } catch (SQLException e) {
+                    send(Message.of(Command.REJECT_RESULT, requestId, "ERROR", "Chưa xử lý được yêu cầu. Vui lòng thử lại."));
+                }
+            }
             case RECEIVED -> {
                 send(ctx.requests().received(cn, m.intParam(0), m.intParam(1)));
                 send(ctx.stock().inventoryMessage(cn));
@@ -295,18 +304,25 @@ public final class ClientHandler {
         if (maCn != null) {
             throw new ServiceException(ErrorCode.E03, "Da dang nhap voi ma " + maCn);
         }
-        var branch = ctx.auth().verify(id, password);
+        phanphoi.server.service.AuthService.Branch branch;
+        // Serialize the limit check and result so parallel requests cannot bypass a newly imposed lock.
+        synchronized (ctx.security().branchLogins()) {
+            String key = ctx.auth().loginKey(id);
+            int retry = ctx.security().branchLoginRetryAfter(ip(), key, System.currentTimeMillis());
+            if (retry > 0) { send(Message.of(Command.LOGIN_BLOCKED, retry)); return; }
+            branch = ctx.auth().verify(id, password);
+            if (branch == null) {
+                ctx.audit().record("BRANCH", "UNAUTHENTICATED", "LOGIN", "invalid credentials", "FAILED", ip());
+                if (ctx.security().onLoginFail(ip(), key, System.currentTimeMillis()))
+                    send(Message.of(Command.LOGIN_BLOCKED, ctx.security().branchLoginRetryAfter(ip(), key, System.currentTimeMillis())));
+                else send(Message.of(Command.LOGIN_FAIL, Protocol.LOGIN_FAIL_WRONG));
+                return;
+            }
+            if (!branch.ambiguous()) ctx.security().branchLogins().succeeded(ip(), key);
+        }
         if (branch != null && branch.ambiguous()) {
             ctx.audit().record("BRANCH", "UNAUTHENTICATED", "LOGIN", "ambiguous email", "REJECTED", ip());
             send(Message.of(Command.LOGIN_FAIL, "Email dung chung. Hay nhap ma CN trong o xac dinh chi nhanh (CN01/CN02)."));
-            return;
-        }
-        if (branch == null) {
-            ctx.audit().record("BRANCH", "UNAUTHENTICATED", "LOGIN", "invalid credentials", "FAILED", ip());
-            send(Message.of(Command.LOGIN_FAIL, Protocol.LOGIN_FAIL_WRONG));
-            if (ctx.security().onLoginFail(ip(), id.substring(0, Math.min(id.length(), 10)), System.currentTimeMillis())) {
-                sendError(ErrorCode.E06, "Dang nhap sai qua nhieu lan, IP bi chan"); close();
-            }
             return;
         }
         String canonical = branch.code();

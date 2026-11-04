@@ -11,6 +11,7 @@ public enum Command {
     LOGIN(2),
     LOGIN_OK(2),
     LOGIN_FAIL(1),
+    LOGIN_BLOCKED(1), // seconds until this IP + branch can try again
     // Thông báo tới phiên đang hoạt động khi có thiết bị khác đăng nhập cùng chi nhánh.
     DUPLICATE_LOGIN_ALERT(2),
     INVENTORY_GET(0),
@@ -25,6 +26,7 @@ public enum Command {
     OFFER(3),
     ACCEPT(2),
     REJECT(1),
+    REJECT_RESULT(3), // maYC, OK | ERROR, maHang | error message (after commit)
     DELIVERED(3),
     // maYC, soLuongCoThe, maHang (maHang để CN hiển thị được YC do admin báo thiếu mà chưa từng nhận OFFER)
     OUT_OF_STOCK(3),

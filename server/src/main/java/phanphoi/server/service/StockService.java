@@ -114,7 +114,7 @@ public final class StockService {
                     SELECT px.ma_yc, px.ma_sp, sp.ten, px.so_luong, px.thoi_gian, 'KHO_TONG' AS nguon, y.so_luong_nhan
                     FROM phieu_xuat px JOIN san_pham sp ON sp.ma_sp = px.ma_sp
                     JOIN yeu_cau y ON y.ma_yc = px.ma_yc
-                    WHERE px.ma_cn = ?
+                    WHERE px.ma_cn = ? AND y.trang_thai <> 'TU_CHOI'
                     UNION ALL
                     SELECT dc.ma_yc, dc.ma_sp, sp.ten, dc.so_luong, dc.cap_nhat_luc, dc.tu_cn, y.so_luong_nhan
                     FROM dieu_chuyen dc JOIN san_pham sp ON sp.ma_sp = dc.ma_sp
@@ -347,7 +347,7 @@ public final class StockService {
                  ELSE 'ok' END""";
 
     private static final String DEBT_SQL = """
-            COALESCE((SELECT sum(CASE WHEN n.loai IN ('XUAT', 'DC_NHAN') THEN n.so_tien ELSE -n.so_tien END)
+            COALESCE((SELECT sum(CASE WHEN n.loai IN ('XUAT', 'DC_NHAN', 'TRA_GIAO') THEN n.so_tien ELSE -n.so_tien END)
                       FROM cong_no_cn n WHERE n.ma_cn = cn.ma_cn), 0)""";
 
     /** Kho chi nhánh: mỗi chi nhánh thật một thẻ với số mặt hàng theo mức tồn, giá trị tồn, YC mở, công nợ. */
@@ -432,7 +432,8 @@ public final class StockService {
             List<Map<String, Object>> perProduct = Db.rows(c, """
                     SELECT sp.ma_sp, sp.ten,
                         COALESCE((SELECT sum(so_luong) FROM phieu_nhap WHERE ma_sp = sp.ma_sp), 0) AS tong_nhap,
-                        COALESCE((SELECT sum(so_luong) FROM phieu_xuat WHERE ma_sp = sp.ma_sp), 0) AS tong_xuat,
+                        COALESCE((SELECT sum(px.so_luong) FROM phieu_xuat px JOIN yeu_cau y ON y.ma_yc = px.ma_yc
+                                  WHERE px.ma_sp = sp.ma_sp AND y.trang_thai <> 'TU_CHOI'), 0) AS tong_xuat,
                         COALESCE((SELECT so_luong FROM kho_tong WHERE ma_sp = sp.ma_sp), 0) AS ton_tong,
                         COALESCE((SELECT sum(COALESCE(so_luong_nhan, so_luong_giao)) FROM yeu_cau
                                   WHERE ma_sp = sp.ma_sp AND trang_thai = 'HOAN_TAT'), 0) AS cn_da_nhan,
@@ -458,8 +459,10 @@ public final class StockService {
                     SELECT COALESCE((SELECT sum(so_tien) FROM cong_no_cn WHERE loai = 'XUAT'), 0) AS so_xuat,
                            COALESCE((SELECT sum(px.so_luong * px.don_gia) FROM phieu_xuat px
                                      JOIN yeu_cau y ON y.ma_yc = px.ma_yc WHERE y.trang_thai = 'HOAN_TAT'), 0) AS phieu_xuat,
-                           COALESCE((SELECT sum(so_tien) FROM cong_no_cn WHERE loai = 'DC_NHAN'), 0) AS so_dc_nhan,
-                           COALESCE((SELECT sum(so_tien) FROM cong_no_cn WHERE loai = 'DC_GIAO'), 0) AS so_dc_giao,
+                           COALESCE((SELECT sum(CASE loai WHEN 'DC_NHAN' THEN so_tien ELSE -so_tien END)
+                                     FROM cong_no_cn WHERE loai IN ('DC_NHAN', 'TRA_NHAN')), 0) AS so_dc_nhan,
+                           COALESCE((SELECT sum(CASE loai WHEN 'DC_GIAO' THEN so_tien ELSE -so_tien END)
+                                     FROM cong_no_cn WHERE loai IN ('DC_GIAO', 'TRA_GIAO')), 0) AS so_dc_giao,
                            COALESCE((SELECT sum(so_luong * don_gia) FROM dieu_chuyen
                                      WHERE trang_thai = 'HOAN_TAT'), 0) AS dieu_chuyen""", Db::toMap);
             double dc = ((Number) debt.get("dieuChuyen")).doubleValue();

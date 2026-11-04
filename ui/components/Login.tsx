@@ -117,7 +117,7 @@ export function CompanyLogin({ onDone }: { onDone: (user: string) => void }) {
         <input type="password" value={matKhau} onChange={(e) => setMatKhau(e.target.value)}
           autoComplete="current-password" required />
       </label>
-      {error && <p className="error">{error}</p>}
+      {error && <p className="error" role="alert">{error}</p>}
       <button className="btn btn-primary" disabled={busy}>{busy ? "Đang đăng nhập..." : "Đăng nhập"}</button>
       <button type="button" className="btn" onClick={() => setForgot(true)}>Quên mật khẩu?</button>
     </form>

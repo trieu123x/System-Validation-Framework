@@ -8,7 +8,7 @@ const path = require('node:path');
   const root = path.resolve('ui/out');
   const products = JSON.parse(await fs.readFile('landing/src/data/products.json', 'utf8')).slice(0, process.env.UI_FILTER_CHECK === '1' ? 31 : 6);
   const inventory = products.map((p, i) => ({ maHang: p.id, tenHang: p.name, soLuong: [4,2,7,10,6,8][i % 6], nguong: [2,3,2,4,0,2][i % 6], model: p.model, danhMuc: p.category, giaBanLe: p.retailPrice, giaXuat: p.retailPrice, anh: p.image.url }));
-  const state = { status: 'ONLINE', statusDetail: 'Đã kết nối', server: 'localhost', maCn: 'CN01', tenCn: 'Chi nhánh Lĩnh Nam', inventory, requests: [], transfers: [], broadcasts: [], notices: [], inbox: [], history: [], historyRange: '', daBao: [], debt: null };
+  const state = { canRejectDelivered: true, status: 'ONLINE', statusDetail: 'Đã kết nối', server: 'localhost', maCn: 'CN01', tenCn: 'Chi nhánh Lĩnh Nam', inventory, requests: [], transfers: [], broadcasts: [], notices: [], inbox: [], history: [], historyRange: '', daBao: [], debt: null };
   const adminProducts = products.map(p => ({ maSp: p.id, ten: p.name, donVi: 'cái', model: p.model, maDm: p.categoryId, tenDm: p.category, giaNhap: Math.round(p.retailPrice * .7), giaXuat: Math.round(p.retailPrice * .85), giaBanLe: p.retailPrice, tonTong: 100, anhUrl: p.image.url }));
   const branches = [{ maCn: 'CN01', ten: state.tenCn, diaChi: 'Hà Nội', giaLap: false, ycMo: 0, tinCho: 0, online: true }];
   const warehouse = { maCn: 'CN01', ten: state.tenCn, diaChi: 'Hà Nội', online: true, thieu: 2, sapThieu: 0, du: 3, chuaDat: 1, giaTriTon: 20000000, ycMo: 0, conNo: 1000000, hanMuc: 2000000, vuotHanMuc: false };
@@ -19,6 +19,7 @@ const path = require('node:path');
   const orders = new Map();
   const createdBodies = [];
   let confirms = 0;
+  const receivingDecisions = [];
   const send = (res, data, status = 200) => { res.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8' }); res.end(JSON.stringify(data)); };
   const broadcast = () => { for (const res of peers) res.write(`event: state\ndata: ${JSON.stringify(state)}\n\n`); };
   const server = http.createServer(async (req, res) => {
@@ -30,6 +31,15 @@ const path = require('node:path');
       if (pathname === '/api/browser/heartbeat') return send(res, { ok: true });
       if (/^\/api\/inbox\/\d+\/reply$/.test(pathname)) { state.inbox.forEach(item => { item.trangThai = 'DA_XEM'; }); send(res, {ok: true}); broadcast(); return; }
       if (pathname === '/api/inventory/refresh') { send(res, {ok: true}); broadcast(); return; }
+      const decision = pathname.match(/^\/api\/requests\/(\d+)\/(reject|received)$/);
+      if (decision) {
+        let body = ''; for await (const chunk of req) body += chunk;
+        receivingDecisions.push({id: Number(decision[1]), action: decision[2], body: JSON.parse(body)});
+        const request = state.requests.find(row => row.maYc === Number(decision[1]));
+        request.trangThai = decision[2] === 'reject' ? 'TU_CHOI' : 'HOAN_TAT';
+        if (decision[2] === 'received') request.soLuongNhan = JSON.parse(body).soLuongNhan;
+        send(res, {ok: true}); broadcast(); return;
+      }
       if (pathname === '/api/auth/me') return send(res, { loggedIn: true, user: 'admin' });
       if (pathname === '/api/branches') return send(res, branches);
       if (pathname === '/api/products') return send(res, adminProducts);
@@ -113,6 +123,128 @@ const path = require('node:path');
       if (!desktop()) await page.getByRole('dialog').waitFor({state: 'hidden'});
     };
     await fs.mkdir('tools/ui-redesign/after', {recursive: true});
+    if (process.env.UI_LOGIN_CHECK === '1') {
+      let branchAllowed = false, adminAllowed = false, branchAttempts = 0, adminAttempts = 0;
+      await page.route('**/api/config', route => route.fulfill({json: {server: 'localhost', branchId: ''}}));
+      await page.route('**/api/state', route => route.fulfill({json: branchAllowed ? state : {status: 'DISCONNECTED', statusDetail: '', server: 'localhost'}}));
+      await page.route('**/api/auth/me', route => route.fulfill({json: {loggedIn: adminAllowed, user: adminAllowed ? 'admin' : null}}));
+      await page.route('**/api/login', route => {
+        branchAttempts++;
+        if (route.request().postDataJSON().matKhau === 'correct-test-password') { branchAllowed = true; return route.fulfill({json: state}); }
+        return route.fulfill({status: 401, json: {error: 'Sai tên đăng nhập hoặc mật khẩu.'}});
+      });
+      await page.route('**/api/auth/login', route => {
+        adminAttempts++;
+        if (route.request().postDataJSON().matKhau === 'correct-test-password') { adminAllowed = true; return route.fulfill({json: {user: 'admin'}}); }
+        return route.fulfill({status: 401, json: {error: 'Sai tên đăng nhập hoặc mật khẩu.'}});
+      });
+      let documents = 0;
+      page.on('request', request => { if (request.isNavigationRequest() && request.frame() === page.mainFrame()) documents++; });
+      for (const role of ['branch', 'admin']) {
+        await page.goto(`${baseUrl}/${role}/`);
+        const password = page.getByLabel('Mật khẩu', {exact: true});
+        await password.waitFor();
+        const identity = page.locator('.login input:not([type="password"])');
+        await identity.fill(role === 'branch' ? 'CN01' : 'admin');
+        const before = documents;
+        for (const value of ['wrong-test-password', 'another-wrong-password']) {
+          await password.fill(value);
+          await page.getByRole('button', {name: 'Đăng nhập', exact: true}).click();
+          await page.getByRole('alert').filter({hasText: 'Sai tên đăng nhập hoặc mật khẩu.'}).waitFor();
+          assert.equal(await password.inputValue(), value);
+          assert.equal(await identity.inputValue(), role === 'branch' ? 'CN01' : 'admin');
+          assert.equal(documents, before, `${role}: failed login reloaded the document`);
+          assert.equal(await page.locator('.workspace-shell').count(), 0);
+        }
+        assert.equal(role === 'branch' ? branchAttempts : adminAttempts, 2);
+        if (role === 'branch') {
+          await page.route('**/api/login', route => route.fulfill({status: 429, headers: {'Retry-After': '60'}, json: {error: 'Đăng nhập chi nhánh này trên IP hiện tại bị khóa. Thử lại sau 60 giây.'}}), {times: 1});
+          await page.getByRole('button', {name: 'Đăng nhập', exact: true}).click();
+          await page.getByRole('alert').filter({hasText: 'chi nhánh này trên IP hiện tại bị khóa'}).waitFor();
+          assert.equal(documents, before, 'IP block must not reload the login form');
+          assert.equal(await password.inputValue(), 'another-wrong-password');
+        }
+        await password.fill('correct-test-password');
+        await page.getByRole('button', {name: 'Đăng nhập', exact: true}).click();
+        await page.getByRole('heading', {name: role === 'branch' ? 'Bán hàng & tồn kho' : 'Tổng quan', exact: true}).waitFor();
+        if (role === 'branch') {
+          for (const width of [1440, 390]) {
+            await page.setViewportSize({width, height: 900});
+            await openMenu();
+            const sales = (desktop() ? page.locator('.app-sidebar') : page.getByRole('dialog')).getByRole('button', {name: 'Bán hàng', exact: true});
+            assert.equal(await sales.getAttribute('aria-current'), 'page');
+            assert.equal(await sales.evaluate(element => element.classList.contains('active')), false);
+            assert.equal(await sales.locator('.nav-count').count(), 0);
+            if (!desktop()) await page.getByRole('button', {name: 'Đóng menu', exact: true}).click();
+          }
+          await page.setViewportSize({width: 1440, height: 1000});
+          branchAllowed = false;
+          await page.route('**/api/threshold', route => route.fulfill({status: 401, json: {error: 'Phiên đăng nhập đã hết hạn.'}}));
+          await navigate('Đặt ngưỡng');
+          const row = page.locator('tbody tr').filter({has: page.getByLabel('Ngưỡng TB01', {exact: true})});
+          await row.getByRole('spinbutton').fill('9');
+          await row.getByRole('button', {name: 'Lưu', exact: true}).click();
+          await page.getByLabel('Mật khẩu', {exact: true}).waitFor();
+          assert.ok(documents > before, 'Protected 401 still resets an expired branch session');
+        }
+      }
+      assert.deepEqual(errors, []);
+      console.log('PASS: branch/admin wrong-password 401 keeps login form and values without reload; IP block 429 displays without reload; sales has no highlight or badge on desktop/mobile; correct password opens workspace; protected 401 still returns expired branch session to login.');
+      return;
+    }
+    if (process.env.UI_RECEIVING_CHECK === '1') {
+      const requests = [
+        {maYc: 101, maHang: inventory[0].maHang, soLuongDeXuat: 5, soLuongCoThe: null, soLuongGiao: null, soLuongNhan: null, trangThai: 'DA_DE_XUAT', capNhat: '2026-11-04 20:00:00'},
+        {maYc: 102, maHang: inventory[1].maHang, soLuongDeXuat: 6, soLuongCoThe: 2, soLuongGiao: null, soLuongNhan: null, trangThai: 'THIEU_HANG', capNhat: '2026-11-04 20:01:00'},
+        {maYc: 103, maHang: inventory[2].maHang, soLuongDeXuat: 4, soLuongCoThe: null, soLuongGiao: 4, soLuongNhan: null, trangThai: 'DA_GIAO', capNhat: '2026-11-04 20:02:00'},
+      ];
+      for (const width of [1440, 1024, 768, 390]) {
+        state.requests = structuredClone(requests);
+        await page.setViewportSize({width, height: 900});
+        await page.goto(`${baseUrl}/branch/?receiving=${width}#view=offers`);
+        await page.getByRole('heading', {name: 'Nhận hàng từ công ty', exact: true}).waitFor();
+        const shipped = page.locator('.receiving-table tbody tr').filter({hasText: 'YC103'});
+        const reject = shipped.getByRole('button', {name: 'Từ chối', exact: true});
+        await reject.waitFor();
+        assert.equal(await shipped.getByRole('button', {name: 'Đồng ý nhận hàng', exact: true}).isDisabled(), true);
+        await page.screenshot({path: `tools/ui-redesign/after/receiving-${width}.png`, fullPage: true});
+        const box = await reject.boundingBox();
+        assert.ok(box.x >= 0 && box.x + box.width <= width, `${width}: reject button is hidden outside the viewport`);
+        assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
+        // Refusal does not require entering a quantity; cancelling the dialog does not send a request.
+        const count = receivingDecisions.length;
+        page.once('dialog', dialog => dialog.dismiss());
+        await reject.click();
+        assert.equal(receivingDecisions.length, count);
+        page.once('dialog', dialog => dialog.accept());
+        await reject.click();
+        await shipped.waitFor({state: 'hidden'});
+        assert.deepEqual(receivingDecisions.at(-1), {id: 103, action: 'reject', body: {}});
+        assert.equal(receivingDecisions.length, count + 1);
+        // Receiving remains a distinct operation with the counted quantity.
+        state.requests = structuredClone(requests);
+        broadcast();
+        await shipped.getByRole('spinbutton').fill('4');
+        await shipped.getByRole('button', {name: 'Đồng ý nhận hàng', exact: true}).click();
+        await shipped.waitFor({state: 'hidden'});
+        assert.deepEqual(receivingDecisions.at(-1), {id: 103, action: 'received', body: {soLuongNhan: 4}});
+      }
+      state.requests = structuredClone(requests);
+      broadcast();
+      const shipped = page.locator('.receiving-table tbody tr').filter({hasText: 'YC103'});
+      await page.route('**/api/requests/103/reject', route => route.fulfill({status: 409, contentType: 'application/json', body: JSON.stringify({error: 'Yêu cầu vừa thay đổi. Vui lòng kiểm tra lại.'})}), {times: 1});
+      page.once('dialog', dialog => dialog.accept());
+      await shipped.getByRole('button', {name: 'Từ chối', exact: true}).click();
+      await page.locator('.toast-error').waitFor();
+      assert.equal(await shipped.getByRole('button', {name: 'Từ chối', exact: true}).isEnabled(), true);
+      assert.equal(state.requests.find(row => row.maYc === 103).trangThai, 'DA_GIAO');
+      state.canRejectDelivered = false;
+      broadcast();
+      await page.waitForFunction(() => Array.from(document.querySelectorAll('.receiving-table button')).some(button => button.title.includes('bản mới') && button.disabled));
+      assert.deepEqual(errors, []);
+      console.log('PASS: delivered goods have accept/refuse buttons at 1440/1024/768/390px; refusal without quantity; cancel sends nothing; correct reject/receipt payloads; errors keep request open; no overflow or browser exceptions.');
+      return;
+    }
     if (process.env.UI_FILTER_CHECK === '1') {
       for (const width of [1440, 1024, 768, 390]) {
         await page.setViewportSize({width, height: 760});

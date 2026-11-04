@@ -162,7 +162,7 @@ CREATE INDEX idx_hang_doi_tin_chua_gui ON hang_doi_tin (ma_cn, tao_luc) WHERE NO
 CREATE TABLE cong_no_cn (
     id         BIGSERIAL     PRIMARY KEY,
     ma_cn      VARCHAR(10)   NOT NULL REFERENCES chi_nhanh(ma_cn),
-    loai       VARCHAR(8)    NOT NULL CHECK (loai IN ('XUAT', 'THU', 'DC_NHAN', 'DC_GIAO')),
+    loai       VARCHAR(8)    NOT NULL CHECK (loai IN ('XUAT', 'THU', 'DC_NHAN', 'DC_GIAO', 'TRA_NHAN', 'TRA_GIAO')),
     so_tien    NUMERIC(15,0) NOT NULL CHECK (so_tien > 0),
     ma_yc      INTEGER       REFERENCES yeu_cau(ma_yc),
     ma_dc      INTEGER       REFERENCES dieu_chuyen(ma_dc),

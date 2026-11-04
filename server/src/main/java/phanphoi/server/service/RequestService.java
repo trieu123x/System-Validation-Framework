@@ -214,15 +214,42 @@ public final class RequestService {
         return replies;
     }
 
-    /** REJECT (FR-17, FR-19). Không có tin trả lời khi thành công. */
-    public void reject(String maCn, int maYc) throws SQLException {
+    /** Refuse an offer or return an unreceived delivery; retries never restore stock twice. */
+    public Message reject(String maCn, int maYc) throws SQLException {
+        String[] product = {null};
+        String[] returnedFrom = {null};
         boolean changed = db.tx(c -> {
             Yc yc = lockYc(c, maYc, maCn);
+            product[0] = yc.maSp;
             switch (yc.trangThai) {
                 case TU_CHOI -> {
                     return false;
                 }
                 case DA_DE_XUAT, THIEU_HANG -> {
+                    setState(c, maYc, TU_CHOI);
+                    TransferService.cancelPending(c, maYc);
+                    return true;
+                }
+                case DA_GIAO -> {
+                    Integer shipped = Db.one(c, "SELECT so_luong FROM phieu_xuat WHERE ma_yc = ?", rs -> rs.getInt(1), maYc);
+                    if (shipped != null) {
+                        if (Db.update(c, "UPDATE kho_tong SET so_luong = so_luong + ? WHERE ma_sp = ?", shipped, yc.maSp) != 1)
+                            throw new ServiceException(ErrorCode.E04, "Không tìm thấy kho gửi hàng.");
+                    } else {
+                        Object[] dc = Db.one(c, """
+                                SELECT ma_dc, tu_cn, so_luong FROM dieu_chuyen
+                                WHERE ma_yc = ? AND trang_thai = 'HOAN_TAT' FOR UPDATE""",
+                                rs -> new Object[]{rs.getInt(1), rs.getString(2), rs.getInt(3)}, maYc);
+                        if (dc == null) throw new ServiceException(ErrorCode.E03, "Không xác định được nơi gửi hàng. Vui lòng liên hệ công ty.");
+                        Db.update(c, """
+                                INSERT INTO kho_chi_nhanh (ma_cn, ma_sp, so_luong, nguong_toi_thieu) VALUES (?, ?, ?, 0)
+                                ON CONFLICT (ma_cn, ma_sp) DO UPDATE SET so_luong = kho_chi_nhanh.so_luong + EXCLUDED.so_luong""",
+                                dc[1], yc.maSp, dc[2]);
+                        DebtService.recordTransferReturn(c, (Integer) dc[0]);
+                        Db.update(c, "UPDATE dieu_chuyen SET trang_thai = 'HUY', cap_nhat_luc = CURRENT_TIMESTAMP WHERE ma_dc = ?", dc[0]);
+                        returnedFrom[0] = (String) dc[1];
+                    }
+                    // Keep the original shipment voucher and quantities for the audit trail.
                     setState(c, maYc, TU_CHOI);
                     TransferService.cancelPending(c, maYc);
                     return true;
@@ -233,7 +260,19 @@ public final class RequestService {
         });
         if (changed) {
             publishRequest(maYc);
+            events.publish(Events.PRODUCTS, null);
+            if (returnedFrom[0] != null) {
+                events.publish(Events.STOCK, Map.of("maCn", returnedFrom[0]));
+                events.publish(Events.TRANSFER, null);
+                debts.changed(returnedFrom[0]);
+                debts.changed(maCn);
+                if (outbox != null) {
+                    try { outbox.sendOnline(returnedFrom[0], new StockService(db, events).inventoryMessage(returnedFrom[0])); }
+                    catch (SQLException ignored) { /* The committed return is recovered by the next inventory refresh. */ }
+                }
+            }
         }
+        return Message.of(Command.REJECT_RESULT, maYc, "OK", product[0]);
     }
 
     /** Ghi số thực nhận và cộng kho trong cùng transaction. Gửi lại cùng số không cộng kho/nợ lần hai. */
@@ -520,6 +559,10 @@ public final class RequestService {
                     WHERE ma_cn = ? AND trang_thai = 'HOAN_TAT' AND so_luong_nhan IS NOT NULL
                     ORDER BY ma_yc DESC LIMIT 100""",
                     rs -> Message.of(Command.RECEIVED_OK, rs.getInt(1), rs.getString(2), rs.getInt(3), rs.getInt(4)), maCn));
+            out.addAll(Db.list(c, """
+                    SELECT ma_yc, ma_sp FROM yeu_cau WHERE ma_cn = ? AND trang_thai = 'TU_CHOI'
+                    ORDER BY ma_yc DESC LIMIT 100""",
+                    rs -> Message.of(Command.REJECT_RESULT, rs.getInt(1), "OK", rs.getString(2)), maCn));
             return out;
         });
     }

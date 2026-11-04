@@ -58,6 +58,7 @@ final class BranchAgent implements ServerLink.Handler {
     private CompletableFuture<Message> pendingLogin;
     private final Map<String, CompletableFuture<String>> checkoutCalls = new LinkedHashMap<>();
     private final Map<String, StringBuilder> checkoutChunks = new LinkedHashMap<>();
+    private final Map<Integer, CompletableFuture<Void>> rejectionCalls = new LinkedHashMap<>();
     private long nextAttemptAt;
     /** Số lần thử kết nối lại liên tiếp đã thất bại (đặt lại khi LOGIN_OK). */
     private int attempt;
@@ -126,6 +127,7 @@ final class BranchAgent implements ServerLink.Handler {
     /** Trạng thái cho giao diện, kèm các mặt hàng đã báo thiếu mà công ty chưa trả lời. */
     private Map<String, Object> snap() {
         Map<String, Object> m = state.snapshot();
+        m.put("canRejectDelivered", true);
         m.put("daBao", new ArrayList<>(alerted));
         m.put("security", security.snapshot());
         return m;
@@ -272,6 +274,7 @@ final class BranchAgent implements ServerLink.Handler {
                 }
             }
         }
+        if (reply.command() == Command.LOGIN_BLOCKED) throw new LoginBlocked(reply.intParam(0));
         if (reply.command() == Command.LOGIN_FAIL) {
             throw new Http.ApiException(Protocol.LOGIN_FAIL_ONLINE.equals(reply.param(0)) ? 409 : 401, reply.param(0));
         }
@@ -283,6 +286,11 @@ final class BranchAgent implements ServerLink.Handler {
         timer.shutdownNow();
         hub.closeAll();
         hub.shutdown();
+    }
+
+    static final class LoginBlocked extends Http.ApiException {
+        final int seconds;
+        LoginBlocked(int seconds) { super(429, phanphoi.common.web.LoginAttempts.blocked(seconds).getMessage()); this.seconds = seconds; }
     }
 
     void logout() {
@@ -357,15 +365,23 @@ final class BranchAgent implements ServerLink.Handler {
     }
 
     void reject(int maYc) {
-        send(Message.of(Command.REJECT, maYc));
+        CompletableFuture<Void> result = new CompletableFuture<>();
         synchronized (lock) {
-            BranchState.Request r = state.requests.get(maYc);
-            if (r != null) {
-                r.trangThai = "TU_CHOI";
-                r.capNhat = BranchState.now();
-                alerted.remove(r.maHang);
-            }
-            publish();
+            if (rejectionCalls.containsKey(maYc)) throw new Http.ApiException(409, "Yêu cầu đang được xử lý.");
+            rejectionCalls.put(maYc, result);
+        }
+        try {
+            send(Message.of(Command.REJECT, maYc));
+            result.get(20, TimeUnit.SECONDS);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new Http.ApiException(503, "Thao tác bị gián đoạn. Vui lòng thử lại.");
+        } catch (TimeoutException e) {
+            throw new Http.ApiException(504, "Chưa nhận được xác nhận. Vui lòng thử lại để kiểm tra kết quả.");
+        } catch (ExecutionException e) {
+            throw new Http.ApiException(409, e.getCause().getMessage());
+        } finally {
+            synchronized (lock) { rejectionCalls.remove(maYc); }
         }
     }
 
@@ -465,6 +481,10 @@ final class BranchAgent implements ServerLink.Handler {
             case PONG -> { }
             case LOGIN_OK -> onLoginOk(l, m.params().size() >= 2 ? m.param(0) : attemptId, m.params().size() >= 2 ? m.param(1) : m.param(0));
             case LOGIN_FAIL -> onLoginFail(l, m);
+            case LOGIN_BLOCKED -> {
+                if (pendingLogin != null) pendingLogin.complete(m);
+                else { wantOnline = false; l.close(); }
+            }
             case DUPLICATE_LOGIN_ALERT -> {
                 String time = m.param(0);
                 String ip = m.param(1);
@@ -529,11 +549,27 @@ final class BranchAgent implements ServerLink.Handler {
                             + r.soLuongCoThe);
                 }
             }
+            case REJECT_RESULT -> {
+                int maYc = m.intParam(0);
+                CompletableFuture<Void> call = rejectionCalls.get(maYc);
+                if ("ERROR".equals(m.param(1))) {
+                    if (call != null) call.completeExceptionally(new IllegalStateException(m.param(2)));
+                } else if ("OK".equals(m.param(1))) {
+                    BranchState.Request r = state.request(maYc);
+                    r.maHang = m.param(2);
+                    r.trangThai = "TU_CHOI";
+                    r.capNhat = BranchState.now();
+                    boolean anotherOpen = state.requests.values().stream().anyMatch(other -> other != r
+                            && r.maHang.equals(other.maHang) && other.trangThai != null && OPEN_STATES.contains(other.trangThai));
+                    if (!anotherOpen) alerted.remove(r.maHang);
+                    if (call != null) call.complete(null);
+                }
+            }
             case DELIVERED -> {
                 BranchState.Request r = state.request(m.intParam(0));
                 r.maHang = m.param(1);
                 r.soLuongGiao = m.intParam(2);
-                if (!"HOAN_TAT".equals(r.trangThai) && !"DA_GIAO".equals(r.trangThai)) {
+                if (!"HOAN_TAT".equals(r.trangThai) && !"TU_CHOI".equals(r.trangThai) && !"DA_GIAO".equals(r.trangThai)) {
                     r.trangThai = "DA_GIAO";
                     toast("success", "Công ty đã gửi " + r.soLuongGiao + " " + tenHang(r.maHang) + " (YC #" + r.maYc
                             + "). Bấm \"Đã nhận hàng\" khi hàng tới");

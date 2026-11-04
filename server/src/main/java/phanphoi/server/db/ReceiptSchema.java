@@ -11,6 +11,10 @@ public final class ReceiptSchema {
             Db.update(c, """
                     ALTER TABLE yeu_cau ADD COLUMN IF NOT EXISTS so_luong_nhan INTEGER
                     CHECK (so_luong_nhan >= 0)""");
+            Db.update(c, "ALTER TABLE cong_no_cn DROP CONSTRAINT IF EXISTS cong_no_cn_loai_check");
+            Db.update(c, """
+                    ALTER TABLE cong_no_cn ADD CONSTRAINT cong_no_cn_loai_check
+                    CHECK (loai IN ('XUAT', 'THU', 'DC_NHAN', 'DC_GIAO', 'TRA_NHAN', 'TRA_GIAO'))""");
             return null;
         });
     }

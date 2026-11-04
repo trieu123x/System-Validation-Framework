@@ -84,12 +84,24 @@ public final class DebtService {
                 ON CONFLICT (loai, ma_dc) WHERE ma_dc IS NOT NULL DO NOTHING""", maDc);
     }
 
+    /** Reverse the original transfer entries without deleting either entry or changing its price. */
+    static void recordTransferReturn(Connection c, int maDc) throws SQLException {
+        Db.one(c, "SELECT 1 FROM chi_nhanh WHERE ma_cn = (SELECT den_cn FROM dieu_chuyen WHERE ma_dc = ?) FOR NO KEY UPDATE", rs -> 1, maDc);
+        Db.update(c, """
+                INSERT INTO cong_no_cn (ma_cn, loai, so_tien, ma_dc, ghi_chu)
+                SELECT ma_cn, CASE loai WHEN 'DC_NHAN' THEN 'TRA_NHAN' ELSE 'TRA_GIAO' END,
+                       so_tien, ma_dc, 'Hoàn hàng điều chuyển #' || ma_dc
+                FROM cong_no_cn WHERE ma_dc = ? AND loai IN ('DC_NHAN', 'DC_GIAO')
+                ON CONFLICT (loai, ma_dc) WHERE ma_dc IS NOT NULL DO NOTHING""", maDc);
+    }
+
     // ================= chi nhánh =================
 
     private static final String BRANCH_SQL = """
             SELECT cn.ma_cn, cn.ten AS ten_cn, cn.gia_lap,
                    COALESCE(sum(CASE n.loai WHEN 'XUAT' THEN n.so_tien WHEN 'DC_NHAN' THEN n.so_tien
-                                            WHEN 'DC_GIAO' THEN -n.so_tien ELSE 0 END), 0) AS tong_nhan,
+                                            WHEN 'TRA_GIAO' THEN n.so_tien
+                                            WHEN 'DC_GIAO' THEN -n.so_tien WHEN 'TRA_NHAN' THEN -n.so_tien ELSE 0 END), 0) AS tong_nhan,
                    COALESCE(sum(n.so_tien) FILTER (WHERE n.loai = 'THU'), 0) AS da_tra,
                    cn.han_muc_no AS han_muc, count(n.id) AS so_but_toan
             FROM chi_nhanh cn LEFT JOIN cong_no_cn n ON n.ma_cn = cn.ma_cn""";
@@ -309,7 +321,7 @@ public final class DebtService {
                                  WHERE n.loai = 'XUAT' AND NOT cn.gia_lap), 0) AS tong_xuat,
                        COALESCE((SELECT sum(n.so_tien) FROM cong_no_cn n JOIN chi_nhanh cn ON cn.ma_cn = n.ma_cn
                                  WHERE n.loai = 'THU' AND NOT cn.gia_lap), 0) AS da_thu_cn,
-                       COALESCE((SELECT sum(CASE WHEN n.loai IN ('XUAT', 'DC_NHAN') THEN n.so_tien ELSE -n.so_tien END)
+                       COALESCE((SELECT sum(CASE WHEN n.loai IN ('XUAT', 'DC_NHAN', 'TRA_GIAO') THEN n.so_tien ELSE -n.so_tien END)
                                  FROM cong_no_cn n JOIN chi_nhanh cn ON cn.ma_cn = n.ma_cn WHERE NOT cn.gia_lap), 0)
                            AS con_no_cn""", rs -> {
             Map<String, Object> m = Db.toMap(rs);

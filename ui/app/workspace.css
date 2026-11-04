@@ -63,6 +63,9 @@ button:focus-visible, a:focus-visible, [tabindex]:focus-visible { outline: 3px s
 .workspace-shell tr.low td { background: #fff7f6; }
 .workspace-shell tr.warn td { background: #fffbf2; }
 .workspace-shell .table-foot { font-size: 12px; padding: 12px 18px; }
+.receiving-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; min-width: 180px; }
+.receiving-table th:last-child, .receiving-table td:last-child { position: sticky; right: 0; z-index: 1; background: var(--surface); box-shadow: -5px 0 10px #18223008; }
+.receiving-table th:last-child { background: var(--th-bg); }
 .workspace-shell .btn, .login-page .btn { min-height: 36px; height: auto; padding: 7px 13px; border-radius: var(--radius-sm); font-size: 13px; font-weight: 550; line-height: 1.4; }
 .workspace-shell .btn-sm { min-height: 32px; padding: 6px 10px; font-size: 12px; }
 .workspace-shell .btn-primary:hover:not(:disabled), .login-page .btn-primary:hover:not(:disabled) { background: var(--accent-hover); filter: none; }
@@ -149,6 +152,16 @@ button:focus-visible, a:focus-visible, [tabindex]:focus-visible { outline: 3px s
 }
 @media (max-width: 1000px) { .workspace-shell .dash, .workspace-shell .split { grid-template-columns: minmax(0, 1fr); } }
 @media (max-width: 767px) {
+  .receiving-table table, .receiving-table tbody { display: block; }
+  .receiving-table thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+  .receiving-table tbody tr { display: grid; grid-template-columns: minmax(0, 1fr) auto; padding: 12px 14px; border-bottom: 1px solid var(--border); }
+  .receiving-table tbody td { padding: 6px 0; border: 0; min-width: 0; white-space: normal; overflow-wrap: anywhere; }
+  .receiving-table td:nth-child(2), .receiving-table td:nth-child(4), .receiving-table td:nth-child(5), .receiving-table td:last-child { grid-column: 1 / -1; }
+  .receiving-table td:nth-child(2) { font-weight: 600; }
+  .receiving-table td:nth-child(3) { grid-row: 1; grid-column: 2; }
+  .receiving-table td:nth-child(5)::before { content: "Số lượng nhận"; margin-right: 12px; font-size: 12px; color: var(--text-2); }
+  .receiving-table td:last-child { position: static; box-shadow: none; }
+  .receiving-actions .btn { flex: 1; }
   .workspace-shell .appbar.appbar-compact { padding: 10px 16px; gap: 10px; min-height: 64px; }
   .workspace-shell .appbar-brand b { font-size: 12px; }
   .workspace-shell .appbar-brand span { font-size: 10px; }

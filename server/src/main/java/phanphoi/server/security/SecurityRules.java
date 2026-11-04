@@ -18,6 +18,7 @@ public final class SecurityRules {
     public final int shortBanMinutes;
     public final int loginFailMax;
     public final int loginFailWindowSec;
+    public final int loginBlockSeconds;
     public final int credStuffingIps;
     public final int credStuffingWindowSec;
     public final int floodMsgsPerSecond;
@@ -43,6 +44,7 @@ public final class SecurityRules {
         shortBanMinutes = cfg.getInt("security.short.ban.minutes", 5);
         loginFailMax = cfg.getInt("security.login.fail.max", 5);
         loginFailWindowSec = cfg.getInt("security.login.fail.window.seconds", 60);
+        loginBlockSeconds = cfg.getInt("security.login.block.seconds", 60);
         credStuffingIps = cfg.getInt("security.cred.stuffing.ips", 3);
         credStuffingWindowSec = cfg.getInt("security.cred.stuffing.window.seconds", 300);
         floodMsgsPerSecond = cfg.getInt("security.flood.msgs.per.second", 50);

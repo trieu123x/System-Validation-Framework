@@ -14,8 +14,9 @@ export async function api<T = unknown>(path: string, body?: unknown, method?: st
   });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
-    // phiên công ty hết hạn (vd. server.jar khởi động lại): trang admin quay về màn đăng nhập
-    if (res.status === 401 && !path.startsWith("/api/auth/") && typeof window !== "undefined") {
+    // A failed sign-in/recovery belongs to its form, not the expired-session handler.
+    const publicAuth = path.startsWith("/api/auth/") || ["/api/login", "/api/password/forgot", "/api/password/reset"].includes(path);
+    if (res.status === 401 && !publicAuth && typeof window !== "undefined") {
       window.dispatchEvent(new Event(UNAUTHORIZED));
     }
     throw new Error((data as { error?: string }).error ?? `HTTP ${res.status}`);
@@ -149,6 +150,8 @@ export const ENTRY_LABEL: Record<string, [string, "+" | "−"]> = {
   XUAT: ["Nhận hàng", "+"],
   DC_NHAN: ["Nhận điều chuyển", "+"],
   DC_GIAO: ["Giao điều chuyển", "−"],
+  TRA_NHAN: ["Trả hàng điều chuyển", "−"],
+  TRA_GIAO: ["Nhận lại hàng điều chuyển", "+"],
   THU: ["Phiếu thu", "−"],
   NHAP: ["Phiếu nhập", "+"],
   CHI: ["Phiếu chi", "−"],

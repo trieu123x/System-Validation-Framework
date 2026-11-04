@@ -21,18 +21,18 @@ public final class AuthService {
     public record Branch(String code, String name, boolean ambiguous) { }
 
     /** Accept branch code, exact branch name or email. Email shared by branches needs #CNxx. */
-    public Branch verify(String login, String password) throws SQLException {
+    private java.util.List<String[]> lookup(String login) throws SQLException {
         String key = login == null ? "" : login.trim();
         String hint = "";
         if (key.contains("#")) {
             String[] parts = key.split("#", -1);
             if (parts.length != 2 || !parts[1].matches("(?i)CN[0-9]{1,4}")) {
-                hash("dummy", password); return null;
+                return java.util.List.of();
             }
             key = parts[0].trim(); hint = parts[1].trim();
         }
         final String input = key, branchHint = hint;
-        java.util.List<String[]> rows = db.read(c -> Db.list(c, """
+        return db.read(c -> Db.list(c, """
                 SELECT ma_cn, ten, mat_khau_hash, salt FROM chi_nhanh
                 WHERE (LOWER(ma_cn) = LOWER(?) OR LOWER(ten) = LOWER(?)
                   OR (email IS NOT NULL AND LOWER(email) = LOWER(?)))
@@ -40,6 +40,16 @@ public final class AuthService {
                 ORDER BY ma_cn LIMIT 5
                 """, rs -> new String[]{rs.getString(1), rs.getString(2), rs.getString(3), rs.getString(4)},
                 input, input, input, branchHint, branchHint));
+    }
+
+    /** Canonical branch identity for rate limiting even if the submitted password is wrong. */
+    public String loginKey(String login) throws SQLException {
+        var rows = lookup(login);
+        return rows.size() == 1 ? rows.get(0)[0] : login.trim().toLowerCase(java.util.Locale.ROOT);
+    }
+
+    public Branch verify(String login, String password) throws SQLException {
+        var rows = lookup(login);
         if (rows.size() > 1) {
             hash("dummy", password);
             return new Branch("", "", true);

@@ -52,6 +52,12 @@ public final class Outbox {
         resyncSources.add(source);
     }
 
+    /** Ephemeral snapshots must not be queued and replayed over newer login data. */
+    public boolean sendOnline(String maCn, Message message) {
+        ClientHandler handler = registry.get(maCn);
+        return handler != null && handler.send(message);
+    }
+
     /** @return true nếu đã gửi ngay, false nếu đã xếp hàng chờ (hoặc bị bỏ ở chế độ baseline NONE). */
     public boolean send(String maCn, Message m) throws SQLException {
         ClientHandler h = registry.get(maCn);
