@@ -23,7 +23,7 @@ Làm mới giao diện nội bộ trên hai route hiện có. Tham khảo bố c
 
 ## POS và quản trị
 
-- POS: bộ lọc bên trái, toolbar tìm sản phẩm, lựa chọn Thẻ/Bảng, giỏ cạnh reload. Thẻ có ảnh, mã/model, giá, tồn, trạng thái, số lượng và thêm giỏ. Bảng vẫn có các cột và sort như trước. Không giả rating/giảm giá.
+- POS: bộ lọc bên trái, toolbar tìm sản phẩm, lựa chọn Thẻ/Bảng, giỏ ở bên phải. Bỏ nút Tải lại cạnh giỏ; khi mở/tải lại trang hoặc kết nối trở lại, tự yêu cầu tồn kho mới sau khi luồng cập nhật sẵn sàng. Thẻ có ảnh, mã/model, giá, tồn, trạng thái, số lượng và thêm giỏ. Bảng vẫn có các cột và sort như trước. Không giả rating/giảm giá.
 - Admin: KPI dạng panel độc lập, bảng thoáng hơn, nhóm form rõ. Bổ sung tìm sản phẩm bằng dữ liệu danh sách đã nhận; giữ danh mục và các form nghiệp vụ.
 - Checkout: giữ server quote, QR thủ công, cơ chế phục hồi, confirm idempotent và invoice; đồng bộ màu/nút với giao diện sáng. CSS hóa đơn/in được giữ riêng.
 - Loading/empty/error/busy thể hiện bằng nhãn, focus bàn phím rõ; thông báo lỗi không xóa dữ liệu đang nhập.

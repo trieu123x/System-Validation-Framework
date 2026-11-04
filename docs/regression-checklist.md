@@ -13,7 +13,7 @@ Ngày: 04/11/2026. Phạm vi: frontend admin và chi nhánh, trên mốc nguồn
 | POS | 6 fixture sản phẩm, search ra 1/0 kết quả; xóa lọc; sort giá; đổi thẻ/bảng vẫn có đủ hàng và cột SL |
 | Cuộn bộ lọc POS | 31 sản phẩm; con lăn trên bộ lọc không cuộn trang sản phẩm; giữ vị trí sau chọn, kết quả trống, cập nhật tồn kho; thử cả khi danh sách đã kéo xuống, dạng thẻ/bảng, 1440/1024/768/390px |
 | Câu chữ | Bỏ nhãn không gian/breadcrumb/mô tả lặp; QR, hóa đơn không còn chú thích client/thủ công; nhãn kết nối và bảo mật dùng tiếng Việt; payload thanh toán giữ nguyên |
-| Giỏ hàng | Một nút cạnh Tải lại; không có nút lặp trong sidebar/drawer; quay lại chọn hàng và sửa giỏ hoạt động |
+| Giỏ hàng | Một nút ở bên phải, không còn Tải lại cạnh giỏ; không có nút lặp trong sidebar/drawer; quay lại chọn hàng và sửa giỏ hoạt động; tải lại trang tự yêu cầu tồn kho mới và giữ giỏ đã lưu |
 | Quote / thanh toán | Payload giữ `{maHang:'TB01',soLuong:1}`, total từ response là 1.090.000 đ; hai click liên tiếp gửi một confirm |
 | Hóa đơn | Hiển thị, trở về danh sách và về bán hàng; PDF mẫu 1 trang A4 tại `tools/ui-redesign/after/invoice.pdf` |
 | Ngưỡng | Giá trị -1, 1.5, vượt int, rỗng không lưu được; 5 gửi đúng payload và cập nhật UI qua SSE fixture |

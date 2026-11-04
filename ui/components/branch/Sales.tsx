@@ -1,10 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { api, fmtMoney, fmtNumber } from "@/lib/api";
+import { fmtMoney, fmtNumber } from "@/lib/api";
 import type { CartLine } from "@/lib/checkout";
 import type { BranchItem, BranchRequest } from "@/lib/types";
-import { Badge, Empty, Facet, FilterGroup, LEVEL_LABEL, ProductImage, SortTh, sortRows, StockBar, stockLevel, useAction, type Sort, type StockLevel } from "@/components/ui";
+import { Badge, Empty, Facet, FilterGroup, LEVEL_LABEL, ProductImage, SortTh, sortRows, StockBar, stockLevel, type Sort, type StockLevel } from "@/components/ui";
 import { CartIcon } from "./Checkout";
 import "./sales.css";
 
@@ -13,7 +13,7 @@ type SupplyFilter = "all" | "waiting" | "none";
 type Key = "maHang" | "tenHang" | "giaBanLe" | "soLuong" | "muc";
 type Props = {
   items: BranchItem[]; requests: BranchRequest[]; reported: string[]; online: boolean;
-  push: (level: string, message: string) => void; cart: CartLine[];
+  cart: CartLine[];
   onAdd: (item: BranchItem, quantity: number) => void; onCart: () => void;
 };
 const SUPPLY: Record<string, [string, string]> = {
@@ -21,8 +21,7 @@ const SUPPLY: Record<string, [string, string]> = {
 };
 const value = (item: BranchItem, key: Key) => key === "muc" ? item.nguong > 0 ? item.soLuong / item.nguong : null : item[key];
 
-export function Sales({ items, requests, reported, online, push, cart, onAdd, onCart }: Props) {
-  const { run, busy } = useAction(push);
+export function Sales({ items, requests, reported, online, cart, onAdd, onCart }: Props) {
   const [q, setQ] = useState("");
   const [filter, setFilter] = useState<Filter>("all");
   const [supplyFilter, setSupplyFilter] = useState<SupplyFilter>("all");
@@ -75,8 +74,7 @@ export function Sales({ items, requests, reported, online, push, cart, onAdd, on
     <section className="sales-catalog">
       <div className="sales-toolbar card">
         <div className="card-head"><div className="sales-catalog-title"><h2>Sản phẩm tại chi nhánh</h2><span>{shown.length} / {items.length} mặt hàng</span></div>
-          <div className="card-actions"><button type="button" className="btn btn-primary cart-shortcut" onClick={onCart}><CartIcon /> Giỏ hàng ({quantity})</button>
-            <button type="button" className="btn" disabled={!online || busy} onClick={() => run(() => api("/api/inventory/refresh", {}))}>{busy ? "Đang tải..." : "Tải lại"}</button></div>
+          <div className="card-actions"><button type="button" className="btn btn-primary cart-shortcut" onClick={onCart}><CartIcon /> Giỏ hàng ({quantity})</button></div>
         </div>
         <div className="sales-searchbar"><label className="sales-search"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5" /><path d="m16 16 5 5" /></svg><input type="search" placeholder="Tìm tên sản phẩm, mã hàng hoặc model..." aria-label="Tìm mặt hàng" value={q} onChange={(event) => setQ(event.target.value)} /></label>
           <select aria-label="Sắp xếp sản phẩm" value={sort ? `${sort.key}:${sort.dir}` : ""} onChange={(event) => {

@@ -68,6 +68,12 @@ export default function BranchPage() {
   }, !!s?.maCn);
 
   useEffect(() => {
+    if (!agentUp || !s?.maCn || s.status !== "ONLINE" || forceRecovery) return;
+    // Request fresh inventory after the event stream is ready, including a page reload or reconnect.
+    void api("/api/inventory/refresh", {}).catch(() => push("error", "Không cập nhật được tồn kho. Vui lòng tải lại trang."));
+  }, [agentUp, s?.maCn, s?.status, forceRecovery, push]);
+
+  useEffect(() => {
     if (/^#reset=[A-Za-z0-9_-]{43}$/.test(window.location.hash)) setForceRecovery(true);
     let active = true;
     const checkSession = () => api<BranchSnapshot>("/api/state").then((snapshot) => { if (active) setS(snapshot); }).catch(() => {});
@@ -183,7 +189,7 @@ export default function BranchPage() {
             <button className="btn btn-sm" onClick={() => navigate("security")}>Xem chi tiết</button>
           </div>
         )}
-        {tab === "stock" && <Stock items={s.inventory} requests={s.requests} reported={s.daBao ?? []} online={online} push={push}
+        {tab === "stock" && <Stock items={s.inventory} requests={s.requests} reported={s.daBao ?? []} online={online}
           cart={cart} onCart={() => navigate("cart")} onAdd={(item, quantity) => {
             const previous = cart.find((line) => line.maHang === item.maHang)?.soLuong ?? 0;
             if (!Number.isSafeInteger(quantity) || quantity < 1 || previous + quantity > item.soLuong) {
