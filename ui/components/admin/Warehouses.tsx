@@ -18,6 +18,7 @@ export function Warehouses({ products, version, push, onBackChange }: { products
   const [sort, setSort] = useState<Sort>("thieu");
   const [sel, setSel] = useState<string | null>(null);
   const [mine, setMine] = useState(0);
+  const [error, setError] = useState("");
 
   useEffect(() => {
     onBackChange(sel ? { label: "Tất cả chi nhánh", onClick: () => setSel(null) } : null);
@@ -25,7 +26,10 @@ export function Warehouses({ products, version, push, onBackChange }: { products
   }, [sel, onBackChange]);
 
   useEffect(() => {
-    api<Warehouse[]>("/api/warehouses").then(setRows).catch(() => {});
+    let active = true;
+    api<Warehouse[]>("/api/warehouses").then((data) => { if (active) { setRows(data); setError(""); } })
+      .catch((failure: Error) => { if (active) setError(failure.message); });
+    return () => { active = false; };
   }, [version, mine]);
 
   if (sel) {
@@ -38,6 +42,7 @@ export function Warehouses({ products, version, push, onBackChange }: { products
 
   return (
     <>
+      {error && <div className="banner banner-danger" role="alert">Không tải được danh sách kho: {error}<button type="button" className="btn btn-sm" onClick={() => setMine((value) => value + 1)} style={{ marginLeft: 10 }}>Thử lại</button></div>}
       <div className="row" style={{ marginBottom: 12, justifyContent: "space-between" }}>
         <div className="row" style={{ gap: 6 }}>
           <button className={`btn ${view === "cards" ? "btn-primary" : ""}`} onClick={() => setView("cards")}>Thẻ chi nhánh</button>
@@ -87,12 +92,18 @@ function WarehouseView({ maCn, version, push, changed }: {
 }) {
   const [d, setD] = useState<WarehouseDetail | null>(null);
   const [level, setLevel] = useState<"" | StockLevel>("");
+  const [error, setError] = useState("");
+  const [reload, setReload] = useState(0);
 
   useEffect(() => {
-    api<WarehouseDetail>(`/api/warehouses/${encodeURIComponent(maCn)}`).then(setD).catch(() => setD(null));
-  }, [maCn, version]);
+    let active = true;
+    setError("");
+    api<WarehouseDetail>(`/api/warehouses/${encodeURIComponent(maCn)}`).then((data) => { if (active) setD(data); })
+      .catch((failure: Error) => { if (active) { setD(null); setError(failure.message); } });
+    return () => { active = false; };
+  }, [maCn, version, reload]);
 
-  if (!d) return <Card><Empty>Đang tải kho {maCn}...</Empty></Card>;
+  if (!d) return <Card>{error ? <div className="banner banner-danger" role="alert">Không tải được kho {maCn}: {error}<button type="button" className="btn btn-sm" onClick={() => setReload((value) => value + 1)} style={{ marginLeft: 10 }}>Thử lại</button></div> : <Empty>Đang tải kho {maCn}...</Empty>}</Card>;
   const count = (l: StockLevel) => d.matHang.filter((m) => m.muc === l).length;
   const shown = level ? d.matHang.filter((m) => m.muc === level) : d.matHang;
   const groups = [...new Set(shown.map((m) => m.tenDm))];

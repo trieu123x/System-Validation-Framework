@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { api, UNAUTHORIZED, useDebounced, useEvents } from "@/lib/api";
 import type { Branch, LogRow, Product, RequestRow, SecurityEventRow, Stats } from "@/lib/types";
-import { Dot, Shell, Toasts, useToasts, type BackAction } from "@/components/ui";
+import { Dot, LoadingWorkspace, Shell, Toasts, useToasts, type BackAction } from "@/components/ui";
 import { CompanyFooter, CompanyLogin, LoginScreen } from "@/components/Login";
 import { COMPANY } from "@/lib/company";
 import { NO_FILTER, Overview, type OverviewFilter } from "@/components/admin/Overview";
@@ -14,8 +14,10 @@ import { Notices } from "@/components/admin/Notices";
 import { Security } from "@/components/admin/Security";
 import { Debts } from "@/components/admin/Debts";
 import { AdminThresholds } from "@/components/admin/Thresholds";
+import { useWorkspaceNavigation } from "@/lib/navigation";
 
 type Tab = "overview" | "products" | "stock" | "thresholds" | "debts" | "history" | "transfers" | "broadcast" | "monitor" | "reconcile";
+const ADMIN_VIEWS: readonly Tab[] = ["overview", "products", "stock", "thresholds", "debts", "history", "transfers", "broadcast", "monitor", "reconcile"];
 
 /** Cổng đăng nhập công ty: chưa có phiên (hoặc phiên hết hạn) thì hiện trang đăng nhập. */
 export default function AdminPage() {
@@ -23,9 +25,15 @@ export default function AdminPage() {
 
   useEffect(() => {
     if (/^#reset=[A-Za-z0-9_-]{43}$/.test(window.location.hash)) { setUser(null); return; }
-    api<{ loggedIn: boolean; user: string }>("/api/auth/me")
-      .then((r) => setUser(r.loggedIn ? r.user : null))
-      .catch(() => setUser(null));
+    let active = true;
+    const checkSession = () => api<{ loggedIn: boolean; user: string }>("/api/auth/me")
+      .then((r) => { if (active) setUser(r.loggedIn ? r.user : null); })
+      .catch(() => { if (active) setUser(null); });
+    void checkSession();
+    const restored = (event: PageTransitionEvent) => {
+      if (event.persisted && !window.location.hash.startsWith("#reset=")) { setUser(undefined); void checkSession(); }
+    };
+    window.addEventListener("pageshow", restored);
     const expired = () => setUser(null);
     window.addEventListener(UNAUTHORIZED, expired);
     // Keep the active Admin lease alive while this browser is open.
@@ -35,11 +43,11 @@ export default function AdminPage() {
         .then((r) => { if (!r.loggedIn) setUser(null); })
         .catch(() => {});
     }, 30_000);
-    return () => { window.clearInterval(heartbeat); window.removeEventListener(UNAUTHORIZED, expired); };
+    return () => { active = false; window.clearInterval(heartbeat); window.removeEventListener(UNAUTHORIZED, expired); window.removeEventListener("pageshow", restored); };
   }, []);
 
   if (user === undefined) {
-    return <main className="center"><p className="muted">Đang mở...</p></main>;
+    return <LoadingWorkspace label="Đang tải..." />;
   }
   if (user === null) {
     return <LoginScreen side="company"><CompanyLogin onDone={setUser} /></LoginScreen>;
@@ -48,8 +56,7 @@ export default function AdminPage() {
 }
 
 function AdminApp({ user, onLogout }: { user: string; onLogout: () => void }) {
-  const [tab, setTab] = useState<Tab>("overview");
-  const [trail, setTrail] = useState<Tab[]>([]);
+  const { view: tab, navigate: openView, goBack: previousView } = useWorkspaceNavigation<Tab>({ scope: "admin", initial: "overview", views: ADMIN_VIEWS });
   const [contextBack, setContextBack] = useState<BackAction | null>(null);
   const { toasts, push, dismiss } = useToasts();
   const [branches, setBranches] = useState<Branch[]>([]);
@@ -62,6 +69,7 @@ function AdminApp({ user, onLogout }: { user: string; onLogout: () => void }) {
   const [showSim, setShowSim] = useState(false);
   const [overviewFilter, setOverviewFilter] = useState<OverviewFilter>(NO_FILTER);
   const [v, setV] = useState({ stock: 0, requests: 0, transfers: 0, products: 0, debts: 0, security: 0, notices: 0 });
+  const [loadError, setLoadError] = useState("");
 
   const bump = (k: keyof typeof v) => setV((x) => ({ ...x, [k]: x[k] + 1 }));
   const flash = (maYc: number) => {
@@ -69,11 +77,11 @@ function AdminApp({ user, onLogout }: { user: string; onLogout: () => void }) {
     setTimeout(() => setFresh((s) => { const n = new Set(s); n.delete(maYc); return n; }), 3000);
   };
 
-  const loadBranches = useCallback(() => api<Branch[]>("/api/branches").then(setBranches).catch(() => {}), []);
-  const loadAlerts = useCallback(() => api<RequestRow[]>("/api/alerts").then(setAlerts).catch(() => {}), []);
-  const loadRequests = useCallback(() => api<RequestRow[]>("/api/requests").then(setRequests).catch(() => {}), []);
-  const loadProducts = useCallback(() => api<Product[]>("/api/products").then(setProducts).catch(() => {}), []);
-  const loadStats = useCallback(() => api<Stats>("/api/stats").then(setStats).catch(() => {}), []);
+  const loadBranches = useCallback(() => api<Branch[]>("/api/branches").then(setBranches).catch((error: Error) => setLoadError(error.message)), []);
+  const loadAlerts = useCallback(() => api<RequestRow[]>("/api/alerts").then(setAlerts).catch((error: Error) => setLoadError(error.message)), []);
+  const loadRequests = useCallback(() => api<RequestRow[]>("/api/requests").then(setRequests).catch((error: Error) => setLoadError(error.message)), []);
+  const loadProducts = useCallback(() => api<Product[]>("/api/products").then(setProducts).catch((error: Error) => setLoadError(error.message)), []);
+  const loadStats = useCallback(() => api<Stats>("/api/stats").then(setStats).catch((error: Error) => setLoadError(error.message)), []);
 
   useEffect(() => {
     loadBranches(); loadAlerts(); loadRequests(); loadProducts(); loadStats();
@@ -90,19 +98,15 @@ function AdminApp({ user, onLogout }: { user: string; onLogout: () => void }) {
   const refreshDebts = useDebounced(() => bump("debts"), 800);
   const refreshSecurity = useDebounced(() => bump("security"), 500);
   const [highCount, setHighCount] = useState(0);
+  useEffect(() => { if (tab === "monitor") setHighCount(0); }, [tab]);
   const navigate = (next: Tab) => {
     if (next === tab) return;
-    setTrail((previous) => [...previous, tab].slice(-20));
     setContextBack(null);
-    setTab(next);
-    if (next === "monitor") setHighCount(0);
+    openView(next);
   };
   const goBack = () => {
-    const previous = trail[trail.length - 1] ?? "overview";
     setContextBack(null);
-    setTab(previous);
-    setTrail((history) => history.slice(0, -1));
-    if (previous === "monitor") setHighCount(0);
+    previousView();
   };
   const [duplicateAlert, setDuplicateAlert] = useState<SecurityEventRow | null>(null);
   const isSim = (maCn: string) => maCn.startsWith("SIM");
@@ -150,7 +154,7 @@ function AdminApp({ user, onLogout }: { user: string; onLogout: () => void }) {
   const shownAlerts = alerts.filter((a) => showSim || !isSim(a.maCn));
   const TITLES: Record<Tab, string> = {
     overview: "Tổng quan", products: "Hàng hóa & kho tổng", stock: "Quản lý kho chi nhánh", debts: "Công nợ",
-    thresholds: "Ngưỡng tối thiểu của chi nhánh",
+    thresholds: "Đặt ngưỡng",
     history: "Yêu cầu cấp hàng",
     transfers: "Điều chuyển hàng", broadcast: "Thông báo tới chi nhánh", monitor: "Giám sát hệ thống", reconcile: "Đối soát kho",
   };
@@ -158,13 +162,13 @@ function AdminApp({ user, onLogout }: { user: string; onLogout: () => void }) {
   return (
     <>
       <Shell<Tab> brand={COMPANY.brand} sub="Quản trị công ty" value={tab} title={TITLES[tab]}
-        menu menuLabel="Chức năng quản trị" onChange={navigate}
+        menu menuLabel="Chức năng quản trị" onChange={navigate} notificationId="broadcast"
         back={tab !== "overview" ? contextBack ?? { label: "Quay lại", onClick: goBack } : undefined}
         nav={[
           { id: "overview", label: "Tổng quan", count: shownAlerts.length, tone: "danger" },
           { id: "products", label: "Hàng hóa" },
           { id: "stock", label: "Kho chi nhánh" },
-          { id: "thresholds", label: "Ngưỡng tối thiểu" },
+          { id: "thresholds", label: "Đặt ngưỡng" },
           { id: "debts", label: "Công nợ" },
           { id: "history", label: "Yêu cầu cấp hàng", count: requests.filter((r) => r.chenhLech != null && r.chenhLech !== 0 && (showSim || !isSim(r.maCn))).length, tone: "danger" },
           { id: "transfers", label: "Điều chuyển", count: shortage, tone: "warn" },
@@ -176,7 +180,7 @@ function AdminApp({ user, onLogout }: { user: string; onLogout: () => void }) {
           <>
             <span className="admin-status-extra">{online} chi nhánh online</span>
             <span title={connected ? "Đang nhận thông báo trực tiếp" : "Không nhận được thông báo trực tiếp"}>
-              <Dot on={connected} />{connected ? "Đã nối server" : "Mất kết nối server"}
+              <Dot on={connected} />{connected ? "Đã kết nối" : "Mất kết nối"}
             </span>
             <span className="admin-status-extra">{user}</span>
             <button className="btn btn-sm" onClick={onLogout}>Đăng xuất</button>
@@ -187,6 +191,7 @@ function AdminApp({ user, onLogout }: { user: string; onLogout: () => void }) {
             <input type="checkbox" checked={showSim} onChange={(e) => setShowSim(e.target.checked)} /> Hiện chi nhánh kiểm thử
           </label>
         )}>
+        {loadError && <div className="banner banner-danger" role="alert"><strong>Không tải được một phần dữ liệu.</strong> {loadError}<button type="button" className="btn btn-sm" style={{ marginLeft: 12 }} onClick={() => { setLoadError(""); loadBranches(); loadAlerts(); loadRequests(); loadProducts(); loadStats(); }}>Thử tải lại</button></div>}
         {duplicateAlert && (
           <div className="banner banner-danger" role="alert" style={{ marginBottom: 16 }}>
             <strong>Cảnh báo đăng nhập trùng: {duplicateAlert.maCn || "Admin"}</strong>

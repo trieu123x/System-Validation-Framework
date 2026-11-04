@@ -9,16 +9,19 @@ import type {
   BranchDebtInfo, BranchItem, BranchRequest, BranchSnapshot, BranchTransfer, ClientSecurityInfo, InboxItem, Notice,
 } from "@/lib/types";
 import {
-  Badge, Card, Dot, Empty, Facet, FilterBar, FilterGroup, LEVEL_LABEL, Shell, SortTh, sortRows, Stat, StateBadge, StockBar, stockLevel,
-  ProductImage, Toasts, useAction, useToasts, type Sort, type StockLevel,
+  Badge, Card, Dot, Empty, FilterBar, LoadingWorkspace, Shell, Stat, StateBadge, stockLevel,
+  ProductImage, Toasts, useAction, useToasts,
 } from "@/components/ui";
 import { LoginScreen } from "@/components/Login";
 import { EntryTable } from "@/components/admin/Debts";
-import { CartIcon, Checkout, InvoiceHistory } from "@/components/branch/Checkout";
+import { Checkout, InvoiceHistory } from "@/components/branch/Checkout";
 import { Thresholds } from "@/components/branch/Thresholds";
+import { Sales as Stock } from "@/components/branch/Sales";
 import type { CartLine } from "@/lib/checkout";
+import { useWorkspaceNavigation } from "@/lib/navigation";
 
 type Tab = "stock" | "cart" | "invoices" | "thresholds" | "offers" | "transfers" | "debt" | "news" | "history" | "activity" | "security";
+const BRANCH_VIEWS: readonly Tab[] = ["stock", "cart", "invoices", "thresholds", "offers", "transfers", "debt", "news", "history", "activity", "security"];
 type Push = (level: string, text: string) => void;
 
 const STATUS_TEXT: Record<BranchSnapshot["status"], string> = {
@@ -31,21 +34,12 @@ const STATUS_TEXT: Record<BranchSnapshot["status"], string> = {
 export default function BranchPage() {
   const [s, setS] = useState<BranchSnapshot | null>(null);
   const [forceRecovery, setForceRecovery] = useState(false);
-  const [tab, setTab] = useState<Tab>("stock");
   const [cart, setCart] = useState<CartLine[]>([]);
   const [cartBranch, setCartBranch] = useState<string | null>(null);
   const [checkoutBusy, setCheckoutBusy] = useState(false);
-  const [trail, setTrail] = useState<Tab[]>([]);
-  const navigate = (next: Tab) => {
-    if (checkoutBusy || next === tab) return;
-    setTrail((previous) => [...previous, tab].slice(-20));
-    setTab(next);
-  };
-  const goBack = () => {
-    if (checkoutBusy) return;
-    setTab(trail[trail.length - 1] ?? "stock");
-    setTrail((previous) => previous.slice(0, -1));
-  };
+  const { view: tab, navigate, goBack } = useWorkspaceNavigation<Tab>({
+    scope: `branch:${s?.maCn ?? ""}`, initial: "stock", views: BRANCH_VIEWS, enabled: !!s?.maCn && !forceRecovery, blocked: checkoutBusy,
+  });
   const { toasts, push, dismiss } = useToasts();
   const [duplicateAlert, setDuplicateAlert] = useState<{ maCn: string; time: string; message: string } | null>(null);
 
@@ -75,7 +69,14 @@ export default function BranchPage() {
 
   useEffect(() => {
     if (/^#reset=[A-Za-z0-9_-]{43}$/.test(window.location.hash)) setForceRecovery(true);
-    api<BranchSnapshot>("/api/state").then(setS).catch(() => {});
+    let active = true;
+    const checkSession = () => api<BranchSnapshot>("/api/state").then((snapshot) => { if (active) setS(snapshot); }).catch(() => {});
+    void checkSession();
+    const restored = (event: PageTransitionEvent) => {
+      if (event.persisted && !window.location.hash.startsWith("#reset=")) { setS(null); void checkSession(); }
+    };
+    window.addEventListener("pageshow", restored);
+    return () => { active = false; window.removeEventListener("pageshow", restored); };
   }, []);
 
   useEffect(() => {
@@ -110,12 +111,12 @@ export default function BranchPage() {
   // All branches use the same public URL /branch/; identity lives in the secure cookie.
 
   if (!s) {
-    return <main className="center"><p className="muted">Đang mở ứng dụng chi nhánh...</p></main>;
+    return <LoadingWorkspace label="Đang tải..." />;
   }
   if (forceRecovery || !s.maCn) {
     return (
       <>
-        <Login snapshot={s} />
+        <Login />
         <Toasts toasts={toasts} dismiss={dismiss} />
       </>
     );
@@ -132,7 +133,7 @@ export default function BranchPage() {
 
   const TITLES: Record<Tab, string> = {
     cart: "Giỏ hàng & thanh toán", invoices: "Hóa đơn bán hàng",
-    thresholds: "Ngưỡng tối thiểu",
+    thresholds: "Đặt ngưỡng",
     stock: "Bán hàng & tồn kho", offers: "Nhận hàng từ công ty", transfers: "Yêu cầu điều chuyển hàng",
     debt: "Công nợ với công ty", news: "Thông báo từ công ty", history: "Lịch sử nhập hàng", activity: "Nhật ký hoạt động",
     security: "An ninh máy chi nhánh",
@@ -141,13 +142,13 @@ export default function BranchPage() {
   return (
     <>
       <Shell<Tab> brand={s.tenCn ?? ""} sub={`TOBOKI · ${s.maCn}`} value={tab} onChange={navigate}
-        menu navigationDisabled={checkoutBusy}
+        menu navigationDisabled={checkoutBusy} notificationId="news"
         back={!["stock", "cart", "invoices"].includes(tab) ? { label: "Quay lại", onClick: goBack } : undefined}
         title={TITLES[tab]}
         nav={[
           { id: "stock", label: "Bán hàng", count: low, tone: "danger" },
           { id: "invoices", label: "Hóa đơn" },
-          { id: "thresholds", label: "Ngưỡng tối thiểu" },
+          { id: "thresholds", label: "Đặt ngưỡng" },
           { id: "offers", label: "Nhận hàng", count: actionable, tone: "warn" },
           { id: "transfers", label: "Điều chuyển", count: pendingTransfers, tone: "warn" },
           { id: "debt", label: "Công nợ", count: overLimit ? 1 : 0, tone: "danger" },
@@ -169,16 +170,16 @@ export default function BranchPage() {
             <button className="btn btn-sm" type="button" onClick={() => setDuplicateAlert(null)}>Đã hiểu</button>
           </div>
         )}
-        {!agentUp && <div className="banner banner-danger">Không kết nối được với dịch vụ chi nhánh.</div>}
+        {!agentUp && <div className="banner banner-danger">Mất kết nối. Vui lòng thử lại.</div>}
         {agentUp && !online && (
           <div className="banner banner-warn">
-            {s.statusDetail}. Dữ liệu bên dưới là bản cuối cùng nhận được; thao tác sẽ mở lại khi nối lại được server.
+            Mất kết nối với công ty. Dữ liệu chưa được cập nhật.
           </div>
         )}
         {(spoof || sec?.serverDoi) && (
           <div className="banner banner-danger">
-            {spoof && <>Có {sec!.discovery.length} server cùng trả lời tìm server: {sec!.discovery.join(", ")}. Đang dùng {sec!.discovery[0]}; nếu không đúng server công ty, hãy nhập IP server khi đăng nhập. </>}
-            {sec?.serverDoi && <>Server đã đổi địa chỉ ({sec.serverDoi}). </>}
+            {spoof && <>Phát hiện nhiều địa chỉ kết nối. Vui lòng kiểm tra lại. </>}
+            {sec?.serverDoi && <>Địa chỉ kết nối công ty đã thay đổi. </>}
             <button className="btn btn-sm" onClick={() => navigate("security")}>Xem chi tiết</button>
           </div>
         )}
@@ -209,7 +210,7 @@ export default function BranchPage() {
   );
 }
 
-function Login({ snapshot }: { snapshot: BranchSnapshot }) {
+function Login() {
   const [maCn, setMaCn] = useState("");
   const [method, setMethod] = useState<"name" | "email">("name");
   const [recoveryToken, setRecoveryToken] = useRecoveryToken();
@@ -261,13 +262,11 @@ function Login({ snapshot }: { snapshot: BranchSnapshot }) {
         </label>
         {method === "email" && <label className="field">Mã chi nhánh (nếu email dùng chung)
           <input value={branchHint} onChange={(e) => setBranchHint(e.target.value)} placeholder="VD: CN01 hoặc CN02" />
-          <span className="note">CN01 và CN02 dùng chung email nên cần điền mã chi nhánh này.</span>
         </label>}
         {fixedBranchId && <span className="note">Trang này chỉ dành cho tài khoản {fixedBranchId}.</span>}
         <label className="field">Mật khẩu
           <input type="password" value={matKhau} onChange={(e) => setMatKhau(e.target.value)} autoFocus={!!fixedBranchId} required />
         </label>
-        {snapshot.statusDetail && <span className="note">{snapshot.statusDetail}</span>}
         {error && <p className="error">{error}</p>}
         <button className="btn btn-primary" disabled={busy}>{busy ? "Đang đăng nhập..." : "Đăng nhập"}</button>
         <button type="button" className="btn" onClick={() => setForgot(true)}>Quên mật khẩu?</button>
@@ -276,24 +275,9 @@ function Login({ snapshot }: { snapshot: BranchSnapshot }) {
   );
 }
 
-type Filter = "all" | "critical" | "warning" | "unset";
-type SupplyFilter = "all" | "waiting" | "none";
-type StockSort = "maHang" | "tenHang" | "giaBanLe" | "soLuong" | "muc";
-
-/** Giá trị để sắp xếp bảng tồn kho; "muc" = tồn / ngưỡng, chưa đặt ngưỡng thì xếp cuối. */
-const stockSortValue = (i: BranchItem, k: StockSort) =>
-  k === "muc" ? (i.nguong > 0 ? i.soLuong / i.nguong : null) : i[k];
-
 /** Ô tìm kiếm của các thanh lọc: khớp không phân biệt hoa thường trên các trường ghép lại. */
 const hit = (needle: string, ...fields: (string | number | null | undefined)[]) =>
   !needle || fields.join(" ").toLowerCase().includes(needle);
-
-/** Nhãn hiện cạnh mặt hàng đang chờ công ty (theo yêu cầu còn mở hoặc cảnh báo vừa gửi). */
-const SUPPLY: Record<string, [string, string]> = {
-  DA_GIAO: ["info", "hàng đang về"],
-  DA_DE_XUAT: ["warn", "chờ bạn xác nhận"],
-  THIEU_HANG: ["danger", "công ty hết hàng"],
-};
 
 const SEC_TONE: Record<string, string> = { HIGH: "danger", MEDIUM: "warn", LOW: "muted" };
 
@@ -329,7 +313,7 @@ function SecurityTab({ sec }: { sec: ClientSecurityInfo | undefined }) {
 /** Công nợ của chi nhánh với công ty: server đẩy tin DEBT mỗi khi sổ đổi (nhận hàng, phiếu thu, điều chuyển). */
 function Debt({ debt }: { debt: BranchDebtInfo | null }) {
   if (!debt) {
-    return <Card><Empty>Chưa nhận được công nợ từ server (server cũ chưa hỗ trợ DEBT, hoặc đang chờ kết nối).</Empty></Card>;
+    return <Card><Empty>Chưa có dữ liệu công nợ.</Empty></Card>;
   }
   const over = debt.conNo > debt.hanMuc;
   return (
@@ -350,144 +334,6 @@ function Debt({ debt }: { debt: BranchDebtInfo | null }) {
         <EntryTable rows={debt.butToan} />
       </Card>
     </>
-  );
-}
-
-function Stock({ items, requests, reported, online, push, cart, onAdd, onCart }: {
-  items: BranchItem[]; requests: BranchRequest[]; reported: string[]; online: boolean; push: Push;
-  cart: CartLine[]; onAdd: (item: BranchItem, quantity: number) => void; onCart: () => void;
-}) {
-  const { run } = useAction(push);
-  const [q, setQ] = useState("");
-  const [filter, setFilter] = useState<Filter>("all");
-  const [supplyFilter, setSupplyFilter] = useState<SupplyFilter>("all");
-  const [category, setCategory] = useState("all");
-  const [sort, setSort] = useState<Sort<StockSort>>(null);
-  const count =(l: StockLevel) => items.filter((i) => stockLevel(i.soLuong, i.nguong) === l).length;
-  const needle = q.trim().toLowerCase();
-  const supply = new Map<string, [string, string]>();
-  reported.forEach((ma) => supply.set(ma, ["warn", "đã báo công ty"]));
-  requests.filter((r) => SUPPLY[r.trangThai]).forEach((r) => supply.set(r.maHang, SUPPLY[r.trangThai]));
-  const waiting = items.filter((i) => supply.has(i.maHang)).length;
-  // server cũ không gửi danh mục: khi đó ẩn bộ lọc và cột liên quan
-  const categories = [...new Set(items.map((i) => i.danhMuc).filter(Boolean))];
-  const hasPrice = items.some((i) => i.giaBanLe != null);
-  const shown = sortRows(items.filter((i) => (filter === "all" || stockLevel(i.soLuong, i.nguong) === filter)
-    && (supplyFilter === "all" || supply.has(i.maHang) === (supplyFilter === "waiting"))
-    && (category === "all" || i.danhMuc === category)
-    && hit(needle, i.maHang, i.tenHang, i.model)), sort, stockSortValue);
-  const th = { sort, onSort: setSort };
-
-  return (
-    <div className="listpage">
-      <aside className="filters">
-        <FilterGroup title="Tìm hàng hóa">
-          <input type="search" placeholder="Mã, tên hoặc model" value={q}
-            onChange={(e) => setQ(e.target.value)} aria-label="Tìm mặt hàng" />
-        </FilterGroup>
-        {categories.length > 0 && (
-          <FilterGroup title="Danh mục">
-            <Facet<string> name="category" value={category} onChange={setCategory} options={[
-              { id: "all", label: "Tất cả", count: items.length },
-              ...categories.map((c) => ({ id: c, label: c, count: items.filter((i) => i.danhMuc === c).length })),
-            ]} />
-          </FilterGroup>
-        )}
-        <FilterGroup title="Mức tồn">
-          <Facet<Filter> name="level" value={filter} onChange={setFilter} options={[
-            { id: "all", label: "Tất cả", count: items.length },
-            { id: "critical", label: "Dưới ngưỡng", count: count("critical") },
-            { id: "warning", label: "Sắp chạm ngưỡng", count: count("warning") },
-            { id: "unset", label: "Chưa đặt ngưỡng", count: count("unset") },
-          ]} />
-        </FilterGroup>
-        <FilterGroup title="Nhập hàng">
-          <Facet<SupplyFilter> name="supply" value={supplyFilter} onChange={setSupplyFilter} options={[
-            { id: "all", label: "Tất cả", count: items.length },
-            { id: "waiting", label: "Đang chờ công ty", count: waiting },
-            { id: "none", label: "Không chờ", count: items.length - waiting },
-          ]} />
-        </FilterGroup>
-        <FilterGroup title="Ghi chú">
-          <p className="note" style={{ margin: 0 }}>
-            Thêm sản phẩm vào giỏ và thanh toán nhiều mặt hàng cùng lúc. Tồn kho được cập nhật sau khi xác nhận thanh toán.
-            Mặt hàng chưa đặt ngưỡng sẽ không được cảnh báo.
-          </p>
-        </FilterGroup>
-      </aside>
-      <section className="card">
-        <div className="card-head">
-          <h2>Tồn kho tại chi nhánh <span className="muted">· {shown.length} mặt hàng</span></h2>
-          <button type="button" className="btn btn-primary cart-shortcut" onClick={onCart}>
-            <CartIcon /> Giỏ hàng ({cart.reduce((sum, line) => sum + line.soLuong, 0)})
-          </button>
-          <button className="btn btn-sm" disabled={!online} onClick={() => run(() => api("/api/inventory/refresh", {}))}>
-            Tải lại
-          </button>
-        </div>
-        {shown.length === 0 ? <Empty>{items.length ? "Không có mặt hàng nào khớp bộ lọc." : "Chưa có dữ liệu tồn kho."}</Empty> : (
-          <div className="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <SortTh k="maHang" {...th}>Mã hàng</SortTh><SortTh k="tenHang" {...th}>Tên hàng</SortTh>
-                  {hasPrice && <SortTh k="giaBanLe" num {...th}>Giá bán lẻ</SortTh>}
-                  <SortTh k="soLuong" num {...th}>Tồn</SortTh><SortTh k="muc" {...th}>Mức tồn</SortTh><th scope="col">Số lượng</th>
-                </tr>
-              </thead>
-              <tbody>
-                {shown.map((it) => (
-                  <StockRow key={it.maHang} it={it} online={online} supply={supply.get(it.maHang)}
-                    showPrice={hasPrice} inCart={cart.find((line) => line.maHang === it.maHang)?.soLuong ?? 0} onAdd={onAdd} />
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </section>
-    </div>
-  );
-}
-
-function StockRow({ it, online, supply, showPrice, inCart, onAdd }: {
-  it: BranchItem; online: boolean; supply?: [string, string]; showPrice: boolean;
-  inCart: number; onAdd: (item: BranchItem, quantity: number) => void;
-}) {
-  const [qty, setQty] = useState("1");
-  const level = stockLevel(it.soLuong, it.nguong);
-
-
-  return (
-    <tr className={level === "critical" ? "low" : ""}>
-      <td className="code">{it.maHang}</td>
-      <td>
-        <div className="with-thumb">
-          <ProductImage src={it.anh} alt={it.tenHang} category={it.danhMuc} />
-          <div>
-            {it.tenHang}
-            {supply && <> <Badge tone={supply[0]}>{supply[1]}</Badge></>}
-            {(it.model || it.danhMuc) && (
-              <div className="muted" style={{ fontSize: 12 }}>{[it.model, it.danhMuc].filter(Boolean).join(" · ")}</div>
-            )}
-          </div>
-        </div>
-      </td>
-      {showPrice && <td className="num nowrap">{fmtMoney(it.giaBanLe)}</td>}
-      <td className="num"><b style={{ fontSize: 14 }}>{fmtNumber(it.soLuong)}</b></td>
-      <td>
-        <StockBar soLuong={it.soLuong} nguong={it.nguong} />
-        <div className="muted" style={{ fontSize: 12 }}>{LEVEL_LABEL[level]}</div>
-      </td>
-      <td className="nowrap">
-        <span className="qty-group">
-          <input type="number" min={1} max={Math.max(0, it.soLuong - inCart)} placeholder="SL" value={qty} style={{ height: 28 }}
-            onChange={(e) => setQty(e.target.value)} aria-label={`Số lượng bán ${it.maHang}`} />
-          <button className="btn btn-sm btn-primary" disabled={!online || it.giaBanLe == null || !Number.isSafeInteger(Number(qty)) || Number(qty) < 1 || Number(qty) + inCart > it.soLuong}
-            onClick={() => { onAdd(it, Number(qty)); setQty("1"); }}>+ Thêm vào giỏ</button>
-        </span>
-        {inCart > 0 && <div className="muted" style={{ fontSize: 12, marginTop: 4 }}>Trong giỏ: {inCart}</div>}
-      </td>
-    </tr>
   );
 }
 
@@ -577,7 +423,7 @@ function OfferRow({ r, name, online, push }: { r: BranchRequest; name: string; o
   const received = () => {
     if (!validReceipt) return;
     if (delta !== 0 && !window.confirm(`YC #${r.maYc}: đã gửi ${r.soLuongGiao}, thực nhận ${n} (${delta > 0 ? "thừa" : "thiếu"} ${Math.abs(delta)}). Xác nhận nhập kho và báo công ty?`)) return;
-    run(() => api(`/api/requests/${r.maYc}/received`, { soLuongNhan: n }), "Đã gửi số kiểm đếm, chờ server xác nhận.");
+    run(() => api(`/api/requests/${r.maYc}/received`, { soLuongNhan: n }), "Đã gửi số lượng thực nhận.");
   };
 
   return (

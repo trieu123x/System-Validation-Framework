@@ -1,22 +1,22 @@
-/* Phong cách phần mềm quản lý bán hàng/phân phối (kiểu KiotViet, Sapo, Odoo):
-   thanh menu ngang trên cùng, bảng dữ liệu dày, bộ lọc cột trái, góc vuông, không đổ bóng. */
+/* TOBOKI: giao diện vận hành nội bộ. Light mặc định, tokens dùng chung. */
 :root {
-  --bg: #eef1f5;
+  --bg: #f5f7fa;
   --surface: #ffffff;
-  --surface-2: #f6f7f9;
-  --th-bg: #e9f0f7;
-  --th-text: #2b3a4a;
-  --row-hover: #f3f8fd;
+  --surface-2: #f8fafc;
+  --th-bg: #f8fafc;
+  --th-text: #536176;
+  --row-hover: #f4f7fd;
   --zebra: #fafbfc;
-  --border: #d6dbe2;
-  --border-strong: #b9c2cd;
-  --text: #222831;
-  --text-2: #687280;
-  --accent: #1a6fb5;
-  --accent-soft: #e6f0fa;
-  --btn-primary: #1a6fb5;
+  --border: #e4e9f0;
+  --border-strong: #c5cdd8;
+  --text: #182230;
+  --text-2: #5c697b;
+  --accent: #245bd6;
+  --accent-soft: #edf3ff;
+  --accent-hover: #1b49b3;
+  --btn-primary: #245bd6;
   --btn-success: #23813a;
-  --success: #23813a;
+  --success: #1f7534;
   --success-soft: #e5f4e8;
   --warn: #9a5b00;
   --warn-soft: #fff3dc;
@@ -24,42 +24,20 @@
   --danger-soft: #fdeceb;
   --info: #0d6e95;
   --info-soft: #e2f2f8;
-  --head-bg: #1b5a93;
+  --head-bg: #ffffff;
   --head-active: #12436f;
-  --head-text: #ffffff;
-  --radius: 3px;
+  --head-text: #182230;
+  --radius: 10px;
+  --radius-sm: 6px;
+  --radius-lg: 14px;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --shadow-sm: 0 2px 6px #18223004;
   color-scheme: light;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #14171b;
-    --surface: #1c2026;
-    --surface-2: #22272e;
-    --th-bg: #232a33;
-    --th-text: #c9d3de;
-    --row-hover: #252c35;
-    --zebra: #1f2329;
-    --border: #313843;
-    --border-strong: #46505d;
-    --text: #e4e8ed;
-    --text-2: #98a2ae;
-    --accent: #5fa1e0;
-    --accent-soft: #1b2e44;
-    --btn-primary: #2a6fb0;
-    --btn-success: #2b7a3f;
-    --success: #5cc277;
-    --success-soft: #183424;
-    --warn: #e8ad4c;
-    --warn-soft: #3a2c14;
-    --danger: #f0716b;
-    --danger-soft: #3d1d1c;
-    --info: #5ec0e6;
-    --info-soft: #15323e;
-    --head-bg: #15314d;
-    --head-active: #0e2238;
-    color-scheme: dark;
-  }
 }
 
 * { box-sizing: border-box; }

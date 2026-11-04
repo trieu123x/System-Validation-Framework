@@ -10,7 +10,6 @@ export type Invoice = {
 // Replace this URL with your bank QR image when the receiving account is ready.
 // Supported placeholders: {amount}, {reference}. The default QR contains a demo message.
 export const PAYMENT_QR_URL = "";
-export const PAYMENT_QR_IS_DEMO = true;
 
 export function paymentQr(order: Invoice) {
   return PAYMENT_QR_URL.replaceAll("{amount}", String(order.total)).replaceAll("{reference}", encodeURIComponent(order.id));

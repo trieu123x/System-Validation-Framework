@@ -53,7 +53,7 @@ export function PasswordRecovery({
       } else {
         await api(scope === "admin" ? "/api/auth/recovery/request" : "/api/password/forgot",
           scope === "admin" ? { scope, email: email.trim() } : { email: email.trim(), branchHint: branchHint.trim() });
-        setMessage("Nếu email khớp tài khoản và SMTP đã bật, bạn sẽ nhận được liên kết đặt lại mật khẩu. Vui lòng kiểm tra cả Spam.");
+        setMessage("Nếu email đã được đăng ký, bạn sẽ nhận được liên kết đặt lại mật khẩu. Vui lòng kiểm tra cả thư rác.");
       }
     } catch (err) {
       setError((err as Error).message);

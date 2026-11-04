@@ -98,25 +98,23 @@ export function Overview({ branches, products, alerts: allAlerts, requests, stat
         <label className="field">Kết nối
           <select value={f.ketNoi} onChange={(e) => set({ ketNoi: e.target.value as OverviewFilter["ketNoi"] })}>
             <option value="">Tất cả</option>
-            <option value="online">Online</option>
-            <option value="offline">Offline</option>
+            <option value="online">Đã kết nối</option>
+            <option value="offline">Mất kết nối</option>
           </select>
         </label>
       </FilterBar>
 
       <div className="kpis">
-        <Stat label="Chi nhánh online" value={`${online}/${visible.length}`}
+        <Stat label="Chi nhánh đã kết nối" value={`${online}/${visible.length}`}
           tone={online === visible.length ? "success" : online === 0 ? "danger" : "warn"}
-          hint={`${visible.length - online} offline`} />
+          hint={`${visible.length - online} mất kết nối`} />
         <Stat label="Cảnh báo chờ xử lý" value={alerts.length} tone={alerts.length ? "danger" : undefined}
           hint={alerts.length ? "cần gửi đề xuất" : "không có"} />
         <Stat label="Đã gửi, chờ CN nhận" value={shipped} hint="xem yêu cầu" onClick={() => go("history")} />
         <Stat label="Báo không đủ hàng" value={shortage} tone={shortage ? "warn" : undefined}
           hint="xem điều chuyển" onClick={() => go("transfers")} />
-        <Stat label="Tin nhắn / phút" value={stats?.tinPhutQua ?? "—"} hint={`${stats?.ketNoi ?? 0} kết nối TCP`}
+        <Stat label="Tin nhắn / phút" value={stats?.tinPhutQua ?? "—"} hint={`${stats?.ketNoi ?? 0} kết nối`}
           onClick={() => go("monitor")} />
-        <Stat label={`Luồng JVM (${stats?.runtime?.ioMode ?? "?"})`} value={stats?.runtime?.threads ?? "—"}
-          hint={stats?.runtime ? `heap ${Math.round(stats.runtime.heapUsedMb)} MB` : undefined} />
       </div>
 
       <div className="dash">

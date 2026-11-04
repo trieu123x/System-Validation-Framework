@@ -24,7 +24,7 @@ export function Thresholds({ items, online, push }: Props) {
   const th = { sort, onSort: setSort };
 
   return <>
-    <p className="note" style={{ marginBottom: 16 }}>Đặt mức tồn tối thiểu cho từng mặt hàng để nhận cảnh báo thiếu hàng. Đặt bằng 0 để tắt cảnh báo cho mặt hàng đó.</p>
+    <p className="note" style={{ marginBottom: 16 }}>Đặt 0 để tắt cảnh báo.</p>
     <FilterBar active={!!(query || category || filter)} onClear={() => { setQuery(""); setCategory(""); setFilter(""); }}>
       <label className="field filterbar-search">Tìm sản phẩm<input type="search" placeholder="Mã, tên hoặc model" value={query} onChange={(e) => setQuery(e.target.value)} /></label>
       {categories.length > 0 && <label className="field">Danh mục<select value={category} onChange={(e) => setCategory(e.target.value)}><option value="">Tất cả danh mục</option>{categories.map((name) => <option key={name}>{name}</option>)}</select></label>}
@@ -32,7 +32,7 @@ export function Thresholds({ items, online, push }: Props) {
     </FilterBar>
     <Card title={<>Ngưỡng cảnh báo tồn kho <span className="muted">· {shown.length} mặt hàng</span></>}
       actions={<button className="btn btn-sm" disabled={!online || busy} onClick={() => run(() => api("/api/inventory/refresh", {}))}>Tải lại</button>}>
-      {!online && <p className="note">Kết nối lại server để cập nhật ngưỡng tối thiểu.</p>}
+      {!online && <p className="note">Kết nối lại để lưu ngưỡng.</p>}
       {!shown.length ? <Empty>Không có mặt hàng nào khớp bộ lọc.</Empty> : <div className="table-wrap"><table>
         <thead><tr><SortTh k="maHang" {...th}>Mã hàng</SortTh><SortTh k="tenHang" {...th}>Sản phẩm</SortTh><SortTh k="soLuong" num {...th}>Tồn hiện tại</SortTh><SortTh k="nguong" {...th}>Ngưỡng tối thiểu</SortTh><th>Trạng thái</th></tr></thead>
         <tbody>{shown.map((item) => <ThresholdRow key={item.maHang} item={item} online={online} push={push} />)}</tbody>

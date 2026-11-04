@@ -6,24 +6,24 @@ import type { Branch, BrowserConnection, NetworkBranch, NetworkEvent } from "@/l
 import { Badge, Card, Empty, Stat } from "@/components/ui";
 
 const EVENT_NAMES: Record<string, string> = {
-  CONNECTED: "Kết nối", DISCONNECTED: "Ngắt kết nối", TIMEOUT: "Hết hạn PONG",
-  RECONNECTED: "Kết nối lại", BROWSER_CONNECTED: "Trình duyệt online",
+  CONNECTED: "Kết nối", DISCONNECTED: "Ngắt kết nối", TIMEOUT: "Không phản hồi",
+  RECONNECTED: "Kết nối lại", BROWSER_CONNECTED: "Trình duyệt đã kết nối",
   BROWSER_OFFLINE: "Trình duyệt mất liên lạc", BROWSER_RECONNECTED: "Trình duyệt kết nối lại",
 };
 const REASONS: Record<string, string> = {
   LOGIN_SUCCESS: "Đăng nhập thành công", CONNECTION_RESTORED: "Kết nối phục hồi",
-  REMOTE_CLOSED: "Đầu bên kia đóng TCP (EOF)", IO_ERROR: "Lỗi đọc/ghi TCP",
-  PONG_TIMEOUT: "Không phản hồi heartbeat", CLIENT_LOGOUT: "Đăng xuất chủ động",
-  SERVER_SHUTDOWN: "Server dừng", SERVER_CLOSE: "Server chủ động đóng",
-  ADMIN_KICK: "Admin ngắt phiên", IP_BANNED: "Admin chặn IP",
-  SECURITY_KICK: "Bị ngắt bởi bảo mật", SLOW_CONSUMER: "Client đọc quá chậm",
+  REMOTE_CLOSED: "Đã đóng kết nối", IO_ERROR: "Lỗi kết nối",
+  PONG_TIMEOUT: "Không phản hồi", CLIENT_LOGOUT: "Đăng xuất chủ động",
+  SERVER_SHUTDOWN: "Công ty tạm ngừng kết nối", SERVER_CLOSE: "Công ty đóng kết nối",
+  ADMIN_KICK: "Quản trị viên ngắt phiên", IP_BANNED: "Quản trị viên chặn địa chỉ",
+  SECURITY_KICK: "Bị ngắt bởi bảo mật", SLOW_CONSUMER: "Phản hồi chậm",
   WRITE_FAILURE: "Không ghi được dữ liệu", PRELOGIN_TIMEOUT: "Chưa đăng nhập kịp",
-  HEARTBEAT_START: "Bắt đầu heartbeat", HEARTBEAT_TIMEOUT: "Trình duyệt ngừng heartbeat",
-  HEARTBEAT_RESTORED: "Heartbeat đã phục hồi", GATEWAY_DISCONNECTED: "Gateway ngắt TCP",
+  HEARTBEAT_START: "Bắt đầu phiên", HEARTBEAT_TIMEOUT: "Trình duyệt không phản hồi",
+  HEARTBEAT_RESTORED: "Trình duyệt đã kết nối lại", GATEWAY_DISCONNECTED: "Chi nhánh mất kết nối",
   USER_LOGOUT: "Người dùng đăng xuất", SESSION_EXPIRED: "Phiên đăng nhập hết hạn",
 };
 const stateName: Record<NetworkBranch["trangThai"], string> = {
-  ONLINE: "Đang kết nối", OFFLINE: "Offline", AWAITING_PONG: "Đang chờ PONG",
+  ONLINE: "Đang kết nối", OFFLINE: "Mất kết nối", AWAITING_PONG: "Đang kiểm tra",
 };
 
 function duration(ms: number | null | undefined) {
@@ -56,7 +56,7 @@ export function Network({ branches }: { branches: Branch[] }) {
         ]);
         if (active) { setRows(status); setEvents(history); setBrowsers(browserStatus); setError(""); }
       } catch {
-        if (active) setError("Không tải được trạng thái mạng. Kiểm tra server và database.");
+        if (active) setError("Không tải được trạng thái kết nối. Vui lòng thử lại.");
       }
     };
     void load();
@@ -74,13 +74,12 @@ export function Network({ branches }: { branches: Branch[] }) {
   return <>
     <div className="kpis">
       <Stat label="Đang kết nối" value={active} tone="success" />
-      <Stat label="Chờ heartbeat" value={waiting} tone={waiting ? "warn" : undefined} />
-      <Stat label="Offline" value={offline} tone={offline ? "danger" : undefined} />
-      <Stat label="Sự cố TCP 24 giờ" value={shown.reduce((n, r) => n + r.suCo24h, 0)} />
-      <Stat label="Browser mất liên lạc 24 giờ" value={shown.reduce((n, r) => n + r.browserSuCo24h, 0)} tone={shown.some(r => r.browserSuCo24h > 0) ? "danger" : undefined} />
+      <Stat label="Đang kiểm tra" value={waiting} tone={waiting ? "warn" : undefined} />
+      <Stat label="Mất kết nối" value={offline} tone={offline ? "danger" : undefined} />
+      <Stat label="Sự cố kết nối 24 giờ" value={shown.reduce((n, r) => n + r.suCo24h, 0)} />
+      <Stat label="Trình duyệt mất liên lạc 24 giờ" value={shown.reduce((n, r) => n + r.browserSuCo24h, 0)} tone={shown.some(r => r.browserSuCo24h > 0) ? "danger" : undefined} />
     </div>
-    <Card title="Tình trạng kết nối TCP của chi nhánh" actions={<button className="btn btn-sm" onClick={() => setRefresh(v => v + 1)}>Làm mới</button>}>
-      <p className="note">Cập nhật mỗi 5 giây. Chờ PONG là giai đoạn kiểm tra thông thường sau khi idle, chưa đủ kết luận mất mạng. Offline có thể do đóng ứng dụng hoặc lỗi TCP/Tailscale, không nhất thiết mất Internet.</p>
+    <Card title="Kết nối chi nhánh" actions={<button className="btn btn-sm" onClick={() => setRefresh(v => v + 1)}>Làm mới</button>}>
       <div className="row" style={{ marginBottom: 10, gap: 10 }}>
         <label className="field">Chi nhánh
           <select value={branch} onChange={e => setBranch(e.target.value)}>
@@ -106,11 +105,10 @@ export function Network({ branches }: { branches: Branch[] }) {
         </table>
       </div>}
     </Card>
-    <Card title="Trình duyệt chi nhánh (heartbeat riêng)">
-      <p className="note">Mỗi phiên đăng nhập gửi heartbeat mỗi 10 giây. Nếu không nhận được trong khoảng 35 giây, server ghi BROWSER_OFFLINE dù gateway TCP vẫn online. Đóng trình duyệt, máy ngủ hoặc mất mạng đều có thể gây timeout; không đồng nghĩa chắc chắn mất Internet.</p>
-      {shownBrowsers.length === 0 ? <Empty>Chưa có trình duyệt đăng nhập và gửi heartbeat trong lượt chạy server này.</Empty> :
+    <Card title="Trình duyệt chi nhánh">
+      {shownBrowsers.length === 0 ? <Empty>Chưa có trình duyệt đăng nhập.</Empty> :
       <div className="table-wrap scroll" style={{ maxHeight: 350 }}><table>
-        <thead><tr><th>Chi nhánh</th><th>Phiên trình duyệt</th><th>Trạng thái</th><th>Heartbeat cuối</th><th>Mất liên lạc từ</th><th>IP ghi nhận</th></tr></thead>
+        <thead><tr><th>Chi nhánh</th><th>Phiên trình duyệt</th><th>Trạng thái</th><th>Hoạt động cuối</th><th>Mất liên lạc từ</th><th>Địa chỉ kết nối</th></tr></thead>
         <tbody>{shownBrowsers.map(b => <tr key={`${b.maCn}-${b.browserId}`}>
           <td><b>{b.maCn}</b></td><td className="muted">{b.browserId}</td>
           <td><Badge tone={b.trangThai === "ONLINE" ? "success" : "danger"}>{b.trangThai === "ONLINE" ? "Đang hoạt động" : "Mất liên lạc"}</Badge></td>
@@ -119,8 +117,7 @@ export function Network({ branches }: { branches: Branch[] }) {
         </tr>)}</tbody>
       </table></div>}
     </Card>
-    <Card title="Lịch sử kết nối (network_events)">
-      <p className="note">Lưu trong PostgreSQL; phân biệt sự kiện TCP và trình duyệt. Thời gian gián đoạn tính từ lúc server xác nhận mất liên lạc, không phải thời điểm chắc chắn Internet bị ngắt. Đăng xuất chủ động không tính là sự cố.</p>
+    <Card title="Lịch sử kết nối">
       {events.filter(e => showSim || !e.maCn.startsWith("SIM")).length === 0 ? <Empty>Chưa có sự kiện kết nối.</Empty> :
         <div className="table-wrap scroll" style={{ maxHeight: 480 }}>
           <table>
@@ -128,7 +125,7 @@ export function Network({ branches }: { branches: Branch[] }) {
             <tbody>{events.filter(e => showSim || !e.maCn.startsWith("SIM")).map(e => <tr key={e.id}>
               <td className="muted nowrap">{shortTime(e.thoiGian)}</td><td><b>{e.maCn}</b></td>
               <td><Badge tone={e.suKien === "RECONNECTED" || e.suKien === "CONNECTED" || e.suKien === "BROWSER_CONNECTED" || e.suKien === "BROWSER_RECONNECTED" ? "success" : e.suKien === "TIMEOUT" || e.suKien === "BROWSER_OFFLINE" ? "danger" : "warn"}>{EVENT_NAMES[e.suKien] ?? e.suKien}</Badge></td>
-              <td>{REASONS[e.lyDo] ?? e.lyDo}</td><td>{e.browserId ? `Browser ${e.browserId.slice(0, 8)}` : "Gateway TCP"}</td><td className="nowrap">{duration(e.gianDoanMs)}</td>
+              <td>{REASONS[e.lyDo] ?? e.lyDo}</td><td>{e.browserId ? `Trình duyệt ${e.browserId.slice(0, 8)}` : "Ứng dụng chi nhánh"}</td><td className="nowrap">{duration(e.gianDoanMs)}</td>
               <td className="muted">#{e.sessionId}</td><td>{e.ip}</td>
             </tr>)}</tbody>
           </table>

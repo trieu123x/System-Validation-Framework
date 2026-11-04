@@ -23,6 +23,9 @@ export function Products({ products, version, push, onBackChange }: {
   const [categories, setCategories] = useState<Category[]>([]);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [dm, setDm] = useState("");
+  const [query, setQuery] = useState("");
+  const [readError, setReadError] = useState("");
+  const [reload, setReload] = useState(0);
 
   useEffect(() => {
     onBackChange(editing ? { label: "Hủy chỉnh sửa", onClick: () => { setEditing(null); setForm(EMPTY); } } : null);
@@ -30,12 +33,18 @@ export function Products({ products, version, push, onBackChange }: {
   }, [editing, onBackChange]);
 
   useEffect(() => {
-    api<Import[]>("/api/imports").then(setImports).catch(() => {});
-    api<Category[]>("/api/categories").then(setCategories).catch(() => {});
-    api<Supplier[]>("/api/suppliers").then(setSuppliers).catch(() => {});
-  }, [version]);
+    let active = true;
+    setReadError("");
+    const failed = (error: Error) => { if (active) setReadError(error.message); };
+    api<Import[]>("/api/imports").then((data) => { if (active) setImports(data); }).catch(failed);
+    api<Category[]>("/api/categories").then((data) => { if (active) setCategories(data); }).catch(failed);
+    api<Supplier[]>("/api/suppliers").then((data) => { if (active) setSuppliers(data); }).catch(failed);
+    return () => { active = false; };
+  }, [version, reload]);
 
-  const shown = dm ? products.filter((p) => p.maDm === dm) : products;
+  const needle = query.trim().toLocaleLowerCase("vi");
+  const shown = products.filter((product) => (!dm || product.maDm === dm)
+    && (!needle || [product.maSp, product.ten, product.model].join(" ").toLocaleLowerCase("vi").includes(needle)));
   // giá xuất cho chi nhánh thấp hơn giá nhập là bán lỗ: chỉ cảnh báo, vẫn cho lưu
   const belowCost = form.giaNhap !== "" && form.giaXuat !== "" && Number(form.giaXuat) < Number(form.giaNhap);
   const impProduct = products.find((p) => p.maSp === imp.maSp);
@@ -67,21 +76,25 @@ export function Products({ products, version, push, onBackChange }: {
   return (
     <div className="split">
       <div className="col">
+        {readError && <div className="banner banner-danger" role="alert">Không tải được dữ liệu nhập kho: {readError}<button type="button" className="btn btn-sm" onClick={() => setReload((value) => value + 1)} style={{ marginLeft: 10 }}>Thử lại</button></div>}
         <Card title={<>Danh sách hàng hóa <span className="muted">· {shown.length} mặt hàng</span></>}
           actions={(
+            <>
+            <input type="search" placeholder="Tìm mã, tên hoặc model..." aria-label="Tìm hàng hóa" value={query} onChange={(event) => setQuery(event.target.value)} />
             <select value={dm} onChange={(e) => setDm(e.target.value)} aria-label="Lọc theo danh mục">
               <option value="">Tất cả danh mục</option>
               {categories.map((c) => <option key={c.maDm} value={c.maDm}>{c.ten} ({c.soMatHang})</option>)}
             </select>
+            </>
           )}>
-          {shown.length === 0 ? <Empty>Chưa có mặt hàng nào.</Empty> : (
+          {shown.length === 0 ? <Empty>{products.length ? "Không có mặt hàng nào khớp bộ lọc." : "Chưa có mặt hàng nào."}</Empty> : (
             <div className="table-wrap">
-              <table>
+              <table className="products-table">
                 <thead>
                   <tr>
                     <th>Mã hàng</th><th>Tên hàng</th><th>Danh mục</th><th>ĐV</th>
                     <th className="num">Giá nhập</th><th className="num">Giá xuất CN</th><th className="num">Giá bán lẻ</th>
-                    <th className="num">Tồn kho tổng</th><th />
+                    <th className="num">Tồn kho tổng</th><th scope="col">Thao tác</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -153,6 +166,7 @@ export function Products({ products, version, push, onBackChange }: {
       <div className="col">
         <Card title={editing ? `Sửa hàng hóa ${editing}` : "Thêm hàng hóa"}>
           <form className="form-stack" onSubmit={save}>
+            <div className="form-section-label">Thông tin sản phẩm</div>
             <label className="field">Mã hàng
               <input value={form.maSp} disabled={!!editing} required maxLength={10}
                 onChange={(e) => setForm({ ...form, maSp: e.target.value })} />
@@ -172,6 +186,7 @@ export function Products({ products, version, push, onBackChange }: {
             <label className="field">Đơn vị tính
               <input value={form.donVi} required maxLength={20} onChange={(e) => setForm({ ...form, donVi: e.target.value })} />
             </label>
+            <div className="form-section-label">Thông tin giá</div>
             <label className="field">Giá nhập (đ)
               <input type="number" min={0} step={1000} value={form.giaNhap} style={{ textAlign: "left" }}
                 onChange={(e) => setForm({ ...form, giaNhap: e.target.value })} />

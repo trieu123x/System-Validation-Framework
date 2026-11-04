@@ -10,7 +10,9 @@ import { Network } from "@/components/admin/Network";
 type Push = (l: string, t: string) => void;
 
 export const LEVEL_TONE: Record<string, string> = { HIGH: "danger", MEDIUM: "warn", LOW: "muted" };
-const MODE_TEXT: Record<string, string> = { OFF: "off (tắt)", DETECT: "detect (chỉ ghi)", BLOCK: "block (tự chặn)" };
+const MODE_TEXT: Record<string, string> = { OFF: "Tắt", DETECT: "Theo dõi", BLOCK: "Tự động chặn", ENFORCE: "Tự động chặn" };
+const LEVEL_TEXT: Record<string, string> = { HIGH: "Cao", MEDIUM: "Trung bình", LOW: "Thấp" };
+const SOURCE_TEXT: Record<string, string> = { SERVER: "Công ty", CLIENT: "Chi nhánh", ADMIN: "Quản trị viên" };
 const ACTION_TEXT: Record<string, string> = {
   GHI_NHAN: "Ghi nhận", CHAN_IP: "Chặn IP", NGAT: "Ngắt phiên", GIOI_HAN: "Giới hạn", KHOA_TK: "Khoá tài khoản",
 };
@@ -56,23 +58,23 @@ function SecurityPanel({ version, branches, push }: { version: number; branches:
   return (
     <>
       <div className="kpis">
-        <Stat label="Kết nối TCP" value={fmtNumber(ov?.ketNoi)} />
+        <Stat label="Kết nối" value={fmtNumber(ov?.ketNoi)} />
         <Stat label="Tin/giây (TB 10 s)" value={ov ? ov.tinGiay.toFixed(1) : "—"} />
         <Stat label="IP đang bị chặn" value={fmtNumber(ov?.ipBiChan)} tone={ov?.ipBiChan ? "danger" : undefined} />
         <Stat label="Sự kiện 24 giờ" value={ev ? ev.high + ev.medium + ev.low : "—"} tone={ev?.high ? "danger" : undefined}
-          hint={ev && <>{ev.high} HIGH · {ev.medium} MEDIUM · {ev.low} LOW</>} />
-        <Stat label="security.mode" value={ov ? MODE_TEXT[ov.mode] : "—"} tone={ov?.mode === "BLOCK" ? "success" : "warn"}
+          hint={ev && <>{ev.high} cao · {ev.medium} trung bình · {ev.low} thấp</>} />
+        <Stat label="Chế độ bảo vệ" value={ov ? MODE_TEXT[ov.mode] : "—"} tone={ov?.mode === "BLOCK" ? "success" : "warn"}
           hint={ov?.suKienBiBo ? `bỏ ${ov.suKienBiBo} sự kiện vì hàng đợi đầy` : undefined} />
       </div>
       <div className="kpis">
-        <Stat label="Anti-scraping" value={ov?.scraping?.mode ?? "—"} hint="Theo dõi truy cập bất thường" />
+        <Stat label="Bảo vệ dữ liệu" value={ov?.scraping ? MODE_TEXT[ov.scraping.mode] ?? "—" : "—"} />
         <Stat label="Đã giới hạn (từ lúc chạy)" value={fmtNumber(ov?.scraping?.limited)} />
         <Stat label="Tài khoản tạm khóa" value={fmtNumber(ov?.scraping?.activeBlocks)} />
         <Stat label="Email đã gửi / lỗi" value={ov?.mail ? `${ov.mail.sent} / ${ov.mail.failed}` : "—"}
           tone={ov?.mail?.failed ? "danger" : undefined}
-          hint={ov?.mail ? `${ov.mail.enabled ? "SMTP bật" : "SMTP tắt"} · ${ov.mail.pending} đang chờ · ${ov.mail.skipped} bỏ trùng/giới hạn · ${ov.mail.rejected} bị từ chối` : undefined} />
+          hint={ov?.mail ? `${ov.mail.enabled ? "Đang gửi email" : "Đã tắt gửi email"} · ${ov.mail.pending} đang chờ` : undefined} />
       </div>
-      {!!ov?.scrapingPersistence?.failures && <p role="alert" className="muted">Có {ov.scrapingPersistence.failures} lỗi lưu audit/khóa. Trạng thái chưa lưu có thể mất khi khởi động lại.</p>}
+      {!!ov?.scrapingPersistence?.failures && <p role="alert" className="muted">Có {ov.scrapingPersistence.failures} thay đổi bảo mật chưa được lưu.</p>}
       {!!ov?.scraping?.capacityMisses && <p role="alert">Bộ đếm đã đầy: {ov.scraping.capacityMisses} yêu cầu chưa được theo dõi.</p>}
       <ScrapingBlocks tick={tick + version} push={push} />
       <Events version={tick + version} branches={branches} push={push} />
@@ -111,9 +113,9 @@ function Events({ version, branches, push }: { version: number; branches: Branch
   };
 
   return (
-    <Card title={<>Sự kiện an ninh <span className="muted">· {rows.length} gần nhất, cập nhật realtime</span></>}>
+    <Card title={<>Sự kiện an ninh <span className="muted">· {rows.length}</span></>}>
       <div className="row" style={{ gap: 8, marginBottom: 10 }}>
-        <button className="btn" onClick={() => { setOffset(0); setF({ ...f, loai: "SCRAPING" }); }}>Chỉ scraping server</button>
+        <button className="btn" onClick={() => { setOffset(0); setF({ ...f, loai: "SCRAPING" }); }}>Truy cập dữ liệu bất thường</button>
         <button className="btn" onClick={exportReport}>Xuất trang hiện tại (ẩn IP)</button>
         <button className="btn" disabled={!offset} onClick={() => setOffset(x => Math.max(0, x - 100))}>Trước</button>
         <span>{offset + 1}–{offset + rows.length}</span>
@@ -122,7 +124,7 @@ function Events({ version, branches, push }: { version: number; branches: Branch
       <div className="filterbar">
         <label className="field">Mức
           <select value={f.muc} onChange={set("muc")}>
-            <option value="">Tất cả</option><option>HIGH</option><option>MEDIUM</option><option>LOW</option>
+            <option value="">Tất cả</option><option value="HIGH">Cao</option><option value="MEDIUM">Trung bình</option><option value="LOW">Thấp</option>
           </select>
         </label>
         <label className="field">Mã sự kiện
@@ -131,7 +133,7 @@ function Events({ version, branches, push }: { version: number; branches: Branch
         </label>
         <label className="field">Nguồn
           <select value={f.nguon} onChange={set("nguon")}>
-            <option value="">Tất cả</option><option>SERVER</option><option>CLIENT</option><option>ADMIN</option>
+            <option value="">Tất cả</option><option value="SERVER">Công ty</option><option value="CLIENT">Chi nhánh</option><option value="ADMIN">Quản trị viên</option>
           </select>
         </label>
         <label className="field">IP<input value={f.ip} onChange={set("ip")} placeholder="VD: 127.0.0.2" /></label>
@@ -146,21 +148,21 @@ function Events({ version, branches, push }: { version: number; branches: Branch
         <div className="table-wrap scroll" style={{ maxHeight: 420 }}>
           <table>
             <thead>
-              <tr><th>Thời gian</th><th>Mức</th><th>Mã</th><th>Nguồn</th><th>IP</th><th>CN</th><th>Chi tiết / Risk</th><th>Xử lý</th><th>Email</th><th>Đánh giá</th></tr>
+              <tr><th>Thời gian</th><th>Mức</th><th>Mã</th><th>Nguồn</th><th>IP</th><th>CN</th><th>Chi tiết</th><th>Xử lý</th><th>Email</th><th>Đánh giá</th></tr>
             </thead>
             <tbody>
               {rows.map((r, i) => (
                 <tr key={r.id ?? `${r.thoiGian}-${i}`} className={r.muc === "HIGH" ? "low" : ""}>
                   <td className="muted nowrap">{r.thoiGian.slice(5, 19)}</td>
-                  <td><Badge tone={LEVEL_TONE[r.muc]}>{r.muc}</Badge></td>
+                  <td><Badge tone={LEVEL_TONE[r.muc]}>{LEVEL_TEXT[r.muc] ?? r.muc}</Badge></td>
                   <td className="code">{r.loai}</td>
-                  <td>{r.nguon}</td>
+                  <td>{SOURCE_TEXT[r.nguon] ?? r.nguon}</td>
                   <td className="nowrap">{maskIp(r.ip)}</td>
                   <td>{r.maCn ?? ""}</td>
                   {/* chi tiết có thể do client gửi lên: React tự escape, chỉ hiển thị dạng chữ */}
                   <td style={{ maxWidth: 420, wordBreak: "break-word" }}>
-                    <details><summary>{r.chiTiet}<br /><b>{parseMetadata(r.metadata).channel ?? ""} · Risk {parseMetadata(r.metadata).riskScore ?? "—"}</b></summary>
-                      <div className="muted">Event: {r.eventKey ?? r.id}</div>
+                    <details><summary>{r.chiTiet}<br /><b>Mức rủi ro: {parseMetadata(r.metadata).riskScore ?? "—"}</b></summary>
+                      <div className="muted">Mã sự kiện: {r.eventKey ?? r.id}</div>
                       <div>{parseMetadata(r.metadata).requestCount ?? "—"} yêu cầu / {parseMetadata(r.metadata).windowSeconds ?? "—"} giây</div>
                       <div>{parseMetadata(r.metadata).resource} · {parseMetadata(r.metadata).action}</div>
                       <div>Thử lại: {parseMetadata(r.metadata).retryAfter ?? 0}s</div>
@@ -221,7 +223,7 @@ function IpTable({ tick, push }: { tick: number; push: Push }) {
             <thead>
               <tr>
                 <th>IP</th><th className="num">Kết nối</th><th className="num">Tin/phút</th>
-                <th className="num">LOGIN_FAIL</th><th className="num">E01</th><th>Trạng thái</th><th />
+                <th className="num">Đăng nhập sai</th><th className="num">Lỗi dữ liệu</th><th>Trạng thái</th><th />
               </tr>
             </thead>
             <tbody>
@@ -270,7 +272,7 @@ function Sessions({ tick, push }: { tick: number; push: Push }) {
   };
 
   return (
-    <Card title={<>Phiên TCP <span className="muted">· {rows.length}</span></>}>
+    <Card title={<>Phiên kết nối <span className="muted">· {rows.length}</span></>}>
       {rows.length === 0 ? <Empty>Không có kết nối nào.</Empty> : (
         <div className="table-wrap scroll" style={{ maxHeight: 360 }}>
           <table>
@@ -318,8 +320,8 @@ function ScrapingBlocks({ tick, push }: { tick: number; push: Push }) {
     if (!reason?.trim()) return;
     if (await run(() => api("/api/security/scraping/blocks/revoke", { subject, reason }), "Đã bỏ chặn và đặt lại bộ đếm")) setRefresh(x => x + 1);
   };
-  return <Card title="Tạm khóa đọc dữ liệu (không chặn IP chung)">
-    {!rows.length ? <Empty>Chưa có tài khoản tạm khóa trên server.</Empty> : <div className="table-wrap"><table>
+  return <Card title="Tài khoản bị hạn chế truy cập">
+    {!rows.length ? <Empty>Chưa có tài khoản bị hạn chế.</Empty> : <div className="table-wrap"><table>
       <thead><tr><th>Tài khoản</th><th>Hết hạn</th><th>Lý do</th><th>Thao tác</th></tr></thead>
       <tbody>{rows.map(b => <tr key={b.subject}><td>{b.subject}</td><td>{new Date(b.expiresAt).toLocaleString("vi-VN")}</td><td>{b.reason}</td>
         <td><button disabled={busy} className="btn btn-sm" onClick={() => revoke(b.subject)}>Bỏ chặn</button></td></tr>)}</tbody>

@@ -100,10 +100,6 @@ export function Transfers({ version }: { version: number }) {
 
   return (
     <Card title="Phiếu điều chuyển giữa chi nhánh">
-      <p className="note">
-        Khi kho tổng không đủ (OUT_OF_STOCK), server tự tìm chi nhánh có tồn &gt; 2 × ngưỡng và gửi TRANSFER_REQ.
-        Chi nhánh nguồn đồng ý thì hàng được chuyển trong một transaction; từ chối thì server thử chi nhánh kế tiếp.
-      </p>
       {rows.length === 0 ? <Empty>Chưa có lần điều chuyển nào.</Empty> : (
         <div className="table-wrap">
           <table>
@@ -144,7 +140,7 @@ export function Reconcile({ version }: { version: number }) {
   }, [version]);
   if (!data) return null;
   return (
-    <Card title="Đối soát kho tổng và chi nhánh (NFR-03)" actions={
+    <Card title="Đối soát kho tổng và chi nhánh" actions={
       <Badge tone={data.khop ? "success" : "danger"}>{data.khop ? "Toàn bộ khớp" : "Có mặt hàng lệch"}</Badge>
     }>
       <p className="note">

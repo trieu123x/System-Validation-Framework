@@ -4,7 +4,6 @@
 .checkout-heading { display: flex; align-items: center; justify-content: space-between; gap: 24px; margin: 12px 0 26px; }
 .checkout-eyebrow { display: block; color: var(--accent); font-size: 10px; letter-spacing: 1.8px; font-weight: 700; margin-bottom: 10px; }
 .checkout-heading h2 { font-size: 28px; letter-spacing: -.7px; margin-bottom: 7px; }
-.checkout-heading p { color: var(--text-2); font-size: 13px; }
 .checkout-step { font-size: 11px; color: var(--text-2); white-space: nowrap; }
 .checkout-step b { margin: 0 9px; color: var(--accent); }
 .checkout-grid { display: grid; grid-template-columns: minmax(0, 1fr) 350px; gap: 22px; align-items: start; }
@@ -37,7 +36,6 @@
 .checkout-total strong { font-size: 29px; letter-spacing: -.7px; color: var(--accent); }
 .btn.checkout-main-btn { width: 100%; min-height: 46px; border-radius: 8px; font-size: 13px; display: flex; justify-content: center; gap: 10px; align-items: center; }
 .checkout-main-btn > span { margin-left: auto; }
-.checkout-footnote { text-align: center; font-size: 10px; color: var(--text-2); margin: 12px 0 0; }
 .checkout-empty { padding: 76px 20px; text-align: center; background: var(--surface); border: 1px dashed var(--border-strong); border-radius: 14px; }
 .checkout-empty h3 { margin: 18px 0 10px; font-size: 20px; }
 .checkout-empty p { color: var(--text-2); margin-bottom: 24px; }
@@ -48,10 +46,8 @@
 .payment-panel h3 { font-size: 20px; margin-bottom: 24px; }
 .payment-qr { background: #fff; padding: 18px; width: 276px; min-height: 276px; margin: 0 auto 16px; border-radius: 16px; box-shadow: 0 12px 40px #132e5014; color: #20374e; }
 .payment-qr img { display: block; max-width: 100%; height: auto; }
-.payment-demo { display: inline-block; font-size: 9px; padding: 5px 9px; border-radius: 5px; color: var(--warn); background: var(--warn-soft); letter-spacing: .5px; }
 .payment-amount { font-size: 34px; font-weight: 700; margin: 20px 0 8px; letter-spacing: -1px; }
 .payment-reference { display: block; font-size: 11px; word-break: break-all; margin-top: 5px; }
-.payment-note { max-width: 340px; font-size: 12px; color: var(--text-2); margin: 22px auto 0; line-height: 1.7; }
 .checkout-mini-lines { border-top: 1px solid var(--border); margin-top: 20px; max-height: 380px; overflow-y: auto; }
 .checkout-mini-lines > div { display: flex; justify-content: space-between; gap: 15px; padding: 16px 0; border-bottom: 1px solid var(--border); font-size: 12px; }
 .checkout-mini-lines small { display: block; color: var(--text-2); margin-top: 6px; }

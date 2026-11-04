@@ -1,6 +1,6 @@
 "use client";
 
-import { ReactNode, useCallback, useId, useRef, useState } from "react";
+import { ReactNode, useCallback, useEffect, useId, useRef, useState } from "react";
 import { STATE_LABEL, STATE_TONE, TRANSFER_LABEL } from "@/lib/api";
 import { imageUrl } from "@/lib/images";
 
@@ -15,11 +15,11 @@ export function StateBadge({ state, transfer }: { state: string | null | undefin
 }
 
 /** Ảnh tượng trưng của mặt hàng; chưa có ảnh hoặc tải lỗi (mất mạng) thì hiện chữ đầu của danh mục. */
-export function ProductImage({ src, alt, category, size = 40 }: {
-  src: string | null | undefined; alt: string; category?: string; size?: number;
+export function ProductImage({ src, alt, category, size = 40, fit = "cover" }: {
+  src: string | null | undefined; alt: string; category?: string; size?: number; fit?: "cover" | "contain";
 }) {
   const [failed, setFailed] = useState(false);
-  const url = imageUrl(src, size * 2);
+  const url = imageUrl(src, size * 2, fit);
   const box = { width: size, height: size };
   if (!url || failed) {
     return <span className="thumb thumb-empty" style={box} title={category}>{(category || alt).charAt(0)}</span>;
@@ -66,17 +66,29 @@ export function Stat({ label, value, tone, hint, onClick }: {
 type NavItem<T extends string> = { id: T; label: string; count?: number; tone?: string };
 export type BackAction = { label: string; onClick: () => void };
 
-/** Khung trang kiểu phần mềm quản lý: thanh menu ngang trên cùng, dưới là thanh tiêu đề trang và nội dung. */
-export function Shell<T extends string>({ brand, sub, nav, value, onChange, status, title, actions, children, menu = false, navigationDisabled = false, back, menuLabel = "Chức năng chi nhánh" }: {
+/** Workspace nội bộ: sidebar desktop thu gọn; drawer cho tablet và điện thoại. */
+export function Shell<T extends string>({ brand, sub, nav, value, onChange, status, title, actions, children, menu = false, navigationDisabled = false, back, menuLabel = "Chức năng chi nhánh", notificationId }: {
   brand: string; sub?: ReactNode; nav: NavItem<T>[]; value: T; onChange: (t: T) => void;
   status?: ReactNode; title: ReactNode; actions?: ReactNode; children: ReactNode;
   menu?: boolean; navigationDisabled?: boolean; back?: BackAction; menuLabel?: string;
+  notificationId?: T;
 }) {
   const drawer = useRef<HTMLDialogElement>(null);
   const drawerId = useId();
   const [menuOpen, setMenuOpen] = useState(false);
-  const links = nav.map((n) => (
-    <button type="button" key={n.id} className={n.id === value ? "active" : ""} disabled={navigationDisabled}
+  const [collapsed, setCollapsed] = useState(false);
+  const [desktop, setDesktop] = useState(false);
+  const sidebarId = `${drawerId}-sidebar`;
+  useEffect(() => {
+    const media = window.matchMedia("(min-width: 1200px)");
+    const update = () => { setDesktop(media.matches); if (media.matches) drawer.current?.close(); };
+    update(); media.addEventListener("change", update);
+    return () => media.removeEventListener("change", update);
+  }, []);
+  const notification = nav.find((item) => item.id === notificationId);
+  const links = nav.filter((item) => item.id !== notificationId).map((n) => (
+    <button type="button" key={n.id} className={n.id === value ? "active" : ""} disabled={navigationDisabled} title={n.label}
+      aria-label={n.count ? `${n.label} (${n.count})` : n.label}
       aria-current={n.id === value ? "page" : undefined} onClick={() => { onChange(n.id); drawer.current?.close(); }}>
       {menu && <NavigationIcon name={n.id} />}
       <span>{n.label}</span>
@@ -84,10 +96,19 @@ export function Shell<T extends string>({ brand, sub, nav, value, onChange, stat
     </button>
   ));
   return (
-    <>
+    <div className={menu ? `workspace-shell${collapsed ? " sidebar-collapsed" : ""}` : undefined}>
+      {menu && <aside className="app-sidebar" id={sidebarId} aria-hidden={!desktop}>
+        <div className="sidebar-brand"><span className="brand-monogram">T</span><div><b>TOBOKI</b><small>QUẢN LÝ PHÂN PHỐI</small></div></div>
+        <nav className="sidebar-nav" aria-label={menuLabel}>{links}</nav>
+      </aside>}
+      <div className={menu ? "app-workspace" : undefined}>
       <header className={`appbar${menu ? " appbar-compact" : ""}`}>
-        {menu && <button type="button" className="menu-toggle" aria-label="Mở menu" aria-expanded={menuOpen} aria-controls={drawerId}
-          disabled={navigationDisabled} onClick={() => { drawer.current?.showModal(); setMenuOpen(true); }}>
+        {menu && <button type="button" className="menu-toggle" aria-label={desktop ? collapsed ? "Mở rộng menu" : "Thu gọn menu" : "Mở menu"}
+          aria-expanded={desktop ? !collapsed : menuOpen} aria-controls={desktop ? sidebarId : drawerId}
+          disabled={navigationDisabled} onClick={() => {
+            if (desktop) setCollapsed((current) => !current);
+            else { drawer.current?.showModal(); setMenuOpen(true); }
+          }}>
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16" /></svg>
         </button>}
         <div className="appbar-brand">
@@ -95,7 +116,15 @@ export function Shell<T extends string>({ brand, sub, nav, value, onChange, stat
           {sub && <span>{sub}</span>}
         </div>
         {!menu && <nav className="appbar-nav">{links}</nav>}
-        {status && <div className="appbar-status">{status}</div>}
+        {(status || notification) && <div className="appbar-status">
+          {notification && <button type="button" className={`header-notification${value === notification.id ? " active" : ""}`}
+            title="Thông báo" aria-label={notification.count ? `Thông báo (${notification.count} chưa đọc)` : "Thông báo"}
+            aria-current={value === notification.id ? "page" : undefined} disabled={navigationDisabled} onClick={() => onChange(notification.id)}>
+            <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4M12 2v1" /></svg>
+            {!!notification.count && <span className="header-notification-count" aria-hidden="true">{notification.count > 99 ? "99+" : notification.count}</span>}
+          </button>}
+          {status}
+        </div>}
       </header>
       {menu && <dialog className="app-drawer" id={drawerId} ref={drawer} aria-labelledby={`${drawerId}-title`}
         onClose={() => setMenuOpen(false)} onClick={(e) => { if (e.target === e.currentTarget) drawer.current?.close(); }}>
@@ -105,17 +134,17 @@ export function Shell<T extends string>({ brand, sub, nav, value, onChange, stat
           </div>
           <div className="drawer-branch"><strong>{brand}</strong><small>{sub}</small></div>
           <nav className="drawer-nav" aria-label={menuLabel}>{links}</nav>
-          <div className="drawer-footer">Quản lý bán hàng & phân phối</div>
         </div>
       </dialog>}
       <div className="subbar">
-        {back && <button type="button" className="btn btn-back" disabled={navigationDisabled} onClick={back.onClick}>← {back.label}</button>}
-        <h1>{title}</h1>
-        <div className="spacer" />
-        {actions}
+        <div className="page-heading">
+          <div className="page-title-row">{back && <button type="button" className="btn btn-back" disabled={navigationDisabled} onClick={back.onClick}>← {back.label}</button>}<h1>{title}</h1></div>
+        </div>
+        {actions && <div className="page-header-actions">{actions}</div>}
       </div>
       <main className="page">{children}</main>
-    </>
+      </div>
+    </div>
   );
 }
 
@@ -242,7 +271,11 @@ export function sortRows<T, K extends string>(rows: T[], sort: Sort<K>,
 }
 
 export function Empty({ children }: { children: ReactNode }) {
-  return <p className="empty">{children}</p>;
+  return <div className="empty"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.3" aria-hidden="true"><path d="m4 8 3-5h10l3 5v12H4ZM4 8h5l1 4h4l1-4h5" /></svg><span>{children}</span></div>;
+}
+
+export function LoadingWorkspace({ label }: { label: string }) {
+  return <main className="workspace-loading" role="status" aria-live="polite"><div className="loading-brand">TOBOKI</div><p>{label}</p><div className="skeleton skeleton-title" /><div className="loading-stats">{[1, 2, 3, 4].map((key) => <div className="skeleton" key={key} />)}</div><div className="skeleton skeleton-panel" /></main>;
 }
 
 type Toast = { id: number; level: string; text: string };
@@ -262,8 +295,8 @@ export function Toasts({ toasts, dismiss }: { toasts: Toast[]; dismiss: (id: num
   return (
     <div className="toasts" aria-live="polite">
       {toasts.map((t) => (
-        <div key={t.id} className={`toast toast-${t.level}`} onClick={() => dismiss(t.id)}>
-          {t.text}
+        <div key={t.id} className={`toast toast-${t.level}`}>
+          <span>{t.text}</span><button type="button" className="toast-dismiss" aria-label="Đóng thông báo" onClick={() => dismiss(t.id)}>×</button>
         </div>
       ))}
     </div>

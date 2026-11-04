@@ -40,15 +40,15 @@ export function LoginScreen({ side, children }: { side: Side; children: ReactNod
           <div className="card-body">
             {other ? (
               <div className="form-stack">
-                <p style={{ margin: 0 }}>
-                  Mở trang đăng nhập {other.label.toLowerCase()} bằng đường dẫn riêng.
-                </p>
-                <a className="btn btn-primary btn-block" href={typeof window !== "undefined" && window.location.protocol === "https:"
+                <a className="btn btn-primary btn-block" onClick={(event) => {
+                  if (event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
+                  event.preventDefault();
+                  window.location.replace(event.currentTarget.href);
+                }} href={typeof window !== "undefined" && window.location.protocol === "https:"
                   ? `https://${host}${tab === "branch" ? ":8443" : ""}${other.path}`
                   : `http://${host}:${other.port}${other.path}`}>
                   Mở trang đăng nhập {other.label.toLowerCase()}
                 </a>
-                <span className="note">Nếu không mở được, vui lòng kiểm tra lại đường dẫn hoặc liên hệ quản trị viên.</span>
               </div>
             ) : children}
           </div>

@@ -100,11 +100,6 @@ export function Notices({ products, branches, version, push }: {
                 </button>
               ))}
             </div>
-            <p className="note" style={{ margin: 0 }}>
-              {loai === "TIN" && "Tin thường: chi nhánh chỉ đọc."}
-              {loai === "HOI_NHU_CAU" && "Chi nhánh bấm “Cần hàng” kèm số lượng → server tạo yêu cầu cấp hàng, bạn duyệt ở Tổng quan."}
-              {loai === "SP_MOI" && "Chi nhánh bấm “Muốn nhập” kèm số lượng → server thêm mặt hàng vào kho chi nhánh và tạo yêu cầu cấp hàng."}
-            </p>
 
             {needProduct && (
               <div className="with-thumb">

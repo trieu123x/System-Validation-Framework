@@ -40,7 +40,6 @@ export function AdminThresholds({ products, branches, version }: { products: Pro
   const th = { sort, onSort: setSort };
 
   return <>
-    <p className="note" style={{ marginBottom: 16 }}>Theo dõi ngưỡng cảnh báo và mức tồn của từng mặt hàng tại các chi nhánh.</p>
     <FilterBar active={!!(query || branch || level || category)} onClear={() => { setQuery(""); setBranch(""); setLevel(""); setCategory(""); }}>
       <label className="field filterbar-search">Tìm kiếm<input type="search" value={query} placeholder="Chi nhánh, mã hoặc tên hàng" onChange={(event) => setQuery(event.target.value)} /></label>
       <label className="field">Chi nhánh<select value={branch} onChange={(event) => setBranch(event.target.value)}><option value="">Tất cả chi nhánh</option>{branches.map((item) => <option key={item.maCn} value={item.maCn}>{item.maCn} · {item.ten}</option>)}</select></label>

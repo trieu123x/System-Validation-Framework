@@ -33,8 +33,7 @@ export function Monitor({ live, branches, clearLive }: { live: LogRow[]; branche
         <Filters branches={branches} maCn={maCn} setMaCn={setMaCn} lenh={lenh} setLenh={setLenh} />
         {shown.length === 0 ? <Empty>Chưa có tin nào kể từ khi mở trang.</Empty> : <Feed rows={shown} />}
       </Card>
-      <Card title="Nhật ký trong CSDL (nhat_ky)">
-        <p className="note">300 tin gần nhất theo bộ lọc bên trái, thời điểm tới mili-giây.</p>
+      <Card title="Lịch sử tin nhắn">
         {rows.length === 0 ? <Empty>Không có bản ghi.</Empty> : <Feed rows={rows} />}
       </Card>
     </div>
@@ -91,10 +90,9 @@ export function AuditTrail({ branches }: { branches: Branch[] }) {
     return () => { active = false; };
   }, [actor, source, refresh]);
 
-  return <Card title="Lịch sử thao tác (audit_log)" actions={
+  return <Card title="Lịch sử thao tác" actions={
     <button className="btn btn-sm" onClick={() => setRefresh(n => n + 1)}>Làm mới</button>
   }>
-    <p className="note">Ghi nhận thao tác nghiệp vụ của admin và chi nhánh, gồm thời gian, dữ liệu chính và kết quả. Tối đa 300 bản ghi mới nhất.</p>
     <div className="row" style={{ marginBottom: 10 }}>
       <select value={source} onChange={e => setSource(e.target.value)} aria-label="Nguồn thao tác">
         <option value="">Tất cả nguồn</option><option value="ADMIN">Admin</option><option value="BRANCH">Chi nhánh</option>
