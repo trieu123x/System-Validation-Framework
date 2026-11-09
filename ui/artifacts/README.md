@@ -1,5 +1,7 @@
 # Giao diện admin và chi nhánh
 
+Thẻ hàng hóa đã thu gọn ảnh và khoảng cách nội dung trên admin/client; ô số lượng và nút thêm giỏ nằm cùng hàng trên điện thoại. Ảnh cận cảnh mới: `compact-cards-admin-1920.png`, `compact-cards-branch-1920.png`, `compact-cards-admin-360.png`, `compact-cards-branch-360.png`.
+
 Ảnh hiện tại dùng header đỏ, catalog trắng/xám, bộ lọc thu gọn và hai poster thiết bị TOBOKI. Các ảnh kiểm tra dùng API giả lập cùng ảnh sản phẩm sẵn có; số liệu trong ảnh là dữ liệu thử nghiệm.
 
 - `posters-admin-overview-1440.png`, `posters-admin-overview-1920.png`: tổng quan admin và hai poster.
