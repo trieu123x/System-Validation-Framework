@@ -3,32 +3,11 @@ html, body { font-size: 14px; line-height: 1.5; }
 html { scroll-padding-top: 110px; }
 button, input, select, textarea { font-family: inherit; }
 button:focus-visible, a:focus-visible, [tabindex]:focus-visible { outline: 3px solid #8fadff; outline-offset: 3px; }
-.workspace-shell { --sidebar-width: 232px; min-height: 100vh; }
-.workspace-shell.sidebar-collapsed { --sidebar-width: 80px; }
-.app-workspace { min-width: 0; margin-left: var(--sidebar-width); }
-.app-sidebar { position: fixed; inset: 0 auto 0 0; z-index: 40; width: var(--sidebar-width); background: var(--surface); border-right: 1px solid var(--border); display: flex; flex-direction: column; overflow-x: hidden; overflow-y: auto; }
-.sidebar-brand { display: flex; align-items: center; gap: var(--space-3); min-height: 82px; padding: 20px; flex-shrink: 0; }
-.brand-monogram { display: grid; place-items: center; width: 36px; height: 38px; border-radius: var(--radius); background: var(--accent); color: white; font-weight: 850; font-size: 27px; font-style: italic; flex-shrink: 0; }
-.sidebar-brand b { display: block; letter-spacing: 1.4px; font-size: 22px; line-height: 1.2; color: var(--text); }
-.sidebar-brand small { display: block; font-size: 8px; font-weight: 600; letter-spacing: 1.1px; color: var(--text-2); margin-top: 4px; white-space: nowrap; }
-.sidebar-nav { display: grid; gap: 5px; padding: 0 12px 20px; }
-.sidebar-nav button { position: relative; display: flex; align-items: center; width: 100%; min-height: 43px; padding: 10px 12px; gap: 12px; border: 0; background: none; border-radius: var(--radius-sm); color: var(--text-2); text-align: left; cursor: pointer; font-size: 13px; white-space: nowrap; }
-.sidebar-nav button > svg { flex-shrink: 0; }
-.sidebar-nav button:hover:not(:disabled) { background: var(--surface-2); color: var(--text); }
-.sidebar-nav button.active { background: var(--accent-soft); color: var(--accent); font-weight: 650; }
-.sidebar-nav button.active:hover:not(:disabled) { background: var(--accent-soft); color: var(--accent); }
-.sidebar-nav button.active::before { content: ""; position: absolute; left: -12px; top: 10px; bottom: 10px; width: 3px; background: var(--accent); border-radius: 0 3px 3px 0; }
-.sidebar-nav button:disabled { opacity: .5; cursor: wait; }
-.sidebar-nav .nav-count { margin-left: auto; min-width: 21px; border-radius: 5px; }
-.sidebar-collapsed .sidebar-brand > div, .sidebar-collapsed .sidebar-nav button > span { display: none; }
-.sidebar-collapsed .sidebar-brand { justify-content: center; padding: 20px 10px; }
-.sidebar-collapsed .sidebar-nav { padding-top: 20px; }
-.sidebar-collapsed .sidebar-nav button { justify-content: center; padding: 12px; }
+.workspace-shell { min-height: 100vh; }
+.app-workspace { min-width: 0; }
 .workspace-shell .appbar.appbar-compact { min-height: 72px; padding: 12px 28px; gap: 16px; border-bottom: 1px solid var(--border); background: var(--surface); color: var(--text); position: sticky; top: 0; z-index: 30; }
 .workspace-shell .menu-toggle { color: var(--text-2); border-color: var(--border); background: white; width: 36px; height: 36px; border-radius: var(--radius-sm); }
 .workspace-shell .menu-toggle:hover:not(:disabled) { background: var(--surface-2); color: var(--accent); }
-.workspace-shell .appbar-brand b { font-size: 14px; font-weight: 650; }
-.workspace-shell .appbar-brand span { font-size: 11px; color: var(--text-2); opacity: 1; }
 .workspace-shell .appbar-status { font-size: 11px; gap: 14px; }
 .workspace-shell .appbar-status .btn { color: var(--text-2); border-color: var(--border); background: var(--surface); }
 .workspace-shell .appbar-status .btn:hover:not(:disabled) { color: var(--accent); background: var(--accent-soft); }
@@ -111,10 +90,6 @@ button:focus-visible, a:focus-visible, [tabindex]:focus-visible { outline: 3px s
 .toast-dismiss:hover { background: var(--surface-2); color: var(--text); }
 .workspace-shell .stockbar { height: 5px; border: 0; border-radius: 3px; background: #e9eef5; }
 .workspace-shell .stockbar-mark { background: #607087; }
-.workspace-shell .app-drawer { box-shadow: 12px 0 60px #18223020; }
-.workspace-shell .app-drawer::backdrop { background: #18223055; backdrop-filter: blur(2px); }
-.workspace-shell .drawer-heading > div > span { font-weight: 800; }
-.workspace-shell .drawer-nav button { font-size: 13px; }
 .workspace-shell .checkout-summary { top: 92px; }
 .workspace-shell .payment-panel { background: var(--surface); }
 .workspace-shell .invoice-table td { font-size: 12px; padding: 19px 10px; }
@@ -128,10 +103,6 @@ button:focus-visible, a:focus-visible, [tabindex]:focus-visible { outline: 3px s
 .skeleton-panel { min-height: 300px; }
 @keyframes skeleton-pulse { to { opacity: .55; } }
 .login-page { background: var(--bg); }
-.login-page .appbar { min-height: 72px; border-bottom: 1px solid var(--border); align-items: center; padding: 0 30px; }
-.login-page .appbar-brand { padding: 0; gap: 16px; }
-.login-page .appbar-brand b { color: var(--accent); font-size: 25px; font-weight: 850; letter-spacing: 2px; }
-.login-page .appbar-brand span { color: var(--text-2); }
 .login-page .login { width: min(430px, 100%); border-radius: var(--radius-lg); box-shadow: 0 12px 40px #18223007; overflow: hidden; }
 .login-page .card-body { padding: 28px; }
 .login-page .login-tabs button { height: 52px; font-size: 14px; }
@@ -139,12 +110,9 @@ button:focus-visible, a:focus-visible, [tabindex]:focus-visible { outline: 3px s
 .login-page .field { gap: 7px; }
 .login-page .company-footer { font-size: 11px; color: var(--text-2); }
 .company-footer { font-size: 11px; }
-.workspace-shell ~ .company-footer { margin-left: 232px; }
-.workspace-shell.sidebar-collapsed ~ .company-footer { margin-left: 80px; }
 @media (max-width: 1399px) { .workspace-shell .appbar-status { gap: 10px; } }
 @media (max-width: 1199px) {
-  .app-sidebar { display: none; }
-  .app-workspace, .workspace-shell ~ .company-footer, .workspace-shell.sidebar-collapsed ~ .company-footer { margin-left: 0; }
+  .app-workspace, .workspace-shell ~ .company-footer { margin-left: 0; }
   .workspace-shell .dash { grid-template-columns: minmax(0, 1fr) 280px; }
   .workspace-shell .appbar.appbar-compact { padding: 12px 22px; }
   .workspace-shell .subbar { padding: 22px 22px 18px; }
@@ -163,8 +131,6 @@ button:focus-visible, a:focus-visible, [tabindex]:focus-visible { outline: 3px s
   .receiving-table td:last-child { position: static; box-shadow: none; }
   .receiving-actions .btn { flex: 1; }
   .workspace-shell .appbar.appbar-compact { padding: 10px 16px; gap: 10px; min-height: 64px; }
-  .workspace-shell .appbar-brand b { font-size: 12px; }
-  .workspace-shell .appbar-brand span { font-size: 10px; }
   .workspace-shell .appbar-status { gap: 6px; max-width: 150px; }
   .workspace-shell .appbar-status .btn { font-size: 10px; min-height: 28px; padding: 4px 8px; }
   .workspace-shell .appbar-status > span { font-size: 10px; }
@@ -186,7 +152,6 @@ button:focus-visible, a:focus-visible, [tabindex]:focus-visible { outline: 3px s
 }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; scroll-behavior: auto !important; transition: none !important; } }
 @media print {
-  .app-sidebar { display: none !important; }
   .app-workspace { margin-left: 0 !important; }
   .workspace-shell .page { max-width: none; padding: 0; }
   .workspace-shell .invoice-paper th, .workspace-shell .invoice-paper td { padding: 13px 10px; }

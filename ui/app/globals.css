@@ -72,18 +72,6 @@ button, input, select, textarea { font: inherit; color: inherit; }
   display: flex; align-items: stretch; min-height: 44px; padding: 0 12px 0 0;
   background: var(--head-bg); color: var(--head-text);
 }
-.appbar-brand {
-  display: flex; align-items: baseline; gap: 8px; padding: 0 18px 0 16px; align-self: center; white-space: nowrap;
-}
-.appbar-brand b { font-size: 15px; font-weight: 600; }
-.appbar-brand span { font-size: 12px; opacity: 0.75; }
-.appbar-nav { display: flex; overflow-x: auto; scrollbar-width: none; }
-.appbar-nav button {
-  display: flex; align-items: center; gap: 6px; padding: 0 13px; border: 0; background: none;
-  color: var(--head-text); opacity: 0.88; cursor: pointer; white-space: nowrap;
-}
-.appbar-nav button:hover { background: rgba(255, 255, 255, 0.1); opacity: 1; }
-.appbar-nav button.active { background: var(--head-active); opacity: 1; font-weight: 600; }
 .nav-count {
   min-width: 18px; padding: 0 5px; border-radius: 2px; background: #e5483f; color: #fff;
   font-size: 11px; line-height: 17px; text-align: center; font-weight: 600;
@@ -95,41 +83,18 @@ button, input, select, textarea { font: inherit; color: inherit; }
 
 /* Menu thu gọn của giao diện chi nhánh. */
 .appbar.appbar-compact { align-items: center; min-height: 62px; padding: 8px 24px; gap: 14px; }
-.appbar-compact .appbar-brand { padding: 0; flex-direction: column; align-items: flex-start; gap: 2px; min-width: 0; white-space: normal; }
-.appbar-compact .appbar-brand b { font-size: 16px; }
-.appbar-compact .appbar-brand span { font-size: 11px; letter-spacing: .5px; }
 .menu-toggle { display: grid; place-items: center; width: 40px; height: 40px; border: 1px solid #ffffff35; border-radius: 8px; background: #ffffff0a; color: inherit; cursor: pointer; flex-shrink: 0; }
 .menu-toggle:hover:not(:disabled) { background: #ffffff20; }
 .menu-toggle:disabled { opacity: .5; cursor: wait; }
-.app-drawer { position: fixed; inset: 0 auto 0 0; margin: 0; padding: 0; border: 0; border-right: 1px solid var(--border); width: 310px; max-width: 88vw; height: 100dvh; max-height: none; background: var(--surface); color: var(--text); box-shadow: 12px 0 60px #0003; overscroll-behavior: contain; }
-.app-drawer::backdrop { background: #07162580; backdrop-filter: blur(3px); }
-body:has(.app-drawer[open]) { overflow: hidden; }
-.drawer-content { min-height: 100%; display: flex; flex-direction: column; padding: 26px 18px 18px; }
-.drawer-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 0 8px; }
-.drawer-heading > div > span { color: var(--accent); font-weight: 800; letter-spacing: 3px; font-size: 20px; }
-.drawer-heading h2 { color: var(--text-2); font-weight: 400; font-size: 11px; margin-top: 5px; }
-.drawer-close { display: grid; place-items: center; width: 32px; height: 32px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface-2); color: var(--text-2); font-size: 23px; cursor: pointer; }
-.drawer-branch { display: grid; gap: 4px; padding: 16px; margin: 22px 0 16px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface-2); }
-.drawer-branch strong { font-size: 13px; }
-.drawer-branch small { color: var(--text-2); font-size: 11px; }
-.drawer-nav { display: grid; gap: 4px; }
-.drawer-nav button { display: flex; align-items: center; gap: 13px; min-height: 45px; width: 100%; border: 0; border-radius: 8px; padding: 10px 14px; background: transparent; color: var(--text-2); text-align: left; cursor: pointer; }
-.drawer-nav button.active { background: var(--accent-soft); color: var(--accent); font-weight: 650; }
-.drawer-nav button:hover:not(:disabled) { background: var(--surface-2); color: var(--text); }
-.drawer-nav button:disabled { opacity: .5; cursor: wait; }
-.drawer-nav .nav-count { margin-left: auto; border-radius: 5px; }
-.drawer-footer { margin-top: auto; padding: 24px 14px 4px; font-size: 10px; color: var(--text-2); }
 .btn-back { display: inline-flex; align-items: center; gap: 6px; min-height: 30px; }
-.cart-shortcut { display: inline-flex; align-items: center; gap: 7px; white-space: nowrap; }
 .admin-status-extra { display: inline; }
 @media (max-width: 760px) {
   .appbar.appbar-compact { flex-wrap: nowrap; padding: 10px 14px; gap: 10px; }
-  .appbar-compact .appbar-brand b { font-size: 13px; }
   .appbar-compact .appbar-status { flex-wrap: wrap; justify-content: flex-end; gap: 5px; padding: 0; font-size: 10px; }
   .appbar-compact .appbar-status .btn { font-size: 10px; }
   .appbar-compact .admin-status-extra { display: none; }
 }
-@media print { .app-drawer, .menu-toggle, .btn-back { display: none !important; } }
+@media print { .menu-toggle, .btn-back { display: none !important; } }
 
 /* ---------- thanh tiêu đề trang ---------- */
 .subbar {
@@ -351,7 +316,6 @@ label.field input, label.field select { color: var(--text); width: 100%; }
 /* ---------- đăng nhập / chờ ---------- */
 .center { min-height: 100vh; display: grid; place-items: center; padding: 16px; }
 .login-page { min-height: 100vh; display: flex; flex-direction: column; }
-.login-page .center { min-height: 0; flex: 1; align-items: start; padding-top: 12vh; }
 .company-footer { text-align: center; padding: 12px 16px 20px; }
 
 /* ---------- ảnh hàng hoá ---------- */
@@ -376,10 +340,7 @@ label.field input, label.field select { color: var(--text); width: 100%; }
 
 @media (max-width: 760px) {
   .appbar { flex-wrap: wrap; padding: 0; }
-  .appbar-brand { padding: 10px 16px 6px; }
   .appbar-status { padding: 0 16px; margin-left: auto; }
-  .appbar-nav { order: 3; width: 100%; border-top: 1px solid rgba(255, 255, 255, 0.12); }
-  .appbar-nav button { padding: 9px 12px; }
   .page { padding: 12px 16px 40px; }
   .grid-2 { grid-template-columns: minmax(0, 1fr); }
   /* bảng cuộn ngang thay vì ngắt tên hàng thành nhiều dòng */

@@ -1,0 +1,12 @@
+{
+  "ok": true,
+  "fixtureApis": true,
+  "checks": [
+    "Requests default to product cards; filtering, pagination and table toggle work",
+    "Shipping, offers and shortage actions retain contracts; invalid quantities and server errors handled",
+    "Offline metric opens its filter; branch connection status remains accessible",
+    "Products, edit form, warehouse cards and debt table render with consistent styling",
+    "All ten admin screens fit 360, 390, 768, 1024 and 1440px widths",
+    "Client layout, collapsed filters and cart position unchanged"
+  ]
+}

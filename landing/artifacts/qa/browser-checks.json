@@ -1,8 +1,8 @@
 {
   "url": "http://127.0.0.1:4173/",
-  "timestamp": "2026-10-24T18:07:26.956Z",
-  "chromePath": "C:/Program Files/Google/Chrome/Application/chrome.exe",
-  "node": "v24.22.1",
+  "timestamp": "2026-11-09T15:57:10.003Z",
+  "chromePath": "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe",
+  "node": "v22.16.0",
   "checks": [
     {
       "name": "desktop: page responds HTTP 200",
@@ -130,9 +130,9 @@
       "details": ""
     },
     {
-      "name": "Carousel next: counter, caption, image and credit match TB02",
+      "name": "Carousel next: counter, caption and image match TB02",
       "passed": true,
-      "details": "{\"id\":\"TB02\",\"index\":2,\"total\":31,\"caption\":\"Sản phẩm 2 trên 31. Máy hút bụiTK-35LMáy hút bụi 35 lít\",\"image\":\"https://res.cloudinary.com/dfnlbrk4w/image/upload/c_limit,w_480,f_auto,q_auto/v1792609535/toboki/TB02.webp\",\"alt\":\"Ảnh minh họa Máy hút bụi 35 lít\",\"source\":\"https://commons.wikimedia.org/wiki/File:Ridgid_2026-08-12_Wet_Dry_Vacuum.jpg\"}"
+      "details": "{\"id\":\"TB02\",\"index\":2,\"total\":31,\"caption\":\"Sản phẩm 2 trên 31. Máy hút bụiTK-35LMáy hút bụi 35 lít\",\"image\":\"https://res.cloudinary.com/dfnlbrk4w/image/upload/c_limit,w_480,f_auto,q_auto/v1792609535/toboki/TB02.webp\",\"alt\":\"Ảnh Máy hút bụi 35 lít\"}"
     },
     {
       "name": "Carousel next: keeps scroll, hash, filter and product list",
@@ -150,9 +150,9 @@
       "details": ""
     },
     {
-      "name": "Carousel previous: counter, caption, image and credit match TB01",
+      "name": "Carousel previous: counter, caption and image match TB01",
       "passed": true,
-      "details": "{\"id\":\"TB01\",\"index\":1,\"total\":31,\"caption\":\"Sản phẩm 1 trên 31. Máy hút bụiTK-16LMáy hút bụi công nghiệp khô và ướt 16 lít\",\"image\":\"https://res.cloudinary.com/dfnlbrk4w/image/upload/c_limit,w_480,f_auto,q_auto/v1792609532/toboki/TB01.webp\",\"alt\":\"Ảnh minh họa Máy hút bụi công nghiệp khô và ướt 16 lít\",\"source\":\"https://commons.wikimedia.org/wiki/File:Craftsman_16_Gallon_Wet-Dry_Vac.jpg\"}"
+      "details": "{\"id\":\"TB01\",\"index\":1,\"total\":31,\"caption\":\"Sản phẩm 1 trên 31. Máy hút bụiTK-16LMáy hút bụi công nghiệp khô và ướt 16 lít\",\"image\":\"https://res.cloudinary.com/dfnlbrk4w/image/upload/c_limit,w_480,f_auto,q_auto/v1792609532/toboki/TB01.webp\",\"alt\":\"Ảnh Máy hút bụi công nghiệp khô và ướt 16 lít\"}"
     },
     {
       "name": "Carousel previous: keeps scroll, hash, filter and product list",
@@ -170,9 +170,9 @@
       "details": ""
     },
     {
-      "name": "Carousel previous wraps to last: counter, caption, image and credit match TB31",
+      "name": "Carousel previous wraps to last: counter, caption and image match TB31",
       "passed": true,
-      "details": "{\"id\":\"TB31\",\"index\":31,\"total\":31,\"caption\":\"Sản phẩm 31 trên 31. Máy xoa vữaTK-600Máy xoa vữa 600 mm\",\"image\":\"https://res.cloudinary.com/dfnlbrk4w/image/upload/c_limit,w_480,f_auto,q_auto/v1792609609/toboki/TB31.webp\",\"alt\":\"Ảnh minh họa Máy xoa vữa 600 mm\",\"source\":\"https://commons.wikimedia.org/wiki/File:Power_trowel_600_el.jpg\"}"
+      "details": "{\"id\":\"TB31\",\"index\":31,\"total\":31,\"caption\":\"Sản phẩm 31 trên 31. Máy xoa vữaTK-600Máy xoa vữa 600 mm\",\"image\":\"https://res.cloudinary.com/dfnlbrk4w/image/upload/c_limit,w_480,f_auto,q_auto/v1792609609/toboki/TB31.webp\",\"alt\":\"Ảnh Máy xoa vữa 600 mm\"}"
     },
     {
       "name": "Carousel previous wraps to last: keeps scroll, hash, filter and product list",
@@ -190,9 +190,9 @@
       "details": ""
     },
     {
-      "name": "Carousel next wraps to first: counter, caption, image and credit match TB01",
+      "name": "Carousel next wraps to first: counter, caption and image match TB01",
       "passed": true,
-      "details": "{\"id\":\"TB01\",\"index\":1,\"total\":31,\"caption\":\"Sản phẩm 1 trên 31. Máy hút bụiTK-16LMáy hút bụi công nghiệp khô và ướt 16 lít\",\"image\":\"https://res.cloudinary.com/dfnlbrk4w/image/upload/c_limit,w_480,f_auto,q_auto/v1792609532/toboki/TB01.webp\",\"alt\":\"Ảnh minh họa Máy hút bụi công nghiệp khô và ướt 16 lít\",\"source\":\"https://commons.wikimedia.org/wiki/File:Craftsman_16_Gallon_Wet-Dry_Vac.jpg\"}"
+      "details": "{\"id\":\"TB01\",\"index\":1,\"total\":31,\"caption\":\"Sản phẩm 1 trên 31. Máy hút bụiTK-16LMáy hút bụi công nghiệp khô và ướt 16 lít\",\"image\":\"https://res.cloudinary.com/dfnlbrk4w/image/upload/c_limit,w_480,f_auto,q_auto/v1792609532/toboki/TB01.webp\",\"alt\":\"Ảnh Máy hút bụi công nghiệp khô và ướt 16 lít\"}"
     },
     {
       "name": "Carousel next wraps to first: keeps scroll, hash, filter and product list",
@@ -210,9 +210,9 @@
       "details": ""
     },
     {
-      "name": "Carousel Enter activates next: counter, caption, image and credit match TB02",
+      "name": "Carousel Enter activates next: counter, caption and image match TB02",
       "passed": true,
-      "details": "{\"id\":\"TB02\",\"index\":2,\"total\":31,\"caption\":\"Sản phẩm 2 trên 31. Máy hút bụiTK-35LMáy hút bụi 35 lít\",\"image\":\"https://res.cloudinary.com/dfnlbrk4w/image/upload/c_limit,w_480,f_auto,q_auto/v1792609535/toboki/TB02.webp\",\"alt\":\"Ảnh minh họa Máy hút bụi 35 lít\",\"source\":\"https://commons.wikimedia.org/wiki/File:Ridgid_2026-08-12_Wet_Dry_Vacuum.jpg\"}"
+      "details": "{\"id\":\"TB02\",\"index\":2,\"total\":31,\"caption\":\"Sản phẩm 2 trên 31. Máy hút bụiTK-35LMáy hút bụi 35 lít\",\"image\":\"https://res.cloudinary.com/dfnlbrk4w/image/upload/c_limit,w_480,f_auto,q_auto/v1792609535/toboki/TB02.webp\",\"alt\":\"Ảnh Máy hút bụi 35 lít\"}"
     },
     {
       "name": "Carousel Enter activates next: keeps scroll, hash, filter and product list",
@@ -230,9 +230,9 @@
       "details": ""
     },
     {
-      "name": "Carousel ArrowLeft activates previous: counter, caption, image and credit match TB01",
+      "name": "Carousel ArrowLeft activates previous: counter, caption and image match TB01",
       "passed": true,
-      "details": "{\"id\":\"TB01\",\"index\":1,\"total\":31,\"caption\":\"Sản phẩm 1 trên 31. Máy hút bụiTK-16LMáy hút bụi công nghiệp khô và ướt 16 lít\",\"image\":\"https://res.cloudinary.com/dfnlbrk4w/image/upload/c_limit,w_480,f_auto,q_auto/v1792609532/toboki/TB01.webp\",\"alt\":\"Ảnh minh họa Máy hút bụi công nghiệp khô và ướt 16 lít\",\"source\":\"https://commons.wikimedia.org/wiki/File:Craftsman_16_Gallon_Wet-Dry_Vac.jpg\"}"
+      "details": "{\"id\":\"TB01\",\"index\":1,\"total\":31,\"caption\":\"Sản phẩm 1 trên 31. Máy hút bụiTK-16LMáy hút bụi công nghiệp khô và ướt 16 lít\",\"image\":\"https://res.cloudinary.com/dfnlbrk4w/image/upload/c_limit,w_480,f_auto,q_auto/v1792609532/toboki/TB01.webp\",\"alt\":\"Ảnh Máy hút bụi công nghiệp khô và ướt 16 lít\"}"
     },
     {
       "name": "Carousel ArrowLeft activates previous: keeps scroll, hash, filter and product list",
@@ -250,9 +250,9 @@
       "details": ""
     },
     {
-      "name": "Carousel ArrowRight activates next: counter, caption, image and credit match TB02",
+      "name": "Carousel ArrowRight activates next: counter, caption and image match TB02",
       "passed": true,
-      "details": "{\"id\":\"TB02\",\"index\":2,\"total\":31,\"caption\":\"Sản phẩm 2 trên 31. Máy hút bụiTK-35LMáy hút bụi 35 lít\",\"image\":\"https://res.cloudinary.com/dfnlbrk4w/image/upload/c_limit,w_480,f_auto,q_auto/v1792609535/toboki/TB02.webp\",\"alt\":\"Ảnh minh họa Máy hút bụi 35 lít\",\"source\":\"https://commons.wikimedia.org/wiki/File:Ridgid_2026-08-12_Wet_Dry_Vacuum.jpg\"}"
+      "details": "{\"id\":\"TB02\",\"index\":2,\"total\":31,\"caption\":\"Sản phẩm 2 trên 31. Máy hút bụiTK-35LMáy hút bụi 35 lít\",\"image\":\"https://res.cloudinary.com/dfnlbrk4w/image/upload/c_limit,w_480,f_auto,q_auto/v1792609535/toboki/TB02.webp\",\"alt\":\"Ảnh Máy hút bụi 35 lít\"}"
     },
     {
       "name": "Carousel ArrowRight activates next: keeps scroll, hash, filter and product list",
@@ -270,9 +270,9 @@
       "details": ""
     },
     {
-      "name": "Carousel restore initial: counter, caption, image and credit match TB01",
+      "name": "Carousel restore initial: counter, caption and image match TB01",
       "passed": true,
-      "details": "{\"id\":\"TB01\",\"index\":1,\"total\":31,\"caption\":\"Sản phẩm 1 trên 31. Máy hút bụiTK-16LMáy hút bụi công nghiệp khô và ướt 16 lít\",\"image\":\"https://res.cloudinary.com/dfnlbrk4w/image/upload/c_limit,w_480,f_auto,q_auto/v1792609532/toboki/TB01.webp\",\"alt\":\"Ảnh minh họa Máy hút bụi công nghiệp khô và ướt 16 lít\",\"source\":\"https://commons.wikimedia.org/wiki/File:Craftsman_16_Gallon_Wet-Dry_Vac.jpg\"}"
+      "details": "{\"id\":\"TB01\",\"index\":1,\"total\":31,\"caption\":\"Sản phẩm 1 trên 31. Máy hút bụiTK-16LMáy hút bụi công nghiệp khô và ướt 16 lít\",\"image\":\"https://res.cloudinary.com/dfnlbrk4w/image/upload/c_limit,w_480,f_auto,q_auto/v1792609532/toboki/TB01.webp\",\"alt\":\"Ảnh Máy hút bụi công nghiệp khô và ướt 16 lít\"}"
     },
     {
       "name": "Carousel restore initial: keeps scroll, hash, filter and product list",
@@ -311,11 +311,6 @@
     },
     {
       "name": "Carousel restored to first slide after coverage",
-      "passed": true,
-      "details": ""
-    },
-    {
-      "name": "Image credits expand",
       "passed": true,
       "details": ""
     },
@@ -708,5 +703,5 @@
   "errors": [],
   "network": [],
   "cancelledImageRequests": [],
-  "browser": "155.0.8059.85"
+  "browser": "157.0.4341.42"
 }

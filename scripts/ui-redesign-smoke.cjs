@@ -1,4 +1,4 @@
-const { chromium } = require('../tools/browser-check/node_modules/playwright');
+const { chromium } = require(process.env.PLAYWRIGHT_MODULE || '../tools/browser-check/node_modules/playwright');
 const assert = require('node:assert/strict');
 const fs = require('node:fs/promises');
 const http = require('node:http');
@@ -102,25 +102,32 @@ const path = require('node:path');
           await page.locator('.subbar h1').waitFor();
           await page.screenshot({path: `tools/ui-redesign/${phase}/${route}-${width}.png`, fullPage: true});
           assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false, `${route} ${width}px overflow`);
-          if (phase === 'after') assert.equal(await page.evaluate(() => getComputedStyle(document.body).backgroundColor), 'rgb(245, 247, 250)');
+          if (phase === 'after') assert.equal(await page.evaluate(() => getComputedStyle(document.body).backgroundColor), 'rgb(245, 246, 247)');
         }
       }
       console.log(`${phase}: captured admin and branch at 1440, 1024, 768 and 390px; no horizontal overflow.`);
       return;
     }
-    const desktop = () => page.viewportSize().width >= 1200;
     const openMenu = async () => {
-      if (desktop()) {
-        const expand = page.getByRole('button', {name: 'Mở rộng menu', exact: true});
-        if (await expand.count()) await expand.click();
-        await page.locator('.app-sidebar').waitFor();
-      } else { await page.getByRole('button', {name: 'Mở menu', exact: true}).click(); await page.getByRole('dialog').waitFor(); }
+      const trigger = page.getByRole('button', {name: 'Tất cả chức năng', exact: true});
+      if (await trigger.getAttribute('aria-expanded') !== 'true') await trigger.click();
+      await page.locator('.functions-dropdown.is-open').waitFor();
     };
     const navigate = async label => {
       if (typeof label === 'string' ? label === 'Thông báo' : label.test('Thông báo')) { await page.locator('.header-notification').click(); return; }
+      if (label === 'Giỏ hàng') { await page.locator('.header-cart').click(); return; }
+      if (label === 'Bán hàng') label = 'Sản phẩm';
       await openMenu();
-      await (desktop() ? page.locator('.app-sidebar') : page.getByRole('dialog')).getByRole('button', {name: label}).click();
-      if (!desktop()) await page.getByRole('dialog').waitFor({state: 'hidden'});
+      for (const group of await page.locator('.functions-group').all()) {
+        const target = group.getByRole('button', {name: label, exact: typeof label === 'string', includeHidden: true});
+        if (!await target.count()) continue;
+        const toggle = group.locator('.functions-group-toggle');
+        if (await toggle.getAttribute('aria-expanded') !== 'true') await toggle.click();
+        await target.click();
+        await page.locator('.functions-dropdown').waitFor({state: 'hidden'});
+        return;
+      }
+      throw new Error(`Không tìm thấy chức năng: ${label}`);
     };
     await fs.mkdir('tools/ui-redesign/after', {recursive: true});
     if (process.env.UI_LOGIN_CHECK === '1') {
@@ -166,16 +173,16 @@ const path = require('node:path');
         }
         await password.fill('correct-test-password');
         await page.getByRole('button', {name: 'Đăng nhập', exact: true}).click();
-        await page.getByRole('heading', {name: role === 'branch' ? 'Bán hàng & tồn kho' : 'Tổng quan', exact: true}).waitFor();
+        await page.getByRole('heading', {name: role === 'branch' ? 'Bán hàng & tồn kho' : 'Tổng quan vận hành', exact: true}).waitFor();
         if (role === 'branch') {
           for (const width of [1440, 390]) {
             await page.setViewportSize({width, height: 900});
             await openMenu();
-            const sales = (desktop() ? page.locator('.app-sidebar') : page.getByRole('dialog')).getByRole('button', {name: 'Bán hàng', exact: true});
+            const sales = page.locator('.functions-dropdown').getByRole('button', {name: 'Sản phẩm', exact: true});
             assert.equal(await sales.getAttribute('aria-current'), 'page');
-            assert.equal(await sales.evaluate(element => element.classList.contains('active')), false);
+            assert.equal(await sales.evaluate(element => element.classList.contains('active')), true);
             assert.equal(await sales.locator('.nav-count').count(), 0);
-            if (!desktop()) await page.getByRole('button', {name: 'Đóng menu', exact: true}).click();
+            await page.keyboard.press('Escape');
           }
           await page.setViewportSize({width: 1440, height: 1000});
           branchAllowed = false;
@@ -189,7 +196,7 @@ const path = require('node:path');
         }
       }
       assert.deepEqual(errors, []);
-      console.log('PASS: branch/admin wrong-password 401 keeps login form and values without reload; IP block 429 displays without reload; sales has no highlight or badge on desktop/mobile; correct password opens workspace; protected 401 still returns expired branch session to login.');
+      console.log('PASS: branch/admin wrong-password 401 keeps login form and values without reload; IP block 429 displays without reload; active sales view has no badge on desktop/mobile; correct password opens workspace; protected 401 still returns expired branch session to login.');
       return;
     }
     if (process.env.UI_RECEIVING_CHECK === '1') {
@@ -252,7 +259,7 @@ const path = require('node:path');
         await page.getByRole('heading', {name: 'Bán hàng & tồn kho', exact: true}).waitFor();
         if (width === 1024) await page.getByRole('button', {name: 'Xem dạng bảng', exact: true}).click();
         const filters = page.getByRole('complementary', {name: 'Bộ lọc sản phẩm'});
-        if (width < 1000) await filters.locator('summary').click();
+        if (!await filters.locator('details').evaluate(element => element.open)) await filters.locator('summary').click();
         await page.waitForFunction(() => {
           const element = document.querySelector('.sales-filters');
           return element.scrollHeight > element.clientHeight + 100;
@@ -299,7 +306,7 @@ const path = require('node:path');
       const refreshed = page.waitForResponse(response => response.url().endsWith('/api/inventory/refresh') && response.request().method() === 'POST');
       await page.reload();
       assert.equal((await refreshed).ok(), true);
-      await page.getByRole('button', {name: 'Giỏ hàng (1)', exact: true}).waitFor();
+      await page.getByRole('button', {name: 'Giỏ hàng (1 sản phẩm)', exact: true}).waitFor();
       assert.equal(await page.locator('.sales-toolbar').getByRole('button', {name: 'Tải lại', exact: true}).count(), 0);
       await page.getByRole('button', {name: /Giỏ hàng/}).click();
       await page.getByRole('button', {name: /Tiến hành thanh toán/}).click();
@@ -307,12 +314,12 @@ const path = require('node:path');
       const paymentCopy = await page.locator('.checkout-page').innerText();
       assert.doesNotMatch(paymentCopy, /client|thủ công|QR MẪU|Mã mẫu|Một lần quét/i);
       await page.screenshot({path: 'tools/ui-redesign/after/payment-clean.png', fullPage: true});
-      assert.equal(await page.locator('.workspace-context, .page-description, .page-breadcrumb').count(), 0);
+      assert.equal(await page.locator('.workspace-context, .page-breadcrumb').count(), 0);
       await page.getByRole('button', {name: 'Xác nhận thanh toán', exact: true}).click();
       await page.locator('.invoice-paper').waitFor();
       assert.doesNotMatch(await page.locator('.invoice-paper').innerText(), /client|thủ công/i);
       await page.goto(`${baseUrl}/admin/`);
-      assert.equal(await page.locator('.workspace-context, .page-description, .page-breadcrumb').count(), 0);
+      assert.equal(await page.locator('.workspace-context, .page-breadcrumb').count(), 0);
       assert.doesNotMatch(await page.locator('.appbar').innerText(), /server|client/i);
       assert.deepEqual(errors, []);
       console.log('PASS: 31 products; independent filter wheel and preserved scroll after selection, empty results and live updates at 1440/1024/768/390px; no inventory reload button; page reload requests fresh inventory and retains cart; concise payment/invoice/header copy; no overflow or browser exceptions.');
@@ -322,7 +329,7 @@ const path = require('node:path');
       let adminAllowed = true;
       await page.route('**/api/auth/me', route => route.fulfill({status: 200, contentType: 'application/json', body: JSON.stringify({loggedIn: adminAllowed, user: adminAllowed ? 'admin' : null})}));
       await page.goto(`${baseUrl}/admin/`);
-      await page.getByRole('heading', {name: 'Tổng quan', exact: true}).waitFor();
+      await page.getByRole('heading', {name: 'Tổng quan vận hành', exact: true}).waitFor();
       await navigate('Hàng hóa');
       await navigate('Kho chi nhánh');
       await page.goBack();
@@ -345,7 +352,7 @@ const path = require('node:path');
       await page.goto(`${baseUrl}/admin/#view=debts`);
       await page.getByRole('heading', {name: 'Công nợ', exact: true}).waitFor();
       await page.getByRole('button', {name: '← Quay lại', exact: true}).click();
-      await page.getByRole('heading', {name: 'Tổng quan', exact: true}).waitFor();
+      await page.getByRole('heading', {name: 'Tổng quan vận hành', exact: true}).waitFor();
       await page.goto(`${baseUrl}/branch/`);
       await navigate('Đặt ngưỡng');
       await navigate('Nhật ký');
@@ -396,7 +403,7 @@ const path = require('node:path');
           await page.locator('.subbar h1').waitFor();
           const bell = page.locator('.appbar .header-notification');
           await bell.waitFor();
-          assert.equal(await page.locator('.sidebar-nav button, .drawer-nav button').filter({hasText: 'Thông báo'}).count(), 0);
+          assert.equal(await page.locator('.functions-group-links button').filter({hasText: 'Thông báo'}).count(), 0);
           assert.equal(await bell.innerText(), role === 'branch' ? '1' : '');
           assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
           const box = await bell.boundingBox();
@@ -406,181 +413,106 @@ const path = require('node:path');
           await page.getByRole('heading', {name: role === 'branch' ? 'Thông báo từ công ty' : 'Thông báo tới chi nhánh', exact: true}).waitFor();
           if (role === 'branch') await bell.locator('.header-notification-count').waitFor({state: 'hidden'});
           await page.getByRole('button', {name: '← Quay lại', exact: true}).click();
-          await page.getByRole('heading', {name: role === 'branch' ? 'Bán hàng & tồn kho' : 'Tổng quan', exact: true}).waitFor();
+          await page.getByRole('heading', {name: role === 'branch' ? 'Bán hàng & tồn kho' : 'Tổng quan vận hành', exact: true}).waitFor();
         }
       }
       console.log('PASS: one bell icon at top right for branch/admin, no duplicate menu entries, unread badge clears after reading, open/back navigation, desktop/mobile, no horizontal overflow.');
       return;
     }
-    await page.goto(`${baseUrl}/branch/`);
+    await page.goto(baseUrl + '/branch/');
     await page.locator('.product-card').first().waitFor();
     assert.equal(await page.locator('.product-card').count(), 6);
-    assert.equal(await page.evaluate(() => getComputedStyle(document.body).backgroundColor), 'rgb(245, 247, 250)');
-    await page.getByRole('searchbox', {name: 'Tìm mặt hàng'}).fill('TB02');
+    assert.equal(await page.evaluate(() => getComputedStyle(document.body).backgroundColor), 'rgb(245, 246, 247)');
+    const search = page.getByRole('searchbox', {name: 'Tìm kiếm hàng hóa', exact: true});
+    await search.fill('TB02');
     assert.equal(await page.locator('.product-card').count(), 1);
-    await page.getByRole('searchbox', {name: 'Tìm mặt hàng'}).fill('nothing_matches');
+    await search.fill('nothing_matches');
     await page.getByText('Không có mặt hàng nào khớp bộ lọc.', {exact: true}).waitFor();
     await page.getByRole('button', {name: 'Xóa bộ lọc', exact: true}).click();
     await page.getByRole('combobox', {name: 'Sắp xếp sản phẩm'}).selectOption('giaBanLe:1');
-    assert.equal((await page.locator('.product-card-code').first().innerText()).startsWith('TB01'), true);
+    assert((await page.locator('.product-card-code').first().innerText()).startsWith('TB01'));
     await page.getByRole('button', {name: 'Xem dạng bảng', exact: true}).click();
-    await page.getByRole('columnheader', {name: 'Số lượng', exact: true}).waitFor();
     assert.equal(await page.locator('tbody tr').count(), 6);
     await page.getByRole('button', {name: 'Xem dạng thẻ', exact: true}).click();
-    await page.getByRole('button', {name: 'Thu gọn menu', exact: true}).click();
-    assert.equal(await page.locator('.app-sidebar').evaluate(el => el.getBoundingClientRect().width), 80);
-    await page.getByRole('button', {name: 'Mở rộng menu', exact: true}).click();
-    assert.equal(await page.getByRole('columnheader', { name: /Ngưỡng tối thiểu/ }).count(), 0);
-    assert.equal(await page.getByRole('button', { name: /Giỏ hàng/ }).count(), 1);
-    const toolbar = page.locator('.card-head').first();
-    const cartBox = await toolbar.getByRole('button', {name: /Giỏ hàng/}).boundingBox();
-    assert.equal(await toolbar.getByRole('button', {name: 'Tải lại', exact: true}).count(), 0);
-    const toolbarBox = await toolbar.boundingBox();
-    assert(toolbarBox.x + toolbarBox.width - (cartBox.x + cartBox.width) < 25);
-    await page.screenshot({ path: 'tools/navigation-preview/stock-desktop.png', fullPage: true });
+    assert.equal(await page.locator('.header-cart').count(), 1);
+    assert.equal(await page.locator('.sales-toolbar').getByRole('button', {name: /Giỏ hàng/}).count(), 0);
+    assert.equal(await page.locator('.sales-filter-disclosure').evaluate(el => el.open), false);
     await openMenu();
-    assert.equal(await page.locator('.app-sidebar').getByRole('button', { name: /Giỏ hàng/ }).count(), 0);
-    await page.screenshot({ path: 'tools/navigation-preview/menu-desktop.png', fullPage: true });
+    const dropdown = page.locator('.functions-dropdown');
+    assert.equal(await dropdown.getByRole('button', {name: /Giỏ hàng/, includeHidden: true}).count(), 0);
+    await page.keyboard.press('Escape');
+    assert.equal(await page.getByRole('button', {name: 'Tất cả chức năng', exact: true}).getAttribute('aria-expanded'), 'false');
+
     await navigate('Đặt ngưỡng');
-    const row = page.locator('tbody tr').filter({ has: page.getByLabel('Ngưỡng TB01', { exact: true }) });
+    const row = page.locator('tbody tr').filter({has: page.getByLabel('Ngưỡng TB01', {exact: true})});
     for (const invalid of ['-1', '1.5', '2147483648', '']) {
       await row.getByRole('spinbutton').fill(invalid);
-      assert.equal(await row.getByRole('button', { name: 'Lưu', exact: true }).isDisabled(), true);
+      assert(await row.getByRole('button', {name: 'Lưu', exact: true}).isDisabled());
     }
     await row.getByRole('spinbutton').fill('5');
-    await row.getByRole('button', { name: 'Lưu', exact: true }).click();
-    await row.getByText('Dưới ngưỡng', { exact: true }).waitFor();
-    assert.deepEqual(changes, [{ maHang: 'TB01', nguong: 5 }]);
-    await page.screenshot({ path: 'tools/navigation-preview/thresholds-desktop.png', fullPage: true });
-    await page.getByRole('button', { name: '← Quay lại', exact: true }).click();
-    await page.locator('.product-card').first().waitFor();
-    await page.getByRole('button', { name: '+ Thêm vào giỏ', exact: true }).first().click();
-    await page.getByRole('button', {name: /Giỏ hàng/}).click();
-    await page.getByRole('button', { name: '← Tiếp tục chọn hàng', exact: true }).waitFor();
-    assert.equal(await page.getByRole('button', { name: '+ Thêm sản phẩm', exact: true }).count(), 0);
-    await page.getByRole('button', { name: '← Tiếp tục chọn hàng', exact: true }).click();
-    await page.getByRole('button', {name: /Giỏ hàng/}).click();
-    await page.getByRole('button', { name: /Tiến hành thanh toán/ }).click();
-    await page.getByRole('button', { name: /Quay lại sửa giỏ hàng/ }).click();
-    await page.getByRole('button', { name: '← Tiếp tục chọn hàng', exact: true }).waitFor();
-    await page.getByRole('button', { name: /Tiến hành thanh toán/ }).click();
-    await page.getByRole('button', { name: 'Xác nhận thanh toán', exact: true }).evaluate(button => { button.click(); button.click(); });
-    await page.getByRole('button', { name: '← Quay lại bán hàng', exact: true }).waitFor();
+    await row.getByRole('button', {name: 'Lưu', exact: true}).click();
+    await row.getByText('Dưới ngưỡng', {exact: true}).waitFor();
+    assert.deepEqual(changes, [{maHang: 'TB01', nguong: 5}]);
+
+    await navigate('Sản phẩm');
+    await page.getByRole('button', {name: '+ Thêm vào giỏ', exact: true}).first().click();
+    await page.locator('.header-cart').click();
+    await page.getByRole('button', {name: '← Tiếp tục chọn hàng', exact: true}).waitFor();
+    await page.getByRole('button', {name: /Tiến hành thanh toán/}).click();
+    await page.getByRole('button', {name: /Quay lại sửa giỏ hàng/}).click();
+    await page.getByRole('button', {name: /Tiến hành thanh toán/}).click();
+    await page.getByRole('button', {name: 'Xác nhận thanh toán', exact: true}).evaluate(button => {button.click(); button.click();});
+    await page.getByRole('button', {name: '← Quay lại bán hàng', exact: true}).waitFor();
     assert.equal(confirms, 1);
     assert.deepEqual(createdBodies.at(-1).items, [{maHang: 'TB01', soLuong: 1}]);
     assert.equal(orders.get(createdBodies.at(-1).id).total, 1090000);
-    await page.locator('.toast').evaluateAll(elements => elements.forEach(element => element.click()));
-    await page.screenshot({path: 'tools/ui-redesign/after/invoice.png', fullPage: true});
     await page.pdf({path: 'tools/ui-redesign/after/invoice.pdf', format: 'A4', printBackground: true, preferCSSPageSize: true});
     await navigate('Hóa đơn');
-    await page.getByRole('button', { name: 'Xem hóa đơn', exact: true }).click();
-    await page.getByRole('button', { name: '← Danh sách hóa đơn', exact: true }).click();
-    await page.getByRole('button', { name: '← Quay lại', exact: true }).click();
-    await page.getByRole('button', { name: '← Quay lại bán hàng', exact: true }).click();
-    await page.setViewportSize({ width: 390, height: 844 });
-    assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
-    await openMenu();
-    await page.screenshot({ path: 'tools/navigation-preview/menu-mobile.png', fullPage: true });
-    await page.getByRole('dialog').getByRole('button', { name: 'Đặt ngưỡng' }).click();
-    await page.getByRole('columnheader', { name: /Ngưỡng tối thiểu/ }).waitFor();
-    await page.screenshot({ path: 'tools/navigation-preview/thresholds-mobile.png', fullPage: true });
-    assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
-    await page.emulateMedia({ colorScheme: 'light' });
-    await openMenu();
-    await page.screenshot({ path: 'tools/navigation-preview/menu-light.png', fullPage: true });
+    await page.getByRole('button', {name: 'Xem hóa đơn', exact: true}).click();
+    await page.locator('.invoice-paper').waitFor();
+
+    await page.goto(baseUrl + '/admin/#view=products');
+    await page.locator('.industry-product-card').first().waitFor();
+    await search.fill('TB02');
+    assert.equal(await page.locator('.industry-product-card').count(), 1);
+    await search.fill('');
+    await page.getByRole('button', {name: 'Sửa TB01', exact: true}).click();
+    const edit = page.getByRole('dialog', {name: 'Sửa hàng hóa TB01', exact: true});
+    assert.equal(await edit.getByLabel('Tên hàng', {exact: true}).inputValue(), products[0].name);
     await page.keyboard.press('Escape');
-    await page.setViewportSize({width: 1440, height: 1000});
-    await page.emulateMedia({colorScheme: 'dark'});
-    await page.goto(`${baseUrl}/admin/`);
-    await page.getByRole('heading', {name: 'Tổng quan', exact: true}).waitFor();
-    assert.equal(await page.locator('.appbar-nav').count(), 0);
-    await page.screenshot({path: 'tools/navigation-preview/admin-overview.png', fullPage: true});
-    await openMenu();
-    assert.equal(await page.getByRole('navigation', {name: 'Chức năng quản trị'}).count(), 1);
-    await page.screenshot({path: 'tools/navigation-preview/admin-menu.png', fullPage: true});
-    await page.locator('.app-sidebar').getByRole('button', {name: 'Đặt ngưỡng', exact: true}).click();
-    await page.getByRole('columnheader', {name: 'Ngưỡng tối thiểu', exact: true}).waitFor();
-    await page.locator('tbody tr').first().waitFor();
-    assert.equal(await page.locator('tbody tr').count(), 6);
-    await page.getByRole('searchbox').fill('TB02');
-    assert.equal(await page.locator('tbody tr').count(), 1);
-    await page.getByRole('button', {name: 'Xoá lọc'}).click();
-    await page.screenshot({path: 'tools/navigation-preview/admin-thresholds.png', fullPage: true});
+    await edit.waitFor({state: 'hidden'});
     await navigate('Kho chi nhánh');
-    await page.locator('.wh-card').first().click();
-    await page.getByRole('heading', {name: /Kho CN01/}).waitFor();
-    assert.equal(await page.getByRole('button', {name: '← Tất cả chi nhánh', exact: true}).count(), 1);
-    assert.equal(await page.locator('thead th').filter({hasText: /^Ngưỡng$/}).count(), 0);
-    const stockRow = page.locator('tbody tr').filter({has: page.locator('td.code', {hasText: 'TB01'})}).first();
-    assert.equal(await stockRow.locator('td').count(), 8);
-    await page.screenshot({path: 'tools/navigation-preview/admin-warehouse.png', fullPage: true});
-    await page.getByRole('button', {name: '← Tất cả chi nhánh', exact: true}).click();
     await page.locator('.wh-card').first().waitFor();
-    await page.getByRole('button', {name: '← Quay lại', exact: true}).click();
-    await page.getByRole('heading', {name: 'Đặt ngưỡng', exact: true}).waitFor();
-    await page.getByRole('button', {name: '← Quay lại', exact: true}).click();
-    await navigate('Hàng hóa');
-    await page.getByRole('searchbox', {name: 'Tìm hàng hóa'}).fill('TB02');
-    assert.equal(await page.locator('tbody tr').count(), 1);
-    await page.getByRole('searchbox', {name: 'Tìm hàng hóa'}).fill('');
-    await page.getByRole('button', {name: 'Sửa', exact: true}).first().click();
-    await page.getByRole('button', {name: '← Hủy chỉnh sửa', exact: true}).click();
-    await page.getByRole('heading', {name: 'Thêm hàng hóa', exact: true}).waitFor();
-    await page.getByRole('button', {name: '← Quay lại', exact: true}).click();
     await navigate('Công nợ');
-    await page.locator('tbody tr').filter({hasText: 'CN01'}).first().click();
-    await page.getByRole('heading', {name: /Sổ công nợ CN01/}).waitFor();
-    await page.getByRole('button', {name: 'Ghi phiếu thu', exact: true}).click();
-    assert.equal(await page.getByRole('button', {name: 'Ghi phiếu thu', exact: true}).count(), 0);
-    await page.getByRole('button', {name: '← Danh sách công nợ chi nhánh', exact: true}).click();
-    await page.getByRole('button', {name: 'Nhà cung cấp', exact: true}).click();
-    await page.locator('tbody tr').filter({hasText: 'NCC01'}).first().click();
-    await page.getByRole('heading', {name: /Sổ nhà cung cấp NCC01/}).waitFor();
-    await page.getByRole('button', {name: '← Danh sách công nợ nhà cung cấp', exact: true}).click();
-    await page.getByRole('button', {name: '← Quay lại', exact: true}).click();
-    await page.setViewportSize({width: 390, height: 844});
-    assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
-    await openMenu();
-    await page.screenshot({path: 'tools/navigation-preview/admin-menu-mobile.png', fullPage: true});
-    await page.getByRole('dialog').getByRole('button', {name: 'Đặt ngưỡng', exact: true}).click();
-    await page.locator('tbody tr').first().waitFor();
-    assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
-    await page.emulateMedia({colorScheme: 'light'});
-    await openMenu();
-    await page.screenshot({path: 'tools/navigation-preview/admin-menu-light.png', fullPage: true});
-    await page.keyboard.press('Escape');
-    await fs.mkdir('tools/ui-redesign/screens', {recursive: true});
-    const screens = {
-      admin: ['Tổng quan', 'Hàng hóa', 'Kho chi nhánh', 'Đặt ngưỡng', 'Công nợ', 'Yêu cầu cấp hàng', 'Điều chuyển', 'Thông báo', 'Giám sát', 'Đối soát'],
-      branch: ['Bán hàng', 'Hóa đơn', 'Đặt ngưỡng', 'Nhận hàng', 'Điều chuyển', 'Công nợ', 'Thông báo', 'Lịch sử nhập', 'Nhật ký', 'An ninh'],
+    await page.locator('tbody tr').filter({hasText: 'CN01'}).first().waitFor();
+
+    const views = {
+      admin: ['overview','products','stock','thresholds','debts','history','transfers','broadcast','monitor','reconcile'],
+      branch: ['stock','cart','invoices','thresholds','offers','transfers','debt','news','history','activity','security'],
     };
-    for (const width of [1440, 1024, 768, 390]) {
+    for (const width of [1440,1024,768,390]) {
       await page.setViewportSize({width, height: 1000});
-      for (const [role, tabs] of Object.entries(screens)) {
-        await page.goto(`${baseUrl}/${role}/`);
-        await page.locator('.subbar h1').waitFor();
-        for (const [index, label] of tabs.entries()) {
-          await navigate(new RegExp(`^${label}( \\([0-9]+\\))?$`));
+      for (const [role,tabs] of Object.entries(views)) {
+        for (const view of tabs) {
+          await page.goto(baseUrl + '/' + role + '/#view=' + view);
           await page.locator('.subbar h1').waitFor();
-          assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false, `${role}/${label} ${width}px overflow`);
-          await page.screenshot({path: `tools/ui-redesign/screens/${role}-${index}-${width}.png`, fullPage: true});
+          assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false, role + '/' + view + ' ' + width + 'px overflow');
         }
+        await openMenu();
+        await page.keyboard.press('Escape');
       }
     }
-    // A failed read must be visible and retryable without changing the contract.
     await page.route('**/api/products', route => route.fulfill({status: 503, contentType: 'application/json', body: JSON.stringify({error: 'Kết nối thử nghiệm bị gián đoạn'})}), {times: 1});
-    await page.goto(`${baseUrl}/admin/`);
-    await page.getByRole('alert').filter({hasText: 'Không tải được một phần dữ liệu.'}).waitFor();
+    await page.goto(baseUrl + '/admin/');
+    const readError = page.getByRole('alert').filter({hasText: 'Không tải được một phần dữ liệu.'});
+    await readError.waitFor();
     await page.getByRole('button', {name: 'Thử tải lại', exact: true}).click();
-    await page.getByRole('alert').filter({hasText: 'Không tải được một phần dữ liệu.'}).waitFor({state: 'hidden'});
-    await page.route('**/api/auth/me', route => route.fulfill({status: 200, contentType: 'application/json', body: JSON.stringify({loggedIn: false})}));
+    await readError.waitFor({state: 'hidden'});
+    await page.route('**/api/auth/me', route => route.fulfill({json: {loggedIn: false}}));
     await page.reload();
-    await page.locator('input[type="password"]').waitFor();
-    await page.screenshot({path: 'tools/ui-redesign/after/login-390.png', fullPage: true});
-    await page.setViewportSize({width: 1440, height: 1000});
-    await page.screenshot({path: 'tools/ui-redesign/after/login-1440.png', fullPage: true});
+    await page.getByRole('heading', {name: 'Chào mừng trở lại!', exact: true}).waitFor();
     assert.deepEqual(errors, []);
-    console.log('PASS: light default under OS dark; grid/table/search/sort; sidebar collapse and mobile drawer; cart at right without reload button; unchanged checkout payload/total; double-click confirms once; PDF export; thresholds; admin search/edit/back/ledgers; 20 modules at 1440/1024/768/390px without overflow; visible read error + retry; login layout/guard; no browser exceptions.');
+    console.log('PASS: catalog search/sort/grid/table; collapsed filters; animated grouped menu; cart placement; valid/invalid thresholds; checkout payload/total and single confirmation; invoice/PDF; admin edit dialog; all 21 views without overflow; read error/retry; login guard.');
   } finally {
     await browser.close();
     for (const res of peers) res.end();

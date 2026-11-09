@@ -1,5 +1,7 @@
 # Đặc tả UI TOBOKI
 
+> Phần dưới ghi lại phương án thiết kế ban đầu. Giao diện hiện tại dùng header đỏ, menu nhóm xổ xuống có animation, bộ lọc thu gọn và poster thiết bị hai bên ở màn hình rộng; login/landing đồng bộ đỏ, trắng và xám than. Chi tiết đợt dọn mã cũ và kiểm tra hiện tại: [CLEANUP.md](CLEANUP.md).
+
 ## Phạm vi
 
 Làm mới giao diện nội bộ trên hai route hiện có. Tham khảo bố cục dễ quét của mẫu người dùng và định hướng seller/admin trong plan. Giữ dữ liệu, quyền và API. Không có thay đổi backend.

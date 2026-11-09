@@ -1,0 +1,14 @@
+{
+  "ok": true,
+  "fixtureApis": true,
+  "results": [
+    "Two-column admin login renders and local Manrope font loads",
+    "Password visibility, username/email payloads and authentication errors work",
+    "Company/branch switch and admin password recovery retain behavior",
+    "Reset token handling and password confirmation still work",
+    "Successful admin sign-in opens the workspace",
+    "Client name/email, shared-email branch hints and recovery work",
+    "Fixed-branch account and successful client sign-in still work",
+    "Admin and client layouts fit desktop, tablet and 360/390px phones"
+  ]
+}

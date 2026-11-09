@@ -1,5 +1,7 @@
 # Kiểm thử và bàn giao UI
 
+> Cập nhật 09/11/2026: script smoke đã chuyển sang kiểm tra menu nhóm xổ xuống, catalog và dialog hiện tại; đã chạy thành công suite mặc định và các nhánh LOGIN/NAVIGATION/FILTER/RECEIVING/HEADER. Có thể đặt `PLAYWRIGHT_MODULE` nếu dùng Playwright ngoài `tools/browser-check`. Kết quả cleanup mới: [CLEANUP.md](CLEANUP.md). Phần bên dưới giữ lịch sử kiểm tra ở mốc nguồn cũ.
+
 Ngày: 04/11/2026. Phạm vi: frontend admin và chi nhánh, trên mốc nguồn `92614b3`.
 
 Bổ sung sau đợt UI: [Nhận hoặc từ chối hàng đã gửi](receiving-refusal.md). Đợt bổ sung này có thay đổi Java/giao thức và loại bút toán hoàn hàng; kết quả PostgreSQL và yêu cầu cập nhật cả công ty/chi nhánh được ghi riêng trong tài liệu đó.

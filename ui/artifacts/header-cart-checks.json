@@ -1,0 +1,9 @@
+{
+  "ok": true,
+  "fixtureApis": true,
+  "checks": [
+    "1440px: cart beside search, removed from top header, count updates, navigation and clearing pass",
+    "390px: cart beside search, removed from top header, count updates, navigation and clearing pass",
+    "360px: cart beside search, removed from top header, count updates, navigation and clearing pass"
+  ]
+}

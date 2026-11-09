@@ -12,7 +12,7 @@ import {
   Badge, Card, Dot, Empty, FilterBar, LoadingWorkspace, Shell, Stat, StateBadge,
   ProductImage, Toasts, useAction, useToasts,
 } from "@/components/ui";
-import { LoginScreen } from "@/components/Login";
+import { LoginInput, LoginScreen } from "@/components/Login";
 import { EntryTable } from "@/components/admin/Debts";
 import { Checkout, InvoiceHistory } from "@/components/branch/Checkout";
 import { Thresholds } from "@/components/branch/Thresholds";
@@ -146,26 +146,31 @@ export default function BranchPage() {
 
   return (
     <>
-      <Shell<Tab> brand={s.tenCn ?? ""} sub={`TOBOKI · ${s.maCn}`} value={tab} onChange={navigate}
+      <Shell<Tab> sub={`TOBOKI · ${s.maCn}`} value={tab} onChange={navigate}
+        catalogView="stock"
+        cartId="cart"
+        className={`branch-shell${tab === "stock" ? " catalog-view" : ""}`}
+        description={tab === "stock" ? "Chọn sản phẩm, kiểm tra tồn kho và tạo đơn bán hàng." : undefined}
         menu navigationDisabled={checkoutBusy} notificationId="news"
         back={!["stock", "cart", "invoices"].includes(tab) ? { label: "Quay lại", onClick: goBack } : undefined}
         title={TITLES[tab]}
         nav={[
-          { id: "stock", label: "Bán hàng", highlight: false },
-          { id: "invoices", label: "Hóa đơn" },
-          { id: "thresholds", label: "Đặt ngưỡng" },
-          { id: "offers", label: "Nhận hàng", count: actionable, tone: "warn" },
-          { id: "transfers", label: "Điều chuyển", count: pendingTransfers, tone: "warn" },
-          { id: "debt", label: "Công nợ", count: overLimit ? 1 : 0, tone: "danger" },
+          { id: "stock", label: "Sản phẩm", group: "Bán hàng" },
+          { id: "cart", label: "Giỏ hàng", count: cart.reduce((sum, line) => sum + line.soLuong, 0), group: "Bán hàng" },
+          { id: "invoices", label: "Hóa đơn", group: "Bán hàng" },
+          { id: "offers", label: "Nhận hàng", count: actionable, tone: "warn", group: "Vận hành kho" },
+          { id: "transfers", label: "Điều chuyển", count: pendingTransfers, tone: "warn", group: "Vận hành kho" },
+          { id: "thresholds", label: "Đặt ngưỡng", group: "Vận hành kho" },
+          { id: "history", label: "Lịch sử nhập", group: "Vận hành kho" },
+          { id: "debt", label: "Công nợ", count: overLimit ? 1 : 0, tone: "danger", group: "Quản lý" },
+          { id: "activity", label: "Nhật ký", group: "Quản lý" },
+          { id: "security", label: "An ninh", count: sec?.suKien.length ?? 0, tone: "danger", group: "Quản lý" },
           { id: "news", label: "Thông báo", count: unread, tone: "warn" },
-          { id: "history", label: "Lịch sử nhập" },
-          { id: "activity", label: "Nhật ký" },
-          { id: "security", label: "An ninh", count: sec?.suKien.length ?? 0, tone: "danger" },
         ]}
         status={
           <>
             <span title={s.statusDetail}><Dot on={online} />{STATUS_TEXT[s.status]}</span>
-            <button className="btn btn-sm" disabled={checkoutBusy} onClick={() => api("/api/logout", {}).then(() => window.location.reload()).catch(() => {})}>Đăng xuất</button>
+            <button className="btn btn-sm workspace-logout" disabled={checkoutBusy} onClick={() => api("/api/logout", {}).then(() => window.location.reload()).catch(() => {})}>Đăng xuất</button>
           </>
         }>
         {duplicateAlert && (
@@ -189,7 +194,7 @@ export default function BranchPage() {
           </div>
         )}
         {tab === "stock" && <Stock items={s.inventory} requests={s.requests} reported={s.daBao ?? []} online={online}
-          cart={cart} onCart={() => navigate("cart")} onAdd={(item, quantity) => {
+          cart={cart} onAdd={(item, quantity) => {
             const previous = cart.find((line) => line.maHang === item.maHang)?.soLuong ?? 0;
             if (!Number.isSafeInteger(quantity) || quantity < 1 || previous + quantity > item.soLuong) {
               push("error", `Chỉ có thể thêm tối đa ${Math.max(0, item.soLuong - previous)} sản phẩm ${item.tenHang}.`); return;
@@ -253,28 +258,28 @@ function Login() {
     <LoginScreen side="branch">
       {forgot || recoveryToken ? <PasswordRecovery scope="branch" token={recoveryToken}
         onCancel={() => { setForgot(false); setRecoveryToken(""); }} onDone={() => {}} /> :
-      <form className="form-stack" onSubmit={submit}>
-        <label className="field">Hình thức đăng nhập
+      <form className="form-stack login-credentials" onSubmit={submit}>
+        <label className="field login-method-field">Hình thức đăng nhập
           <select value={method} onChange={(e) => { setMethod(e.target.value as "name" | "email"); setMaCn(e.target.value === "name" ? fixedBranchId : ""); setBranchHint(""); }}>
             <option value="name">Tên hoặc mã chi nhánh</option>
             <option value="email">Email chi nhánh</option>
           </select>
         </label>
         <label className="field">{method === "email" ? "Email" : "Tên hoặc mã chi nhánh"}
-          <input type={method === "email" ? "email" : "text"} value={method === "name" && fixedBranchId ? fixedBranchId : maCn} onChange={(e) => setMaCn(e.target.value)}
+          <LoginInput icon={method === "email" ? "mail" : "user"} type={method === "email" ? "email" : "text"} value={method === "name" && fixedBranchId ? fixedBranchId : maCn} onChange={(e) => setMaCn(e.target.value)}
             placeholder={method === "email" ? "VD: test0003@gmail.com" : "VD: CN03 hoặc Chi nhánh TP.HCM"}
-            readOnly={method === "name" && !!fixedBranchId} autoFocus={!fixedBranchId} required />
+            readOnly={method === "name" && !!fixedBranchId} autoComplete="username" autoFocus={!fixedBranchId} required />
         </label>
         {method === "email" && <label className="field">Mã chi nhánh (nếu email dùng chung)
           <input value={branchHint} onChange={(e) => setBranchHint(e.target.value)} placeholder="VD: CN01 hoặc CN02" />
         </label>}
         {fixedBranchId && <span className="note">Trang này chỉ dành cho tài khoản {fixedBranchId}.</span>}
         <label className="field">Mật khẩu
-          <input type="password" value={matKhau} onChange={(e) => setMatKhau(e.target.value)} autoFocus={!!fixedBranchId} required />
+          <LoginInput icon="lock" type="password" value={matKhau} onChange={(e) => setMatKhau(e.target.value)} placeholder="Nhập mật khẩu của bạn" autoComplete="current-password" autoFocus={!!fixedBranchId} required />
         </label>
         {error && <p className="error" role="alert">{error}</p>}
-        <button className="btn btn-primary" disabled={busy}>{busy ? "Đang đăng nhập..." : "Đăng nhập"}</button>
-        <button type="button" className="btn" onClick={() => setForgot(true)}>Quên mật khẩu?</button>
+        <button type="button" className="login-forgot" disabled={busy} onClick={() => setForgot(true)}>Quên mật khẩu?</button>
+        <button className="btn btn-primary login-submit" disabled={busy}>{busy ? "Đang đăng nhập..." : "Đăng nhập"}</button>
       </form>}
     </LoginScreen>
   );

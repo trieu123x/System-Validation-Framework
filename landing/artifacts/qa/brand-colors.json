@@ -1,0 +1,8 @@
+{
+  "ok": true,
+  "checks": [
+    "1440px: red masthead and primary action, white keyboard focus, no overflow",
+    "390px: red masthead and primary action, white keyboard focus, no overflow",
+    "360px: red masthead and primary action, white keyboard focus, no overflow"
+  ]
+}

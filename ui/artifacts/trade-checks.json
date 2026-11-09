@@ -1,0 +1,15 @@
+{
+  "ok": true,
+  "results": [
+    "Admin overview and all three request actions preserve contracts",
+    "Header search navigates to real results; category tiles and operational banners work",
+    "Admin catalog search, cards/table, edit, create and import work",
+    "All ten admin views render without runtime errors",
+    "Client search, quantity-based add, table view, cart quantities and payment-to-invoice work",
+    "All eleven client views render",
+    "Desktop/tablet/mobile layouts at 360–1440px and mobile navigation pass",
+    "Both sign-in screens render"
+  ],
+  "imageCount": 9,
+  "fixtureApis": true
+}

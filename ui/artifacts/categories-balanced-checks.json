@@ -1,0 +1,30 @@
+{
+  "ok": true,
+  "fixtureApis": true,
+  "checks": [
+    "10 categories / 1920px: equal tiles, centered last row, working category filter, no overflow",
+    "10 categories / 1440px: equal tiles, centered last row, working category filter, no overflow",
+    "10 categories / 1024px: equal tiles, centered last row, working category filter, no overflow",
+    "10 categories / 768px: equal tiles, centered last row, working category filter, no overflow",
+    "10 categories / 390px: equal tiles, centered last row, working category filter, no overflow",
+    "10 categories / 360px: equal tiles, centered last row, working category filter, no overflow",
+    "7 categories / 1920px: equal tiles, centered last row, working category filter, no overflow",
+    "7 categories / 1440px: equal tiles, centered last row, working category filter, no overflow",
+    "7 categories / 1024px: equal tiles, centered last row, working category filter, no overflow",
+    "7 categories / 768px: equal tiles, centered last row, working category filter, no overflow",
+    "7 categories / 390px: equal tiles, centered last row, working category filter, no overflow",
+    "7 categories / 360px: equal tiles, centered last row, working category filter, no overflow",
+    "3 categories / 1920px: equal tiles, centered last row, working category filter, no overflow",
+    "3 categories / 1440px: equal tiles, centered last row, working category filter, no overflow",
+    "3 categories / 1024px: equal tiles, centered last row, working category filter, no overflow",
+    "3 categories / 768px: equal tiles, centered last row, working category filter, no overflow",
+    "3 categories / 390px: equal tiles, centered last row, working category filter, no overflow",
+    "3 categories / 360px: equal tiles, centered last row, working category filter, no overflow",
+    "1 categories / 1920px: equal tiles, centered last row, working category filter, no overflow",
+    "1 categories / 1440px: equal tiles, centered last row, working category filter, no overflow",
+    "1 categories / 1024px: equal tiles, centered last row, working category filter, no overflow",
+    "1 categories / 768px: equal tiles, centered last row, working category filter, no overflow",
+    "1 categories / 390px: equal tiles, centered last row, working category filter, no overflow",
+    "1 categories / 360px: equal tiles, centered last row, working category filter, no overflow"
+  ]
+}

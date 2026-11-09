@@ -1,0 +1,20 @@
+{
+  "ok": true,
+  "fixtureApis": true,
+  "checks": [
+    "admin 1920px: full-width red masthead, catalog/sidebar, filters, category/search and animated menu navigation",
+    "branch 1920px: full-width red masthead, catalog/sidebar, filters, category/search and animated menu navigation",
+    "admin 1440px: full-width red masthead, catalog/sidebar, filters, category/search and animated menu navigation",
+    "branch 1440px: full-width red masthead, catalog/sidebar, filters, category/search and animated menu navigation",
+    "admin 1024px: full-width red masthead, catalog/sidebar, filters, category/search and animated menu navigation",
+    "branch 1024px: full-width red masthead, catalog/sidebar, filters, category/search and animated menu navigation",
+    "admin 768px: full-width red masthead, catalog/sidebar, filters, category/search and animated menu navigation",
+    "branch 768px: full-width red masthead, catalog/sidebar, filters, category/search and animated menu navigation",
+    "admin 390px: full-width red masthead, catalog/sidebar, filters, category/search and animated menu navigation",
+    "branch 390px: full-width red masthead, catalog/sidebar, filters, category/search and animated menu navigation",
+    "admin 360px: full-width red masthead, catalog/sidebar, filters, category/search and animated menu navigation",
+    "branch 360px: full-width red masthead, catalog/sidebar, filters, category/search and animated menu navigation",
+    "Client quantity validation, cart count/increment, payment and invoice/print work",
+    "All 10 admin and 11 client screens fit desktop, tablet and 360px mobile widths"
+  ]
+}

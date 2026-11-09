@@ -19,7 +19,7 @@ export default function Hero() {
         <h1 id="hero-title">Vững thiết bị.<br /><span>Tiếp sức</span><br />mọi công trình.</h1>
         <p className="hero-description">Khám phá máy móc và thiết bị TOBOKI: máy hút bụi, máy tời, máy rửa xe, thiết bị thi công và phụ kiện.</p>
         <div className="hero-actions">
-          <a className="button button-orange" href="#san-pham">Xem sản phẩm <Icon name="arrow" /></a>
+          <a className="button button-primary" href="#san-pham">Xem sản phẩm <Icon name="arrow" /></a>
           {systemLinks.admin && <a className="text-link" href={systemLinks.admin}>Đăng nhập quản trị <span aria-hidden="true">↗</span></a>}
         </div>
       </div>

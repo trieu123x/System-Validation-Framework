@@ -1,3 +1,13 @@
+# Cập nhật giao diện ngày 09/11/2026
+
+- Đồng bộ đỏ TOBOKI `#df2118`, chữ xám than và nền trắng/xám nhạt với admin, client và trang đăng nhập. Header đỏ, giá và bộ lọc đang chọn màu đỏ; cập nhật favicon và ảnh chia sẻ.
+- `npm run build`: đạt. Đã cài được thư viện để kiểm tra bản cập nhật này; không thay đổi phiên bản khai báo hay lockfile.
+- Browser QA trên Edge chạy ngầm: **90/90 kiểm tra đạt**, không có lỗi JavaScript, console hay request mạng. Kiểm tra bố cục 1440/768/360px, menu và bàn phím, bộ lọc, danh mục, 31 sản phẩm và carousel.
+- Ảnh hiện tại: `screenshots/desktop-1440.png`, `screenshots/tablet-768.png`, `screenshots/mobile-360.png`. Kết quả chi tiết: `qa/browser-checks.json`.
+- Chưa đo lại Lighthouse cho lần đổi màu này. Các điểm Lighthouse ở phần lịch sử bên dưới thuộc lượt kiểm tra cũ.
+
+---
+
 # Cập nhật nội dung ngày 28/10/2026
 
 - Đã bỏ khối quy trình nghiệp vụ và các ghi chú demo, trích dẫn, nguồn ảnh khỏi giao diện.

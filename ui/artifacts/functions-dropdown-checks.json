@@ -1,0 +1,13 @@
+{
+  "ok": true,
+  "fixtureApis": true,
+  "checks": [
+    "admin 1440px: grouped dropdown, animation, navigation, outside click, Escape and keyboard activation pass",
+    "admin 390px: grouped dropdown, animation, navigation, outside click, Escape and keyboard activation pass",
+    "admin 360px: grouped dropdown, animation, navigation, outside click, Escape and keyboard activation pass",
+    "branch 1440px: grouped dropdown, animation, navigation, outside click, Escape and keyboard activation pass",
+    "branch 390px: grouped dropdown, animation, navigation, outside click, Escape and keyboard activation pass",
+    "branch 360px: grouped dropdown, animation, navigation, outside click, Escape and keyboard activation pass",
+    "Reduced-motion preference disables dropdown animation"
+  ]
+}

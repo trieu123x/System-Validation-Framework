@@ -1,6 +1,6 @@
 "use client";
 
-import { ReactNode, useCallback, useEffect, useId, useRef, useState } from "react";
+import { ReactNode, useCallback, useState } from "react";
 import { STATE_LABEL, STATE_TONE, TRANSFER_LABEL } from "@/lib/api";
 import { imageUrl } from "@/lib/images";
 
@@ -63,113 +63,7 @@ export function Stat({ label, value, tone, hint, onClick }: {
   return onClick ? <button type="button" className={cls} onClick={onClick}>{body}</button> : <div className={cls}>{body}</div>;
 }
 
-type NavItem<T extends string> = { id: T; label: string; count?: number; tone?: string; highlight?: boolean };
-export type BackAction = { label: string; onClick: () => void };
-
-/** Workspace nội bộ: sidebar desktop thu gọn; drawer cho tablet và điện thoại. */
-export function Shell<T extends string>({ brand, sub, nav, value, onChange, status, title, actions, children, menu = false, navigationDisabled = false, back, menuLabel = "Chức năng chi nhánh", notificationId }: {
-  brand: string; sub?: ReactNode; nav: NavItem<T>[]; value: T; onChange: (t: T) => void;
-  status?: ReactNode; title: ReactNode; actions?: ReactNode; children: ReactNode;
-  menu?: boolean; navigationDisabled?: boolean; back?: BackAction; menuLabel?: string;
-  notificationId?: T;
-}) {
-  const drawer = useRef<HTMLDialogElement>(null);
-  const drawerId = useId();
-  const [menuOpen, setMenuOpen] = useState(false);
-  const [collapsed, setCollapsed] = useState(false);
-  const [desktop, setDesktop] = useState(false);
-  const sidebarId = `${drawerId}-sidebar`;
-  useEffect(() => {
-    const media = window.matchMedia("(min-width: 1200px)");
-    const update = () => { setDesktop(media.matches); if (media.matches) drawer.current?.close(); };
-    update(); media.addEventListener("change", update);
-    return () => media.removeEventListener("change", update);
-  }, []);
-  const notification = nav.find((item) => item.id === notificationId);
-  const links = nav.filter((item) => item.id !== notificationId).map((n) => (
-    <button type="button" key={n.id} className={n.id === value && n.highlight !== false ? "active" : ""} disabled={navigationDisabled} title={n.label}
-      aria-label={n.count ? `${n.label} (${n.count})` : n.label}
-      aria-current={n.id === value ? "page" : undefined} onClick={() => { onChange(n.id); drawer.current?.close(); }}>
-      {menu && <NavigationIcon name={n.id} />}
-      <span>{n.label}</span>
-      {n.count ? <span className={`nav-count ${n.tone ? "count-" + n.tone : ""}`}>{n.count}</span> : null}
-    </button>
-  ));
-  return (
-    <div className={menu ? `workspace-shell${collapsed ? " sidebar-collapsed" : ""}` : undefined}>
-      {menu && <aside className="app-sidebar" id={sidebarId} aria-hidden={!desktop}>
-        <div className="sidebar-brand"><span className="brand-monogram">T</span><div><b>TOBOKI</b><small>QUẢN LÝ PHÂN PHỐI</small></div></div>
-        <nav className="sidebar-nav" aria-label={menuLabel}>{links}</nav>
-      </aside>}
-      <div className={menu ? "app-workspace" : undefined}>
-      <header className={`appbar${menu ? " appbar-compact" : ""}`}>
-        {menu && <button type="button" className="menu-toggle" aria-label={desktop ? collapsed ? "Mở rộng menu" : "Thu gọn menu" : "Mở menu"}
-          aria-expanded={desktop ? !collapsed : menuOpen} aria-controls={desktop ? sidebarId : drawerId}
-          disabled={navigationDisabled} onClick={() => {
-            if (desktop) setCollapsed((current) => !current);
-            else { drawer.current?.showModal(); setMenuOpen(true); }
-          }}>
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16" /></svg>
-        </button>}
-        <div className="appbar-brand">
-          <b>{brand}</b>
-          {sub && <span>{sub}</span>}
-        </div>
-        {!menu && <nav className="appbar-nav">{links}</nav>}
-        {(status || notification) && <div className="appbar-status">
-          {notification && <button type="button" className={`header-notification${value === notification.id ? " active" : ""}`}
-            title="Thông báo" aria-label={notification.count ? `Thông báo (${notification.count} chưa đọc)` : "Thông báo"}
-            aria-current={value === notification.id ? "page" : undefined} disabled={navigationDisabled} onClick={() => onChange(notification.id)}>
-            <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4M12 2v1" /></svg>
-            {!!notification.count && <span className="header-notification-count" aria-hidden="true">{notification.count > 99 ? "99+" : notification.count}</span>}
-          </button>}
-          {status}
-        </div>}
-      </header>
-      {menu && <dialog className="app-drawer" id={drawerId} ref={drawer} aria-labelledby={`${drawerId}-title`}
-        onClose={() => setMenuOpen(false)} onClick={(e) => { if (e.target === e.currentTarget) drawer.current?.close(); }}>
-        <div className="drawer-content">
-          <div className="drawer-heading"><div><span>TOBOKI</span><h2 id={`${drawerId}-title`}>Menu chức năng</h2></div>
-            <button type="button" className="drawer-close" aria-label="Đóng menu" onClick={() => drawer.current?.close()} autoFocus>×</button>
-          </div>
-          <div className="drawer-branch"><strong>{brand}</strong><small>{sub}</small></div>
-          <nav className="drawer-nav" aria-label={menuLabel}>{links}</nav>
-        </div>
-      </dialog>}
-      <div className="subbar">
-        <div className="page-heading">
-          <div className="page-title-row">{back && <button type="button" className="btn btn-back" disabled={navigationDisabled} onClick={back.onClick}>← {back.label}</button>}<h1>{title}</h1></div>
-        </div>
-        {actions && <div className="page-header-actions">{actions}</div>}
-      </div>
-      <main className="page">{children}</main>
-      </div>
-    </div>
-  );
-}
-
-function NavigationIcon({ name }: { name: string }) {
-  const paths: Record<string, string> = {
-    stock: "M3 10 12 3l9 7M5 9v12h14V9M9 21v-7h6v7",
-    cart: "M3 3h2l2 12h12l2-9H6M9 20h.01M18 20h.01",
-    invoices: "M6 3h12v18l-3-2-3 2-3-2-3 2ZM9 7h6M9 11h6M9 15h3",
-    thresholds: "M4 6h6m4 0h6M4 12h10m4 0h2M4 18h2m4 0h10M10 3v6M14 9v6M6 15v6",
-    offers: "M12 3v12m-5-5 5 5 5-5M4 16v5h16v-5",
-    transfers: "M3 7h17m-4-4 4 4-4 4M21 17H4m4-4-4 4 4 4",
-    debt: "M3 6h18v14H3ZM3 10h18M16 15h2M5 6V3h13v3",
-    news: "m4 9 15-5v16L4 15ZM4 9H2v6h2M7 16l2 5h4l-2-4",
-    history: "M3 11a9 9 0 1 1 3 8M3 5v6h6M12 7v5l3 2",
-    activity: "M5 3h14v18H5ZM8 7h8M8 12h8M8 17h5",
-    security: "m12 3 8 3v6c0 5-8 9-8 9s-8-4-8-9V6Zm-4 9 3 3 5-6",
-    overview: "M3 3h7v7H3ZM14 3h7v7h-7ZM3 14h7v7H3ZM14 14h7v7h-7Z",
-    products: "m12 3 9 5v9l-9 5-9-5V8Zm-9 5 9 5 9-5M12 13v9M7.5 5.5l9 5",
-    debts: "M3 6h18v14H3ZM3 10h18M16 15h2M5 6V3h13v3",
-    broadcast: "m4 9 15-5v16L4 15ZM4 9H2v6h2M7 16l2 5h4l-2-4",
-    monitor: "M3 4h18v13H3ZM8 21h8M12 17v4M6 11h3l2-4 3 7 2-3h2",
-    reconcile: "M8 4H5v17h14V4h-3M8 3h8v4H8ZM8 12l2 2 5-5M8 18h8",
-  };
-  return <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.65" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={paths[name] ?? paths.stock} /></svg>;
-}
+export { Shell, type BackAction } from "./WorkspaceShell";
 
 /** Mức tồn so với ngưỡng: đỏ dưới ngưỡng, vàng sắp chạm (< 1,5 × ngưỡng), xanh đủ, xám chưa đặt ngưỡng. */
 export type StockLevel = "critical" | "warning" | "ok" | "unset";

@@ -1,0 +1,199 @@
+/* Operations use the same red identity and white panels as the branch catalog. */
+.workspace-shell.industry-shell.trade-shell.admin-shell { --admin-ink: #2b3035; --admin-muted: #788087; --admin-line: #e4e5e7; }
+.workspace-shell.industry-shell.trade-shell.admin-shell .page { padding-bottom: 32px; }
+.workspace-shell.industry-shell.trade-shell.admin-shell .subbar { padding-top: 26px; padding-bottom: 22px; }
+.workspace-shell.industry-shell.trade-shell.admin-shell h1 { font-size: 25px; letter-spacing: -.5px; }
+.workspace-shell.industry-shell.trade-shell.admin-shell .card { border-color: var(--admin-line); border-radius: 4px; box-shadow: none; }
+.workspace-shell.industry-shell.trade-shell.admin-shell .card-head { min-height: 58px; padding: 16px 18px; background: white; }
+.workspace-shell.industry-shell.trade-shell.admin-shell .card-head h2 { font-size: 15px; font-weight: 700; color: var(--admin-ink); }
+.workspace-shell.industry-shell.trade-shell.admin-shell .card-body { padding: 18px; }
+.workspace-shell.industry-shell.trade-shell.admin-shell th { padding: 13px 16px; font-size: 11px; background: #f6f8f9; color: #667681; border-color: #e7ecef; }
+.workspace-shell.industry-shell.trade-shell.admin-shell td { padding: 14px 16px; font-size: 13px; border-color: #e9edef; }
+.workspace-shell.industry-shell.trade-shell.admin-shell tbody tr:nth-child(even) td { background: white; }
+.workspace-shell.industry-shell.trade-shell.admin-shell tbody tr:hover td { background: #f7fafb; }
+.workspace-shell.industry-shell.trade-shell.admin-shell tbody tr.low td { background: #fff6f5; }
+.workspace-shell.industry-shell.trade-shell.admin-shell tbody tr.warn td { background: #fffbf0; }
+.workspace-shell.industry-shell.trade-shell.admin-shell .btn { min-height: 36px; padding: 8px 13px; font-size: 12px; border-radius: 3px; }
+.workspace-shell.industry-shell.trade-shell.admin-shell .btn-sm { min-height: 30px; padding: 6px 10px; font-size: 11px; }
+.workspace-shell.industry-shell.trade-shell.admin-shell .filterbar { border-color: #e5eaed; background: #f8fafb; padding: 16px; gap: 12px; }
+.workspace-shell.industry-shell.trade-shell.admin-shell label.field { color: #64747f; font-size: 12px; gap: 7px; }
+.workspace-shell.industry-shell.trade-shell.admin-shell input:not([type="checkbox"]):not([type="radio"]), .workspace-shell.industry-shell.trade-shell.admin-shell select { min-height: 37px; }
+.workspace-shell.industry-shell.trade-shell.admin-shell .kpis { gap: 14px; margin-bottom: 22px; }
+.workspace-shell.industry-shell.trade-shell.admin-shell .kpi { padding: 19px; border-radius: 4px; border-color: var(--admin-line); box-shadow: none; }
+.workspace-shell.industry-shell.trade-shell.admin-shell .kpi-label { font-size: 12px; }
+.workspace-shell.industry-shell.trade-shell.admin-shell .kpi-value { font-size: 27px; line-height: 1.3; font-weight: 700; letter-spacing: -.7px; }
+.workspace-shell.industry-shell.trade-shell.admin-shell .kpi-hint { font-size: 11px; margin-top: 8px; }
+.workspace-shell.industry-shell.trade-shell.admin-shell .wh-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; }
+.workspace-shell.industry-shell.trade-shell.admin-shell .wh-card { display: flex; flex-direction: column; padding: 22px; border-radius: 4px; border-color: var(--admin-line); border-top: 3px solid #34454f; background: white; box-shadow: none; min-width: 0; }
+.workspace-shell.industry-shell.trade-shell.admin-shell .wh-card.wh-alert { border-top-color: var(--accent); }
+.workspace-shell.industry-shell.trade-shell.admin-shell .wh-card:hover { border-color: #aabac5; box-shadow: 0 4px 16px #29343c08; }
+.workspace-shell.industry-shell.trade-shell.admin-shell .wh-card h3 { align-items: baseline; font-size: 15px; line-height: 1.6; margin-bottom: 18px; text-align: left; }
+.workspace-shell.industry-shell.trade-shell.admin-shell .wh-nums { width: 100%; padding: 16px 0; margin-bottom: 14px; background: #f7f9fa; border: 1px solid #edf0f2; }
+.workspace-shell.industry-shell.trade-shell.admin-shell .wh-nums b { font-size: 23px; }
+.workspace-shell.industry-shell.trade-shell.admin-shell .wh-nums span { margin-top: 5px; font-size: 11px; }
+.workspace-shell.industry-shell.trade-shell.admin-shell .wh-meta { width: 100%; padding: 7px 0; font-size: 12px; }
+.workspace-shell.industry-shell.trade-shell.admin-shell .wh-meta b { font-weight: 600; }
+.workspace-shell.industry-shell.trade-shell.admin-shell .form-section-label { color: #556873; font-size: 11px; letter-spacing: .6px; padding-bottom: 10px; }
+.workspace-shell.industry-shell.trade-shell.admin-shell .form-stack { gap: 16px; }
+.workspace-shell.industry-shell.trade-shell.admin-shell .product-management > .col { gap: 26px; }
+.workspace-shell.industry-shell.trade-shell.admin-shell .operations-overview { grid-template-columns: minmax(0, 1fr); gap: 20px; }
+.admin-shell .overview-scope { color: #7d8991; font-size: 11px; }
+.admin-shell .scope-mark { width: 6px; height: 6px; border-radius: 0; }
+.workspace-shell.industry-shell.trade-shell.admin-shell .overview-metrics { gap: 14px; }
+.workspace-shell.industry-shell.trade-shell.admin-shell .overview-metric { position: relative; padding: 17px 19px; gap: 10px; border-color: var(--admin-line); border-radius: 4px; border-top: 3px solid #364954; }
+.workspace-shell.industry-shell.trade-shell.admin-shell .overview-metric.metric-danger { border-top-color: var(--accent); }
+.workspace-shell.industry-shell.trade-shell.admin-shell .overview-metric.metric-amber { border-top-color: #be8a36; }
+.workspace-shell.industry-shell.trade-shell.admin-shell .overview-metric:hover { border-left-color: #aabac5; border-right-color: #aabac5; border-bottom-color: #aabac5; box-shadow: 0 4px 14px #25313a08; }
+.admin-shell .metric-top { color: #64747f; font-size: 12px; font-weight: 500; }
+.admin-shell .metric-icon { width: 28px; height: 28px; border-radius: 3px; background: #f5f7f9; }
+.workspace-shell.industry-shell.trade-shell.admin-shell .overview-metric > strong { font-size: 32px; font-weight: 700; color: #27343e; }
+.workspace-shell.industry-shell.trade-shell.admin-shell .metric-danger > strong { color: var(--accent); }
+.admin-shell .metric-bottom { color: #819099; font-size: 11px; }
+.admin-overview-workbench { display: grid; grid-template-columns: 232px minmax(0, 1fr); gap: 22px; align-items: start; min-width: 0; }
+.admin-overview-sidebar, .admin-overview-main { display: grid; grid-template-columns: minmax(0, 1fr); gap: 22px; min-width: 0; }
+.admin-overview-sidebar { position: sticky; top: 20px; }
+.admin-filter-disclosure { border: 1px solid var(--admin-line); border-radius: 4px; background: white; overflow: hidden; }
+.admin-filter-disclosure > summary { position: relative; padding: 18px 16px; color: #35434e; font-size: 14px; font-weight: 700; cursor: pointer; background: white; }
+.admin-filter-disclosure[open] > summary { border-bottom: 1px solid var(--admin-line); }
+.admin-filter-dot { display: inline-block; width: 6px; height: 6px; margin-left: 8px; border-radius: 50%; background: var(--accent); }
+.workspace-shell.industry-shell.trade-shell.admin-shell .overview-filter-panel { border: 0; border-radius: 0; background: white; }
+.workspace-shell.industry-shell.trade-shell.admin-shell .overview-filter-panel .filterbar { display: flex; flex-direction: column; align-items: stretch; gap: 17px; padding: 18px 15px; margin: 0; background: white; }
+.workspace-shell.industry-shell.trade-shell.admin-shell .overview-filter-panel .field, .workspace-shell.industry-shell.trade-shell.admin-shell .overview-filter-panel .filterbar-search { flex: none; width: 100%; min-width: 0; }
+.workspace-shell.industry-shell.trade-shell.admin-shell .overview-filter-panel input, .workspace-shell.industry-shell.trade-shell.admin-shell .overview-filter-panel select { width: 100%; font-size: 12px; min-height: 37px; }
+.workspace-shell.industry-shell.trade-shell.admin-shell .overview-filter-panel .btn { min-height: 35px; }
+.admin-shell .overview-advanced-filters { grid-template-columns: minmax(0, 1fr); padding: 17px 15px; gap: 17px; }
+.admin-shell .overview-filter-toggle { justify-content: center; }
+.admin-shell .overview-filter-toggle.is-active { color: #ad2234; border-color: #d8aab1; }
+.admin-shell .overview-alert-section { scroll-margin-top: 22px; }
+.workspace-shell.industry-shell.trade-shell.admin-shell .overview-alert-card { background: transparent; border: 0; overflow: visible; }
+.workspace-shell.industry-shell.trade-shell.admin-shell .overview-alert-card > .card-head { background: transparent; border: 0; padding: 0 0 17px; min-height: 46px; }
+.workspace-shell.industry-shell.trade-shell.admin-shell .overview-alert-card > .card-head h2 { font-size: 18px; }
+.workspace-shell.industry-shell.trade-shell.admin-shell .overview-alert-card > .card-body { padding: 0; }
+.workspace-shell.industry-shell.trade-shell.admin-shell .overview-alert-card > .card-body > .table-wrap { margin: 0; border: 1px solid var(--admin-line); border-radius: 3px; background: white; }
+.admin-shell .overview-section-title { gap: 9px; }
+.admin-shell .section-count { background: var(--accent-soft); color: var(--accent); border-radius: 3px; font-size: 11px; min-width: 23px; }
+.admin-request-controls { display: flex; align-items: center; gap: 13px; }
+.admin-shell .overview-sort-note { font-size: 11px; color: #849099; }
+.admin-request-controls .catalog-view-switch { display: flex; padding: 3px; border: 1px solid #dce3e7; border-radius: 3px; background: white; }
+.admin-request-controls .catalog-view-switch button { display: grid; place-items: center; width: 29px; height: 28px; padding: 0; border: 0; border-radius: 2px; background: transparent; color: #8a969e; cursor: pointer; }
+.admin-request-controls .catalog-view-switch button[aria-pressed="true"] { background: #edf2f4; color: #2b4351; }
+.admin-request-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; }
+.admin-request-card { display: flex; flex-direction: column; min-width: 0; border: 1px solid var(--admin-line); border-radius: 4px; background: white; overflow: hidden; transition: border-color .15s, box-shadow .15s; }
+.admin-request-card:hover { border-color: #e0aaa4; box-shadow: 0 4px 16px #39241e09; }
+.admin-request-image { position: relative; display: grid; place-items: center; height: 175px; padding: 20px; background: white; border-bottom: 1px solid #f0f0f0; }
+.admin-request-image .thumb { width: 100% !important; max-width: 180px; height: 120px !important; object-fit: contain; background: transparent; border: 0; border-radius: 0; }
+.admin-request-image .thumb-empty { display: grid; place-items: center; color: #aebfc9; font-size: 34px; }
+.admin-request-priority { position: absolute; left: 12px; bottom: 11px; padding: 4px 7px; border: 1px solid #ffd3cc; border-radius: 3px; background: #fff2ef; color: #c12318; font-size: 10px; font-weight: 600; }
+.admin-request-content { display: flex; flex: 1; flex-direction: column; padding: 15px; }
+.admin-request-meta { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 5px; color: #788991; font-size: 10px; }
+.admin-request-meta > span { color: #35667b; font-weight: 700; }
+.admin-request-meta time { font-variant-numeric: tabular-nums; color: #8d999f; }
+.admin-request-content h3 { margin: 11px 0 4px; color: #26333d; font-size: 14px; font-weight: 700; line-height: 1.55; }
+.admin-request-code { color: #8c989f; font-size: 10px; }
+.admin-request-branch { display: flex; align-items: center; gap: 8px; margin-top: 17px; padding: 12px 0; border-top: 1px solid #eef1f3; border-bottom: 1px solid #eef1f3; }
+.admin-branch-icon { display: grid; place-items: center; width: 30px; height: 30px; border: 1px solid #e5ebee; background: #f6f9fa; border-radius: 3px; color: #84959e; flex-shrink: 0; }
+.admin-branch-icon svg { width: 15px; height: 15px; }
+.admin-request-branch b { display: block; color: #4b5e6b; font-size: 11px; line-height: 1.5; font-weight: 600; }
+.admin-request-branch small { display: block; color: #93a0a8; font-size: 10px; margin-top: 2px; }
+.admin-request-stock { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin: 13px 0 0; }
+.admin-request-stock > div:last-child { text-align: right; }
+.admin-request-stock dt { color: #8b989f; font-size: 10px; }
+.admin-request-stock dd { margin: 6px 0 0; color: #374b58; font-size: 16px; font-weight: 700; }
+.admin-request-stock dd > span { color: #95a1a9; font-size: 12px; font-weight: 400; }
+.admin-request-availability { display: flex; align-items: center; gap: 6px; margin: 13px 0; color: #aa7b32; font-size: 10px; }
+.admin-request-availability > span { width: 5px; height: 5px; background: currentColor; border-radius: 50%; flex-shrink: 0; }
+.admin-request-availability.can-supply { color: #4b8766; }
+.admin-request-notice { color: #7d8d96; font-size: 10px; line-height: 1.6; margin-bottom: 10px; }
+.workspace-shell.industry-shell.trade-shell.admin-shell .admin-request-action { display: flex; align-items: center; justify-content: space-between; gap: 9px; width: 100%; min-height: 35px; margin-top: auto; padding: 9px 12px; font-size: 11px; }
+.admin-request-action svg { width: 15px; height: 15px; }
+.admin-request-card.request-fresh { animation: admin-request-flash 2s ease-out; }
+@keyframes admin-request-flash { from { border-color: #bc1e33; box-shadow: 0 0 0 2px #bc1e331c; } }
+.admin-shell .overview-table-footer { margin-top: 18px; padding: 15px 0 0; border-top: 1px solid #e6ebee; font-size: 11px; color: #89959c; }
+.admin-shell .overview-pagination { gap: 10px; }
+.workspace-shell.industry-shell.trade-shell.admin-shell .overview-pagination .btn { background: white; min-width: 29px; padding: 4px 8px; min-height: 29px; }
+.admin-shell .overview-lower-grid { display: block; }
+.admin-shell .overview-lower-grid > .col { gap: 22px; }
+.workspace-shell.industry-shell.trade-shell.admin-shell .overview-branches .card-head { min-height: 49px; padding: 15px; }
+.workspace-shell.industry-shell.trade-shell.admin-shell .overview-branches .card-head h2 { min-width: 0; font-size: 12px; }
+.workspace-shell.industry-shell.trade-shell.admin-shell .overview-branches .card-body { padding: 15px; }
+.admin-shell .overview-branches .btn-link { font-size: 10px; }
+.admin-shell .overview-network-summary { margin-bottom: 14px; }
+.admin-shell .overview-network-summary strong { font-size: 28px; font-weight: 700; }
+.admin-shell .overview-network-summary strong span { font-size: 16px; }
+.admin-shell .overview-network-summary small { font-size: 10px; }
+.admin-shell .network-percentage { font-size: 10px; padding: 4px 6px; border-radius: 3px; }
+.admin-shell .overview-network-meter { height: 5px; border-radius: 2px; }
+.admin-shell .overview-network-legend { font-size: 9px; gap: 4px; }
+.admin-shell .overview-branch-list { max-height: 340px; }
+.admin-shell .overview-branch-list li { padding: 12px 0; gap: 8px; }
+.admin-shell .branch-avatar { width: 26px; height: 26px; border-radius: 3px; font-size: 10px; }
+.admin-shell .branch-information b { font-size: 10px; }
+.admin-shell .branch-information small { font-size: 9px; line-height: 1.5; }
+.admin-shell .branch-connection span { display: none; }
+.admin-shell .overview-recent-product { font-size: 12px; }
+.admin-shell .overview-request-link { color: #27657e; }
+.workspace-shell.industry-shell.trade-shell.admin-shell .overview-process { color: white; background: var(--accent); border-color: var(--accent); }
+.workspace-shell.industry-shell.trade-shell.admin-shell .overview-process:hover { color: white; background: var(--accent-hover); border-color: var(--accent-hover); }
+.admin-shell .overview-request-drawer { width: 480px; }
+.admin-shell .request-drawer-header { padding: 23px; border-top: 4px solid var(--accent); }
+.admin-shell .request-eyebrow { color: #9d6a72; font-size: 10px; }
+.admin-shell .request-drawer-header h2 { font-size: 22px; margin-top: 7px; }
+.admin-shell .request-stock-grid { background: #f8fafb; border-radius: 4px; }
+.admin-shell .request-action-area .btn-primary { background: var(--accent); border-color: var(--accent); }
+.admin-shell .request-product b { color: #283b47; }
+@media (max-width: 1200px) {
+  .admin-overview-workbench { grid-template-columns: 215px minmax(0, 1fr); gap: 18px; }
+  .admin-request-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+  .workspace-shell.industry-shell.trade-shell.admin-shell .wh-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 850px) {
+  .admin-overview-workbench { display: flex; flex-direction: column; }
+  .admin-overview-sidebar { position: static; display: contents; }
+  .admin-filter-disclosure { order: 0; width: 100%; }
+  .admin-overview-main { order: 1; width: 100%; }
+  .admin-overview-sidebar > .overview-branches { order: 2; width: 100%; }
+  .admin-request-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .workspace-shell.industry-shell.trade-shell.admin-shell .overview-filter-panel .filterbar { flex-flow: row wrap; }
+  .workspace-shell.industry-shell.trade-shell.admin-shell .overview-filter-panel .field { flex: 1 1 200px; }
+}
+@media (max-width: 650px) {
+  .workspace-shell.industry-shell.trade-shell.admin-shell .subbar { padding: 22px 14px 18px; }
+  .workspace-shell.industry-shell.trade-shell.admin-shell h1 { font-size: 22px; }
+  .workspace-shell.industry-shell.trade-shell.admin-shell .overview-metrics { gap: 10px; }
+  .workspace-shell.industry-shell.trade-shell.admin-shell .overview-metric { padding: 13px; gap: 9px; }
+  .workspace-shell.industry-shell.trade-shell.admin-shell .overview-metric > strong { font-size: 28px; }
+  .admin-shell .metric-top { font-size: 11px; }
+  .admin-shell .metric-bottom { font-size: 10px; line-height: 1.5; }
+  .admin-request-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 11px; }
+  .admin-request-image { height: 120px; padding: 13px; }
+  .admin-request-image .thumb { height: 92px !important; }
+  .admin-request-priority { font-size: 9px; left: 8px; bottom: 8px; }
+  .admin-request-content { padding: 11px; }
+  .admin-request-content h3 { font-size: 12px; }
+  .admin-request-meta { font-size: 9px; }
+  .admin-request-meta time { font-size: 8px; }
+  .admin-request-branch { gap: 6px; margin-top: 13px; }
+  .admin-branch-icon { display: none; }
+  .admin-request-branch b { font-size: 10px; }
+  .admin-request-stock { gap: 5px; }
+  .admin-request-stock dt { font-size: 9px; }
+  .admin-request-stock dd { font-size: 15px; }
+  .admin-request-availability { font-size: 9px; line-height: 1.5; align-items: flex-start; }
+  .admin-request-availability > span { margin-top: 4px; }
+  .workspace-shell.industry-shell.trade-shell.admin-shell .admin-request-action { padding: 8px; font-size: 10px; }
+  .admin-request-action svg { width: 12px; }
+  .admin-request-controls { gap: 7px; }
+  .admin-request-controls .overview-sort-note { display: none; }
+  .workspace-shell.industry-shell.trade-shell.admin-shell .overview-alert-card > .card-head h2 { font-size: 17px; }
+  .workspace-shell.industry-shell.trade-shell.admin-shell .wh-grid { grid-template-columns: minmax(0, 1fr); }
+  .workspace-shell.industry-shell.trade-shell.admin-shell .overview-alert-table td { padding: 5px 0; }
+  .admin-shell .overview-table-footer { font-size: 10px; }
+  .admin-shell .overview-pagination { gap: 7px; }
+  .admin-shell .overview-scope { font-size: 10px; }
+  .admin-shell .overview-advanced-filters { grid-template-columns: minmax(0, 1fr); }
+}
+@media (prefers-reduced-motion: reduce) { .admin-request-card { transition: none; animation: none; } }
+@media print {
+  .admin-overview-workbench { display: block; }
+  .admin-overview-sidebar, .admin-request-controls { display: none; }
+}

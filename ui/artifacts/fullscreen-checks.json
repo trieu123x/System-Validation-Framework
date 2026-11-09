@@ -1,0 +1,16 @@
+{
+  "ok": true,
+  "fixtureApis": true,
+  "checks": [
+    "admin 1920px: edge-to-edge frame, no outer margin or rounded corners, no horizontal overflow",
+    "branch 1920px: edge-to-edge frame, no outer margin or rounded corners, no horizontal overflow",
+    "admin 1440px: edge-to-edge frame, no outer margin or rounded corners, no horizontal overflow",
+    "branch 1440px: edge-to-edge frame, no outer margin or rounded corners, no horizontal overflow",
+    "admin 768px: edge-to-edge frame, no outer margin or rounded corners, no horizontal overflow",
+    "branch 768px: edge-to-edge frame, no outer margin or rounded corners, no horizontal overflow",
+    "admin 390px: edge-to-edge frame, no outer margin or rounded corners, no horizontal overflow",
+    "branch 390px: edge-to-edge frame, no outer margin or rounded corners, no horizontal overflow",
+    "admin 360px: edge-to-edge frame, no outer margin or rounded corners, no horizontal overflow",
+    "branch 360px: edge-to-edge frame, no outer margin or rounded corners, no horizontal overflow"
+  ]
+}

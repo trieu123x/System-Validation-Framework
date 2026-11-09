@@ -5,6 +5,7 @@ tools/
 **/target/
 ui/.next/
 ui/out/
+ui/artifacts/
 ui/next-env.d.ts
 ui/tsconfig.tsbuildinfo
 config/*.local.properties
