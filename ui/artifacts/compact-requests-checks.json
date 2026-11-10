@@ -1,0 +1,118 @@
+{
+  "ok": true,
+  "fixtureApis": true,
+  "checks": [
+    {
+      "width": 1920,
+      "columns": 4,
+      "height": 412,
+      "imageHeight": 140,
+      "overflow": false,
+      "buttonOverflow": false
+    },
+    {
+      "width": 1440,
+      "columns": 4,
+      "height": 412,
+      "imageHeight": 140,
+      "overflow": false,
+      "buttonOverflow": false
+    },
+    {
+      "width": 1366,
+      "columns": 4,
+      "height": 412,
+      "imageHeight": 140,
+      "overflow": false,
+      "buttonOverflow": false
+    },
+    {
+      "width": 1200,
+      "columns": 3,
+      "height": 412,
+      "imageHeight": 140,
+      "overflow": false,
+      "buttonOverflow": false
+    },
+    {
+      "width": 1024,
+      "columns": 3,
+      "height": 412,
+      "imageHeight": 140,
+      "overflow": false,
+      "buttonOverflow": false
+    },
+    {
+      "width": 900,
+      "columns": 3,
+      "height": 412,
+      "imageHeight": 140,
+      "overflow": false,
+      "buttonOverflow": false
+    },
+    {
+      "width": 850,
+      "columns": 3,
+      "height": 412,
+      "imageHeight": 140,
+      "overflow": false,
+      "buttonOverflow": false
+    },
+    {
+      "width": 768,
+      "columns": 3,
+      "height": 412,
+      "imageHeight": 140,
+      "overflow": false,
+      "buttonOverflow": false
+    },
+    {
+      "width": 650,
+      "columns": 2,
+      "height": 368,
+      "imageHeight": 112,
+      "overflow": false,
+      "buttonOverflow": false
+    },
+    {
+      "width": 600,
+      "columns": 2,
+      "height": 368,
+      "imageHeight": 112,
+      "overflow": false,
+      "buttonOverflow": false
+    },
+    {
+      "width": 390,
+      "columns": 2,
+      "height": 368,
+      "imageHeight": 112,
+      "overflow": false,
+      "buttonOverflow": false
+    },
+    {
+      "width": 360,
+      "columns": 2,
+      "height": 368,
+      "imageHeight": 112,
+      "overflow": false,
+      "buttonOverflow": false
+    },
+    {
+      "width": 320,
+      "columns": 2,
+      "height": 368,
+      "imageHeight": 112,
+      "overflow": false,
+      "buttonOverflow": false
+    }
+  ],
+  "edgeCases": [
+    "long names",
+    "missing image",
+    "requested quantity notice",
+    "drawer",
+    "table toggle",
+    "pagination"
+  ]
+}
