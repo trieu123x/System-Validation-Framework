@@ -31,7 +31,7 @@ body:has(.trade-shell) .toasts { top: calc(var(--workspace-toolbar-height, 116px
 .workspace-shell.industry-shell.trade-shell .appbar.industry-header { position: sticky; top: 0; z-index: 50; display: grid; grid-template-columns: 180px minmax(0, 1fr) auto; align-items: center; min-height: 100px; gap: 24px; padding: 20px 32px; border: 0; border-radius: 0; background: var(--accent); color: white; }
 .trade-shell .industry-brand { gap: 0; }
 .trade-shell .industry-brand b { display: block; padding: 0; color: white; font-size: 38px; line-height: 1; font-weight: 900; font-style: normal; letter-spacing: -1.5px; }
-.trade-shell .industry-sections { display: flex; flex: 0 0 auto; justify-content: flex-start; gap: 24px; padding-right: 24px; border-right: 1px solid var(--border); }
+.trade-shell .industry-sections { display: flex; flex: 0 0 auto; justify-content: flex-start; gap: 24px; }
 .industry-section { position: relative; min-width: 0; }
 .trade-shell .industry-section-toggle { display: flex; align-items: center; gap: 6px; min-height: 48px; padding: 12px 0; color: #42484d; font-size: 13px; font-weight: 400; }
 .trade-shell .industry-section-toggle:hover, .trade-shell .industry-section-toggle[aria-expanded="true"], .trade-shell .industry-sections .is-current { color: var(--accent); }
@@ -68,11 +68,6 @@ body:has(.trade-shell) .toasts { top: calc(var(--workspace-toolbar-height, 116px
 .trade-search > button > svg { display: none; }
 .trade-search > button:hover { background: #e3e3e3; }
 .trade-shell .industry-navigation { position: relative; z-index: 40; min-height: 48px; justify-content: flex-start; padding: 0 32px; gap: 25px; background: white; border-bottom: 1px solid #e3e5e7; }
-.trade-shell .industry-view-links { gap: 23px; padding: 0; }
-.trade-shell .industry-view-links button { min-height: 48px; padding: 13px 0 10px; border: 0; border-bottom: 3px solid transparent; border-radius: 0; color: #5c666e; font-size: 13px; background: transparent; }
-.trade-shell .industry-view-links button:hover { color: #20272c; background: transparent; }
-.trade-shell .industry-view-links button.active { color: var(--accent); font-weight: 700; background: transparent; border-color: var(--accent); }
-.trade-shell .industry-view-links .active .nav-count { color: #a11c2c; background: #f9e7e9; }
 .trade-shell .industry-workspace-status { display: flex; align-items: center; flex-shrink: 0; gap: 12px; margin-left: auto; padding-left: 16px; border-left: 1px solid #d6dce3; color: #626d76; font-size: 11px; white-space: nowrap; }
 .trade-shell .industry-workspace-status .industry-space-label { display: inline; padding: 0; border: 0; font-size: 11px; color: #626d76; }
 .workspace-connection { display: inline-flex; align-items: center; gap: 6px; }
@@ -202,10 +197,9 @@ body:has(.trade-shell) .toasts { top: calc(var(--workspace-toolbar-height, 116px
   .trade-searchbar { grid-column: 1 / -1; grid-row: 2; }
   .trade-shell .industry-header .appbar-status { grid-column: 2; grid-row: 1; }
   .trade-shell .industry-navigation { flex-wrap: wrap; padding: 0 22px; gap: 0; }
-  .trade-shell .industry-sections { width: 100%; padding-right: 0; border-right: 0; }
+  .trade-shell .industry-sections { width: 100%; }
   .industry-section { position: static; }
   .functions-dropdown { left: 22px; }
-  .trade-shell .industry-view-links { width: 100%; }
   .trade-shell .industry-workspace-status { flex-wrap: wrap; width: 100%; margin: 0; padding: 7px 0; border-left: 0; border-top: 1px solid #edf0f2; gap: 8px 12px; }
   .store-catalog-sidebar { position: static; }
   .store-brand-panel { display: none; }
@@ -235,8 +229,6 @@ body:has(.trade-shell) .toasts { top: calc(var(--workspace-toolbar-height, 116px
   .trade-shell .industry-navigation { padding: 0 14px; min-height: 41px; }
   .trade-shell .industry-sections { gap: 16px; }
   .trade-shell .industry-section-toggle { min-height: 41px; padding: 10px 0; font-size: 11px; gap: 4px; }
-  .trade-shell .industry-view-links { gap: 18px; }
-  .trade-shell .industry-view-links button { min-height: 41px; font-size: 11px; padding: 10px 0 8px; }
   .workspace-shell.industry-shell.trade-shell .subbar { padding: 21px 14px 17px; }
   .workspace-shell.industry-shell.trade-shell.admin-shell .subbar { padding: 21px 14px 17px; }
   .workspace-shell.industry-shell.trade-shell h1 { font-size: 21px; }

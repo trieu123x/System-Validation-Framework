@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useEffect, useId, useRef, useState, type ReactNode } from "react";
 
-type NavItem<T extends string> = { id: T; label: string; count?: number; tone?: string; group?: string; dropdownOnly?: boolean };
+type NavItem<T extends string> = { id: T; label: string; count?: number; tone?: string; group?: string };
 export type BackAction = { label: string; onClick: () => void };
 
 const CatalogSearchContext = createContext<{ query: string; setQuery: (value: string) => void } | null>(null);
@@ -32,7 +32,7 @@ export function SidePanel({ title, onClose, children }: { title: string; onClose
   </dialog>;
 }
 
-/** Shared frame: group dropdowns and context-specific views share the navigation bar. */
+/** Shared frame with grouped dropdown navigation. */
 export function Shell<T extends string>({ sub, nav, value, onChange, status, navigationStatus, title, actions, children, menu = false, navigationDisabled = false, back, menuLabel = "Chức năng chi nhánh", notificationId, className = "", description, catalogView, cartId }: {
   sub?: ReactNode; nav: NavItem<T>[]; value: T; onChange: (value: T) => void;
   status?: ReactNode; navigationStatus?: ReactNode; title: ReactNode; actions?: ReactNode; children: ReactNode;
@@ -51,7 +51,6 @@ export function Shell<T extends string>({ sub, nav, value, onChange, status, nav
   const navigation = nav.filter((item) => item.id !== notificationId && item.id !== cartId);
   const groups = [...new Set(navigation.map((item) => item.group).filter((group): group is string => !!group))];
   const activeGroup = nav.find((item) => item.id === value)?.group ?? groups[0];
-  const currentViews = navigation.filter((item) => !item.dropdownOnly && (!activeGroup || item.group === activeGroup));
 
   useEffect(() => {
     const element = header.current;
@@ -139,7 +138,6 @@ export function Shell<T extends string>({ sub, nav, value, onChange, status, nav
             </div>
           </div>;
         })}</div>}
-        <div className="industry-view-links">{currentViews.map(viewButton)}</div>
         <div className="industry-workspace-status"><span className="industry-space-label">{sub}</span>{navigationStatus}</div>
       </nav>}
 

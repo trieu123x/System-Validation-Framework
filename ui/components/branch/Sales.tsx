@@ -1,12 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useId, useRef, useState } from "react";
 import { fmtMoney, fmtNumber } from "@/lib/api";
 import type { CartLine } from "@/lib/checkout";
 import type { BranchItem, BranchRequest } from "@/lib/types";
-import { Badge, Empty, Facet, FilterGroup, LEVEL_LABEL, ProductImage, SortTh, sortRows, StockBar, stockLevel, type Sort, type StockLevel } from "@/components/ui";
+import { Badge, Empty, LEVEL_LABEL, ProductImage, SortTh, sortRows, StockBar, stockLevel, type Sort, type StockLevel } from "@/components/ui";
 import { useCatalogSearch } from "@/components/WorkspaceShell";
-import { CatalogBrand, CatalogDiscovery } from "@/components/CatalogDiscovery";
+import { CatalogDiscovery } from "@/components/CatalogDiscovery";
 import "./sales.css";
 
 type Filter = "all" | "critical" | "warning" | "unset";
@@ -29,7 +29,11 @@ export function Sales({ items, requests, reported, online, cart, onAdd }: Props)
   const [category, setCategory] = useState("all");
   const [sort, setSort] = useState<Sort<Key>>(null);
   const [view, setView] = useState<"grid" | "table">("grid");
+  const [categoriesOpen, setCategoriesOpen] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const categoryPanelId = useId();
+  const filterOptionsId = useId();
+  const categoryTrigger = useRef<HTMLButtonElement>(null);
   const count = (level: StockLevel) => items.filter((item) => stockLevel(item.soLuong, item.nguong) === level).length;
   const supply = new Map<string, [string, string]>();
   reported.forEach((code) => supply.set(code, ["warn", "đã báo công ty"]));
@@ -47,30 +51,38 @@ export function Sales({ items, requests, reported, online, cart, onAdd }: Props)
   const clearFilters = () => { setQ(""); setCategory("all"); setFilter("all"); setSupplyFilter("all"); };
 
   return <>
-    <div className="sales-layout industry-catalog-layout">
-    <div className="store-catalog-sidebar">
-    <CatalogBrand />
-    <aside className="sales-filters filters industry-catalog-filters" aria-label="Bộ lọc sản phẩm">
-      <details className="sales-filter-disclosure" open={filtersOpen} onToggle={(event) => setFiltersOpen(event.currentTarget.open)}>
-        <summary>Bộ lọc sản phẩm <span>{items.length}</span></summary>
-        {categories.length > 0 && <FilterGroup title="Danh mục"><Facet<string> name="category" value={category} onChange={setCategory} options={[
-          { id: "all", label: "Tất cả sản phẩm", count: items.length },
-          ...categories.map((name) => ({ id: name, label: name, count: items.filter((item) => item.danhMuc === name).length })),
-        ]} /></FilterGroup>}
-        <FilterGroup title="Mức tồn"><Facet<Filter> name="level" value={filter} onChange={setFilter} options={[
-          { id: "all", label: "Tất cả", count: items.length }, { id: "critical", label: "Dưới ngưỡng", count: count("critical") },
-          { id: "warning", label: "Sắp chạm ngưỡng", count: count("warning") }, { id: "unset", label: "Chưa đặt ngưỡng", count: count("unset") },
-        ]} /></FilterGroup>
-        <FilterGroup title="Nhập hàng"><Facet<SupplyFilter> name="supply" value={supplyFilter} onChange={setSupplyFilter} options={[
-          { id: "all", label: "Tất cả", count: items.length }, { id: "waiting", label: "Đang chờ công ty", count: waiting },
-          { id: "none", label: "Không chờ", count: items.length - waiting },
-        ]} /></FilterGroup>
-      </details>
+    <div className="sales-layout industry-catalog-layout branch-catalog-layout">
+    <aside className={`sales-category-sidebar${categoriesOpen ? " is-open" : ""}`} aria-label="Danh mục sản phẩm">
+      <button ref={categoryTrigger} type="button" className="sales-category-toggle" aria-expanded={categoriesOpen} aria-controls={categoryPanelId} onClick={() => setCategoriesOpen((open) => !open)}>
+        <span><strong>Danh mục sản phẩm</strong><small>{category === "all" ? "Tất cả sản phẩm" : category}</small></span>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
+      </button>
+      <div className="sales-category-panel" id={categoryPanelId}>
+        <CatalogDiscovery variant="sidebar" allCategory={{ id: "all", label: "Tất cả sản phẩm", count: items.length }}
+          categories={categories.map((name) => ({ id: name, label: name, count: items.filter((item) => item.danhMuc === name).length, image: items.find((item) => item.danhMuc === name)?.anh }))}
+          selected={category} onSelect={(next) => {
+            setCategory(next);
+            setCategoriesOpen(false);
+            if (window.matchMedia("(max-width: 899px)").matches) categoryTrigger.current?.focus({ preventScroll: true });
+          }} />
+      </div>
     </aside>
-    </div>
     <section className="sales-catalog">
-      <CatalogDiscovery categories={categories.map((name) => ({ id: name, label: name, count: items.filter((item) => item.danhMuc === name).length, image: items.find((item) => item.danhMuc === name)?.anh }))}
-        selected={category} onSelect={setCategory} />
+      <section className={`sales-filter-panel${filtersOpen ? " is-expanded" : ""}`} aria-label="Bộ lọc sản phẩm">
+        <div className="sales-filter-heading"><h2><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden="true"><path d="M4 6h16M7 12h10M10 18h4" /></svg>Bộ lọc sản phẩm</h2><button type="button" className="btn-link" disabled={!filtered} onClick={clearFilters}>Xóa bộ lọc</button></div>
+        <div className="sales-filter-fields">
+          <label className="field sales-local-search">Tìm trong sản phẩm<input type="search" value={q} onChange={(event) => setQ(event.target.value)} placeholder="Tên sản phẩm, mã hàng hoặc model" /></label>
+          <button type="button" className="sales-filter-toggle" aria-expanded={filtersOpen} aria-controls={filterOptionsId} onClick={() => setFiltersOpen((open) => !open)}><span>Mức tồn và nhập hàng</span><small>{filter !== "all" || supplyFilter !== "all" ? `${Number(filter !== "all") + Number(supplyFilter !== "all")} điều kiện` : "Tất cả"}</small><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg></button>
+          <div className="sales-filter-options" id={filterOptionsId}>
+          <label className="field">Mức tồn<select value={filter} onChange={(event) => setFilter(event.target.value as Filter)}>
+            <option value="all">Tất cả ({items.length})</option><option value="critical">Dưới ngưỡng ({count("critical")})</option><option value="warning">Sắp chạm ngưỡng ({count("warning")})</option><option value="unset">Chưa đặt ngưỡng ({count("unset")})</option>
+          </select></label>
+          <label className="field">Nhập hàng<select value={supplyFilter} onChange={(event) => setSupplyFilter(event.target.value as SupplyFilter)}>
+            <option value="all">Tất cả ({items.length})</option><option value="waiting">Đang chờ công ty ({waiting})</option><option value="none">Không chờ ({items.length - waiting})</option>
+          </select></label>
+          </div>
+        </div>
+      </section>
       <div className="sales-toolbar card">
         <div className="card-head"><div className="sales-catalog-title"><h2>Sản phẩm tại chi nhánh</h2><span>{shown.length} / {items.length} mặt hàng</span></div>
         </div>
@@ -82,7 +94,7 @@ export function Sales({ items, requests, reported, online, cart, onAdd }: Props)
           <div className="sales-view-switch" role="group" aria-label="Cách xem sản phẩm"><button type="button" aria-pressed={view === "grid"} aria-label="Xem dạng thẻ" title="Xem dạng thẻ" onClick={() => setView("grid")}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden="true"><path d="M3 3h7v7H3ZM14 3h7v7h-7ZM3 14h7v7H3ZM14 14h7v7h-7Z" /></svg></button><button type="button" aria-pressed={view === "table"} aria-label="Xem dạng bảng" title="Xem dạng bảng" onClick={() => setView("table")}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden="true"><path d="M3 4h18v16H3ZM3 9h18M3 14h18M9 4v16" /></svg></button></div>
         </div>
       </div>
-      <div className="sales-results"><span><i className="sales-result-dot" />{category === "all" ? "Tất cả sản phẩm" : category}{q && ` · Tìm: ${q}`}</span><span>{count("critical")} mặt hàng dưới ngưỡng{filtered && <button type="button" className="btn-link" onClick={clearFilters}>Xóa bộ lọc</button>}</span></div>
+      <div className="sales-results"><span><i className="sales-result-dot" />{category === "all" ? "Tất cả sản phẩm" : category}{q && ` · Tìm: ${q}`}</span><span>{count("critical")} mặt hàng dưới ngưỡng</span></div>
       {!shown.length ? <div className="card"><Empty>{items.length ? "Không có mặt hàng nào khớp bộ lọc." : "Chưa có dữ liệu tồn kho."}</Empty></div> : view === "grid" ?
         <div className="product-grid">{shown.map((item) => <ProductCard key={item.maHang} item={item} online={online} supply={supply.get(item.maHang)} inCart={inCart(item.maHang)} onAdd={onAdd} />)}</div> :
         <div className="card sales-table"><div className="table-wrap" tabIndex={0}><table><thead><tr><SortTh k="maHang" {...th}>Mã hàng</SortTh><SortTh k="tenHang" {...th}>Tên hàng</SortTh><SortTh k="giaBanLe" num {...th}>Giá bán lẻ</SortTh><SortTh k="soLuong" num {...th}>Tồn</SortTh><SortTh k="muc" {...th}>Mức tồn</SortTh><th scope="col">Số lượng</th></tr></thead><tbody>{shown.map((item) => <tr key={item.maHang} className={stockLevel(item.soLuong, item.nguong) === "critical" ? "low" : ""}>

@@ -1,0 +1,1365 @@
+{
+  "date": "2026-11-11",
+  "scope": "Client product catalog layout",
+  "buildPassed": true,
+  "smokeScriptSyntaxChecked": true,
+  "fullSmokeSuiteRun": false,
+  "geometry": [
+    {
+      "label": "wide",
+      "brokenImages": 0,
+      "categories": {
+        "bottom": 1069.578125,
+        "height": 820.5,
+        "right": 275,
+        "visible": true,
+        "width": 242,
+        "x": 33,
+        "y": 249.078125
+      },
+      "categoryCount": 11,
+      "documentWidth": 1920,
+      "fields": {
+        "bottom": 362.078125,
+        "height": 62,
+        "right": 1869,
+        "visible": true,
+        "width": 1552,
+        "x": 317,
+        "y": 300.078125
+      },
+      "filter": {
+        "bottom": 381.078125,
+        "height": 133,
+        "right": 1888,
+        "visible": true,
+        "width": 1590,
+        "x": 298,
+        "y": 248.078125
+      },
+      "overflow": [],
+      "products": {
+        "bottom": 3833.578125,
+        "height": 3310,
+        "right": 1888,
+        "visible": true,
+        "width": 1590,
+        "x": 298,
+        "y": 523.578125
+      },
+      "selected": [
+        "Tất cả sản phẩm"
+      ],
+      "shown": 31,
+      "sidebar": {
+        "bottom": 1070.578125,
+        "height": 822.5,
+        "right": 276,
+        "visible": true,
+        "width": 244,
+        "x": 32,
+        "y": 248.078125
+      },
+      "url": "http://host.docker.internal:4319/branch/",
+      "width": 1920
+    },
+    {
+      "label": "desktop",
+      "brokenImages": 0,
+      "categories": {
+        "bottom": 1069.578125,
+        "height": 820.5,
+        "right": 275,
+        "visible": true,
+        "width": 242,
+        "x": 33,
+        "y": 249.078125
+      },
+      "categoryCount": 11,
+      "documentWidth": 1440,
+      "fields": {
+        "bottom": 362.078125,
+        "height": 62,
+        "right": 1389,
+        "visible": true,
+        "width": 1072,
+        "x": 317,
+        "y": 300.078125
+      },
+      "filter": {
+        "bottom": 381.078125,
+        "height": 133,
+        "right": 1408,
+        "visible": true,
+        "width": 1110,
+        "x": 298,
+        "y": 248.078125
+      },
+      "overflow": [],
+      "products": {
+        "bottom": 3833.578125,
+        "height": 3310,
+        "right": 1408,
+        "visible": true,
+        "width": 1110,
+        "x": 298,
+        "y": 523.578125
+      },
+      "selected": [
+        "Tất cả sản phẩm"
+      ],
+      "shown": 31,
+      "sidebar": {
+        "bottom": 1070.578125,
+        "height": 822.5,
+        "right": 276,
+        "visible": true,
+        "width": 244,
+        "x": 32,
+        "y": 248.078125
+      },
+      "url": "http://host.docker.internal:4319/branch/",
+      "width": 1440
+    },
+    {
+      "label": "small-desktop",
+      "brokenImages": 0,
+      "categories": {
+        "bottom": 1077.578125,
+        "height": 828.5,
+        "right": 255,
+        "visible": true,
+        "width": 222,
+        "x": 33,
+        "y": 249.078125
+      },
+      "categoryCount": 11,
+      "documentWidth": 1024,
+      "fields": {
+        "bottom": 435.078125,
+        "height": 135,
+        "right": 973,
+        "visible": true,
+        "width": 682,
+        "x": 291,
+        "y": 300.078125
+      },
+      "filter": {
+        "bottom": 454.078125,
+        "height": 206,
+        "right": 992,
+        "visible": true,
+        "width": 720,
+        "x": 272,
+        "y": 248.078125
+      },
+      "overflow": [],
+      "products": {
+        "bottom": 5153.078125,
+        "height": 4556.5,
+        "right": 992,
+        "visible": true,
+        "width": 720,
+        "x": 272,
+        "y": 596.578125
+      },
+      "selected": [
+        "Tất cả sản phẩm"
+      ],
+      "shown": 31,
+      "sidebar": {
+        "bottom": 1016.078125,
+        "height": 768,
+        "right": 256,
+        "visible": true,
+        "width": 224,
+        "x": 32,
+        "y": 248.078125
+      },
+      "url": "http://host.docker.internal:4319/branch/",
+      "width": 1024
+    },
+    {
+      "label": "breakpoint",
+      "brokenImages": 0,
+      "categories": {
+        "bottom": 1077.578125,
+        "height": 828.5,
+        "right": 255,
+        "visible": true,
+        "width": 222,
+        "x": 33,
+        "y": 249.078125
+      },
+      "categoryCount": 11,
+      "documentWidth": 900,
+      "fields": {
+        "bottom": 435.078125,
+        "height": 135,
+        "right": 849,
+        "visible": true,
+        "width": 558,
+        "x": 291,
+        "y": 300.078125
+      },
+      "filter": {
+        "bottom": 454.078125,
+        "height": 206,
+        "right": 868,
+        "visible": true,
+        "width": 596,
+        "x": 272,
+        "y": 248.078125
+      },
+      "overflow": [],
+      "products": {
+        "bottom": 5180.078125,
+        "height": 4583.5,
+        "right": 868,
+        "visible": true,
+        "width": 596,
+        "x": 272,
+        "y": 596.578125
+      },
+      "selected": [
+        "Tất cả sản phẩm"
+      ],
+      "shown": 31,
+      "sidebar": {
+        "bottom": 1016.078125,
+        "height": 768,
+        "right": 256,
+        "visible": true,
+        "width": 224,
+        "x": 32,
+        "y": 248.078125
+      },
+      "url": "http://host.docker.internal:4319/branch/",
+      "width": 900
+    },
+    {
+      "label": "tablet",
+      "brokenImages": 0,
+      "categories": {
+        "bottom": 0,
+        "height": 0,
+        "right": 0,
+        "visible": false,
+        "width": 0,
+        "x": 0,
+        "y": 0
+      },
+      "categoryCount": 11,
+      "documentWidth": 768,
+      "fields": {
+        "bottom": 625.578125,
+        "height": 135,
+        "right": 717,
+        "visible": true,
+        "width": 666,
+        "x": 51,
+        "y": 490.578125
+      },
+      "filter": {
+        "bottom": 644.578125,
+        "height": 206,
+        "right": 736,
+        "visible": true,
+        "width": 704,
+        "x": 32,
+        "y": 438.578125
+      },
+      "overflow": [],
+      "products": {
+        "bottom": 5343.578125,
+        "height": 4556.5,
+        "right": 736,
+        "visible": true,
+        "width": 704,
+        "x": 32,
+        "y": 787.078125
+      },
+      "selected": [
+        "Tất cả sản phẩm"
+      ],
+      "shown": 31,
+      "sidebar": {
+        "bottom": 424.578125,
+        "height": 68,
+        "right": 736,
+        "visible": true,
+        "width": 704,
+        "x": 32,
+        "y": 356.578125
+      },
+      "url": "http://host.docker.internal:4319/branch/",
+      "width": 768
+    },
+    {
+      "label": "small-tablet",
+      "brokenImages": 0,
+      "categories": {
+        "bottom": 0,
+        "height": 0,
+        "right": 0,
+        "visible": false,
+        "width": 0,
+        "x": 0,
+        "y": 0
+      },
+      "categoryCount": 11,
+      "documentWidth": 601,
+      "fields": {
+        "bottom": 625.578125,
+        "height": 135,
+        "right": 550,
+        "visible": true,
+        "width": 499,
+        "x": 51,
+        "y": 490.578125
+      },
+      "filter": {
+        "bottom": 644.578125,
+        "height": 206,
+        "right": 569,
+        "visible": true,
+        "width": 537,
+        "x": 32,
+        "y": 438.578125
+      },
+      "overflow": [],
+      "products": {
+        "bottom": 5385.078125,
+        "height": 4572.5,
+        "right": 569,
+        "visible": true,
+        "width": 537,
+        "x": 32,
+        "y": 812.578125
+      },
+      "selected": [
+        "Tất cả sản phẩm"
+      ],
+      "shown": 31,
+      "sidebar": {
+        "bottom": 424.578125,
+        "height": 68,
+        "right": 569,
+        "visible": true,
+        "width": 537,
+        "x": 32,
+        "y": 356.578125
+      },
+      "url": "http://host.docker.internal:4319/branch/",
+      "width": 601
+    },
+    {
+      "label": "mobile",
+      "brokenImages": 0,
+      "categories": {
+        "bottom": 0,
+        "height": 0,
+        "right": 0,
+        "visible": false,
+        "width": 0,
+        "x": 0,
+        "y": 0
+      },
+      "categoryCount": 11,
+      "documentWidth": 390,
+      "fields": {
+        "bottom": 556.984375,
+        "height": 107.5,
+        "right": 361,
+        "visible": true,
+        "width": 332,
+        "x": 29,
+        "y": 449.484375
+      },
+      "filter": {
+        "bottom": 571.984375,
+        "height": 169,
+        "right": 376,
+        "visible": true,
+        "width": 362,
+        "x": 14,
+        "y": 402.984375
+      },
+      "overflow": [],
+      "products": {
+        "bottom": 6172.484375,
+        "height": 5415,
+        "right": 376,
+        "visible": true,
+        "width": 362,
+        "x": 14,
+        "y": 757.484375
+      },
+      "selected": [
+        "Tất cả sản phẩm"
+      ],
+      "shown": 31,
+      "sidebar": {
+        "bottom": 388.984375,
+        "height": 68,
+        "right": 376,
+        "visible": true,
+        "width": 362,
+        "x": 14,
+        "y": 320.984375
+      },
+      "url": "http://host.docker.internal:4319/branch/",
+      "width": 390
+    },
+    {
+      "label": "narrow",
+      "brokenImages": 0,
+      "categories": {
+        "bottom": 0,
+        "height": 0,
+        "right": 0,
+        "visible": false,
+        "width": 0,
+        "x": 0,
+        "y": 0
+      },
+      "categoryCount": 11,
+      "documentWidth": 320,
+      "fields": {
+        "bottom": 576.171875,
+        "height": 107.5,
+        "right": 291,
+        "visible": true,
+        "width": 262,
+        "x": 29,
+        "y": 468.671875
+      },
+      "filter": {
+        "bottom": 591.171875,
+        "height": 169,
+        "right": 306,
+        "visible": true,
+        "width": 292,
+        "x": 14,
+        "y": 422.171875
+      },
+      "overflow": [],
+      "products": {
+        "bottom": 6383.671875,
+        "height": 5607,
+        "right": 306,
+        "visible": true,
+        "width": 292,
+        "x": 14,
+        "y": 776.671875
+      },
+      "selected": [
+        "Tất cả sản phẩm"
+      ],
+      "shown": 31,
+      "sidebar": {
+        "bottom": 408.171875,
+        "height": 68,
+        "right": 306,
+        "visible": true,
+        "width": 292,
+        "x": 14,
+        "y": 340.171875
+      },
+      "url": "http://host.docker.internal:4319/branch/",
+      "width": 320
+    }
+  ],
+  "filterCombination": [
+    {
+      "step": 1,
+      "brokenImages": 0,
+      "categories": {
+        "bottom": 1069.578125,
+        "height": 820.5,
+        "right": 275,
+        "visible": true,
+        "width": 242,
+        "x": 33,
+        "y": 249.078125
+      },
+      "categoryCount": 11,
+      "documentWidth": 1440,
+      "fields": {
+        "bottom": 362.078125,
+        "height": 62,
+        "right": 1389,
+        "visible": true,
+        "width": 1072,
+        "x": 317,
+        "y": 300.078125
+      },
+      "filter": {
+        "bottom": 381.078125,
+        "height": 133,
+        "right": 1408,
+        "visible": true,
+        "width": 1110,
+        "x": 298,
+        "y": 248.078125
+      },
+      "overflow": [],
+      "products": {
+        "bottom": 1340.578125,
+        "height": 817,
+        "right": 1408,
+        "visible": true,
+        "width": 1110,
+        "x": 298,
+        "y": 523.578125
+      },
+      "selected": [
+        "Máy hút bụi"
+      ],
+      "shown": 5,
+      "sidebar": {
+        "bottom": 1070.578125,
+        "height": 822.5,
+        "right": 276,
+        "visible": true,
+        "width": 244,
+        "x": 32,
+        "y": 248.078125
+      },
+      "url": "http://host.docker.internal:4319/branch/",
+      "width": 1440
+    },
+    {
+      "step": 3,
+      "brokenImages": 0,
+      "categories": {
+        "bottom": 1069.578125,
+        "height": 820.5,
+        "right": 275,
+        "visible": true,
+        "width": 242,
+        "x": 33,
+        "y": 249.078125
+      },
+      "categoryCount": 11,
+      "documentWidth": 1440,
+      "fields": {
+        "bottom": 362.078125,
+        "height": 62,
+        "right": 1389,
+        "visible": true,
+        "width": 1072,
+        "x": 317,
+        "y": 300.078125
+      },
+      "filter": {
+        "bottom": 381.078125,
+        "height": 133,
+        "right": 1408,
+        "visible": true,
+        "width": 1110,
+        "x": 298,
+        "y": 248.078125
+      },
+      "overflow": [],
+      "products": {
+        "bottom": 925.078125,
+        "height": 401.5,
+        "right": 1408,
+        "visible": true,
+        "width": 1110,
+        "x": 298,
+        "y": 523.578125
+      },
+      "selected": [
+        "Máy hút bụi"
+      ],
+      "shown": 1,
+      "sidebar": {
+        "bottom": 1070.578125,
+        "height": 822.5,
+        "right": 276,
+        "visible": true,
+        "width": 244,
+        "x": 32,
+        "y": 248.078125
+      },
+      "url": "http://host.docker.internal:4319/branch/",
+      "width": 1440
+    },
+    {
+      "step": 5,
+      "brokenImages": 0,
+      "categories": {
+        "bottom": 1069.578125,
+        "height": 820.5,
+        "right": 275,
+        "visible": true,
+        "width": 242,
+        "x": 33,
+        "y": 249.078125
+      },
+      "categoryCount": 11,
+      "documentWidth": 1440,
+      "fields": {
+        "bottom": 362.078125,
+        "height": 62,
+        "right": 1389,
+        "visible": true,
+        "width": 1072,
+        "x": 317,
+        "y": 300.078125
+      },
+      "filter": {
+        "bottom": 381.078125,
+        "height": 133,
+        "right": 1408,
+        "visible": true,
+        "width": 1110,
+        "x": 298,
+        "y": 248.078125
+      },
+      "overflow": [],
+      "products": {
+        "bottom": 925.078125,
+        "height": 401.5,
+        "right": 1408,
+        "visible": true,
+        "width": 1110,
+        "x": 298,
+        "y": 523.578125
+      },
+      "selected": [
+        "Máy hút bụi"
+      ],
+      "shown": 1,
+      "sidebar": {
+        "bottom": 1070.578125,
+        "height": 822.5,
+        "right": 276,
+        "visible": true,
+        "width": 244,
+        "x": 32,
+        "y": 248.078125
+      },
+      "url": "http://host.docker.internal:4319/branch/",
+      "width": 1440
+    },
+    {
+      "step": 7,
+      "brokenImages": 0,
+      "categories": {
+        "bottom": 1069.578125,
+        "height": 820.5,
+        "right": 275,
+        "visible": true,
+        "width": 242,
+        "x": 33,
+        "y": 249.078125
+      },
+      "categoryCount": 11,
+      "documentWidth": 1440,
+      "fields": {
+        "bottom": 362.078125,
+        "height": 62,
+        "right": 1389,
+        "visible": true,
+        "width": 1072,
+        "x": 317,
+        "y": 300.078125
+      },
+      "filter": {
+        "bottom": 381.078125,
+        "height": 133,
+        "right": 1408,
+        "visible": true,
+        "width": 1110,
+        "x": 298,
+        "y": 248.078125
+      },
+      "overflow": [],
+      "products": null,
+      "selected": [
+        "Máy hút bụi"
+      ],
+      "shown": 0,
+      "sidebar": {
+        "bottom": 1070.578125,
+        "height": 822.5,
+        "right": 276,
+        "visible": true,
+        "width": 244,
+        "x": 32,
+        "y": 248.078125
+      },
+      "url": "http://host.docker.internal:4319/branch/",
+      "width": 1440
+    },
+    {
+      "step": 9,
+      "brokenImages": 0,
+      "categories": {
+        "bottom": 1069.578125,
+        "height": 820.5,
+        "right": 275,
+        "visible": true,
+        "width": 242,
+        "x": 33,
+        "y": 249.078125
+      },
+      "categoryCount": 11,
+      "documentWidth": 1440,
+      "fields": {
+        "bottom": 362.078125,
+        "height": 62,
+        "right": 1389,
+        "visible": true,
+        "width": 1072,
+        "x": 317,
+        "y": 300.078125
+      },
+      "filter": {
+        "bottom": 381.078125,
+        "height": 133,
+        "right": 1408,
+        "visible": true,
+        "width": 1110,
+        "x": 298,
+        "y": 248.078125
+      },
+      "overflow": [],
+      "products": {
+        "bottom": 3833.578125,
+        "height": 3310,
+        "right": 1408,
+        "visible": true,
+        "width": 1110,
+        "x": 298,
+        "y": 523.578125
+      },
+      "selected": [
+        "Tất cả sản phẩm"
+      ],
+      "shown": 31,
+      "sidebar": {
+        "bottom": 1070.578125,
+        "height": 822.5,
+        "right": 276,
+        "visible": true,
+        "width": 244,
+        "x": 32,
+        "y": 248.078125
+      },
+      "url": "http://host.docker.internal:4319/branch/",
+      "width": 1440
+    }
+  ],
+  "searchAndTable": [
+    {
+      "step": 1,
+      "brokenImages": 0,
+      "categories": {
+        "bottom": 1069.578125,
+        "height": 820.5,
+        "right": 275,
+        "visible": true,
+        "width": 242,
+        "x": 33,
+        "y": 249.078125
+      },
+      "categoryCount": 11,
+      "documentWidth": 1440,
+      "fields": {
+        "bottom": 362.078125,
+        "height": 62,
+        "right": 1389,
+        "visible": true,
+        "width": 1072,
+        "x": 317,
+        "y": 300.078125
+      },
+      "filter": {
+        "bottom": 381.078125,
+        "height": 133,
+        "right": 1408,
+        "visible": true,
+        "width": 1110,
+        "x": 298,
+        "y": 248.078125
+      },
+      "overflow": [],
+      "products": {
+        "bottom": 925.078125,
+        "height": 401.5,
+        "right": 1408,
+        "visible": true,
+        "width": 1110,
+        "x": 298,
+        "y": 523.578125
+      },
+      "selected": [
+        "Tất cả sản phẩm"
+      ],
+      "shown": 1,
+      "sidebar": {
+        "bottom": 1070.578125,
+        "height": 822.5,
+        "right": 276,
+        "visible": true,
+        "width": 244,
+        "x": 32,
+        "y": 248.078125
+      },
+      "url": "http://host.docker.internal:4319/branch/",
+      "width": 1440
+    },
+    {
+      "step": 3,
+      "brokenImages": 0,
+      "categories": {
+        "bottom": 1069.578125,
+        "height": 820.5,
+        "right": 275,
+        "visible": true,
+        "width": 242,
+        "x": 33,
+        "y": 249.078125
+      },
+      "categoryCount": 11,
+      "documentWidth": 1440,
+      "fields": {
+        "bottom": 362.078125,
+        "height": 62,
+        "right": 1389,
+        "visible": true,
+        "width": 1072,
+        "x": 317,
+        "y": 300.078125
+      },
+      "filter": {
+        "bottom": 381.078125,
+        "height": 133,
+        "right": 1408,
+        "visible": true,
+        "width": 1110,
+        "x": 298,
+        "y": 248.078125
+      },
+      "overflow": [],
+      "products": null,
+      "selected": [
+        "Tất cả sản phẩm"
+      ],
+      "shown": 0,
+      "sidebar": {
+        "bottom": 1070.578125,
+        "height": 822.5,
+        "right": 276,
+        "visible": true,
+        "width": 244,
+        "x": 32,
+        "y": 248.078125
+      },
+      "url": "http://host.docker.internal:4319/branch/",
+      "width": 1440
+    },
+    {
+      "step": 7,
+      "brokenImages": 0,
+      "categories": {
+        "bottom": 1069.578125,
+        "height": 820.5,
+        "right": 275,
+        "visible": true,
+        "width": 242,
+        "x": 33,
+        "y": 249.078125
+      },
+      "categoryCount": 11,
+      "documentWidth": 1440,
+      "fields": {
+        "bottom": 362.078125,
+        "height": 62,
+        "right": 1389,
+        "visible": true,
+        "width": 1072,
+        "x": 317,
+        "y": 300.078125
+      },
+      "filter": {
+        "bottom": 381.078125,
+        "height": 133,
+        "right": 1408,
+        "visible": true,
+        "width": 1110,
+        "x": 298,
+        "y": 248.078125
+      },
+      "overflow": [],
+      "products": {
+        "bottom": 2666.578125,
+        "height": 2143,
+        "right": 1408,
+        "visible": true,
+        "width": 1110,
+        "x": 298,
+        "y": 523.578125
+      },
+      "selected": [
+        "Tất cả sản phẩm"
+      ],
+      "shown": 31,
+      "sidebar": {
+        "bottom": 1070.578125,
+        "height": 822.5,
+        "right": 276,
+        "visible": true,
+        "width": 244,
+        "x": 32,
+        "y": 248.078125
+      },
+      "url": "http://host.docker.internal:4319/branch/",
+      "width": 1440
+    }
+  ],
+  "mobileCategorySelection": {
+    "brokenImages": 0,
+    "categories": {
+      "bottom": 0,
+      "height": 0,
+      "right": 0,
+      "visible": false,
+      "width": 0,
+      "x": 0,
+      "y": 0
+    },
+    "categoryCount": 11,
+    "documentWidth": 390,
+    "fields": {
+      "bottom": 556.984375,
+      "height": 107.5,
+      "right": 361,
+      "visible": true,
+      "width": 332,
+      "x": 29,
+      "y": 449.484375
+    },
+    "filter": {
+      "bottom": 571.984375,
+      "height": 169,
+      "right": 376,
+      "visible": true,
+      "width": 362,
+      "x": 14,
+      "y": 402.984375
+    },
+    "overflow": [],
+    "products": {
+      "bottom": 1757.984375,
+      "height": 1000.5,
+      "right": 376,
+      "visible": true,
+      "width": 362,
+      "x": 14,
+      "y": 757.484375
+    },
+    "selected": [
+      "Máy rửa xe"
+    ],
+    "shown": 6,
+    "sidebar": {
+      "bottom": 388.984375,
+      "height": 68,
+      "right": 376,
+      "visible": true,
+      "width": 362,
+      "x": 14,
+      "y": 320.984375
+    },
+    "url": "http://host.docker.internal:4319/branch/",
+    "width": 390
+  },
+  "mobileFilter": {
+    "brokenImages": 0,
+    "categories": {
+      "bottom": 0,
+      "height": 0,
+      "right": 0,
+      "visible": false,
+      "width": 0,
+      "x": 0,
+      "y": 0
+    },
+    "categoryCount": 11,
+    "documentWidth": 390,
+    "fields": {
+      "bottom": 704.984375,
+      "height": 255.5,
+      "right": 361,
+      "visible": true,
+      "width": 332,
+      "x": 29,
+      "y": 449.484375
+    },
+    "filter": {
+      "bottom": 719.984375,
+      "height": 317,
+      "right": 376,
+      "visible": true,
+      "width": 362,
+      "x": 14,
+      "y": 402.984375
+    },
+    "overflow": [],
+    "products": null,
+    "selected": [
+      "Máy rửa xe"
+    ],
+    "shown": 0,
+    "sidebar": {
+      "bottom": 388.984375,
+      "height": 68,
+      "right": 376,
+      "visible": true,
+      "width": 362,
+      "x": 14,
+      "y": 320.984375
+    },
+    "url": "http://host.docker.internal:4319/branch/",
+    "width": 390
+  },
+  "accessibility": {
+    "desktop": {
+      "inapplicable": 42,
+      "incomplete": 0,
+      "passes": 17,
+      "violations": 0
+    },
+    "mobile": {
+      "inapplicable": 43,
+      "incomplete": 0,
+      "passes": 16,
+      "violations": 0
+    }
+  },
+  "adminRegression": {
+    "categoryButtons": 10,
+    "documentWidth": 1440,
+    "hasOriginalFilters": true,
+    "sidebarVariant": 0,
+    "title": "Hàng hóa & kho tổng",
+    "width": 1440
+  },
+  "public": {
+    "geometry": [
+      {
+        "label": "desktop",
+        "brokenImages": 0,
+        "categories": {
+          "bottom": 1069.578125,
+          "height": 820.5,
+          "right": 275,
+          "visible": true,
+          "width": 242,
+          "x": 33,
+          "y": 249.078125
+        },
+        "categoryCount": 11,
+        "documentWidth": 1440,
+        "fields": {
+          "bottom": 362.078125,
+          "height": 62,
+          "right": 1389,
+          "visible": true,
+          "width": 1072,
+          "x": 317,
+          "y": 300.078125
+        },
+        "filter": {
+          "bottom": 381.078125,
+          "height": 133,
+          "right": 1408,
+          "visible": true,
+          "width": 1110,
+          "x": 298,
+          "y": 248.078125
+        },
+        "overflow": [],
+        "products": {
+          "bottom": 3833.578125,
+          "height": 3310,
+          "right": 1408,
+          "visible": true,
+          "width": 1110,
+          "x": 298,
+          "y": 523.578125
+        },
+        "selected": [
+          "Tất cả sản phẩm"
+        ],
+        "shown": 31,
+        "sidebar": {
+          "bottom": 1070.578125,
+          "height": 822.5,
+          "right": 276,
+          "visible": true,
+          "width": 244,
+          "x": 32,
+          "y": 248.078125
+        },
+        "url": "https://desktop-flfkcet-1.tailab761f.ts.net:8443/branch/",
+        "width": 1440
+      },
+      {
+        "label": "tablet",
+        "brokenImages": 0,
+        "categories": {
+          "bottom": 0,
+          "height": 0,
+          "right": 0,
+          "visible": false,
+          "width": 0,
+          "x": 0,
+          "y": 0
+        },
+        "categoryCount": 11,
+        "documentWidth": 768,
+        "fields": {
+          "bottom": 625.578125,
+          "height": 135,
+          "right": 717,
+          "visible": true,
+          "width": 666,
+          "x": 51,
+          "y": 490.578125
+        },
+        "filter": {
+          "bottom": 644.578125,
+          "height": 206,
+          "right": 736,
+          "visible": true,
+          "width": 704,
+          "x": 32,
+          "y": 438.578125
+        },
+        "overflow": [],
+        "products": {
+          "bottom": 5343.578125,
+          "height": 4556.5,
+          "right": 736,
+          "visible": true,
+          "width": 704,
+          "x": 32,
+          "y": 787.078125
+        },
+        "selected": [
+          "Tất cả sản phẩm"
+        ],
+        "shown": 31,
+        "sidebar": {
+          "bottom": 424.578125,
+          "height": 68,
+          "right": 736,
+          "visible": true,
+          "width": 704,
+          "x": 32,
+          "y": 356.578125
+        },
+        "url": "https://desktop-flfkcet-1.tailab761f.ts.net:8443/branch/",
+        "width": 768
+      },
+      {
+        "label": "mobile",
+        "brokenImages": 0,
+        "categories": {
+          "bottom": 0,
+          "height": 0,
+          "right": 0,
+          "visible": false,
+          "width": 0,
+          "x": 0,
+          "y": 0
+        },
+        "categoryCount": 11,
+        "documentWidth": 390,
+        "fields": {
+          "bottom": 556.984375,
+          "height": 107.5,
+          "right": 361,
+          "visible": true,
+          "width": 332,
+          "x": 29,
+          "y": 449.484375
+        },
+        "filter": {
+          "bottom": 571.984375,
+          "height": 169,
+          "right": 376,
+          "visible": true,
+          "width": 362,
+          "x": 14,
+          "y": 402.984375
+        },
+        "overflow": [],
+        "products": {
+          "bottom": 6253.484375,
+          "height": 5496,
+          "right": 376,
+          "visible": true,
+          "width": 362,
+          "x": 14,
+          "y": 757.484375
+        },
+        "selected": [
+          "Tất cả sản phẩm"
+        ],
+        "shown": 31,
+        "sidebar": {
+          "bottom": 388.984375,
+          "height": 68,
+          "right": 376,
+          "visible": true,
+          "width": 362,
+          "x": 14,
+          "y": 320.984375
+        },
+        "url": "https://desktop-flfkcet-1.tailab761f.ts.net:8443/branch/",
+        "width": 390
+      }
+    ],
+    "selection": {
+      "brokenImages": 0,
+      "categories": {
+        "bottom": 0,
+        "height": 0,
+        "right": 0,
+        "visible": false,
+        "width": 0,
+        "x": 0,
+        "y": 0
+      },
+      "categoryCount": 11,
+      "documentWidth": 390,
+      "fields": {
+        "bottom": 556.984375,
+        "height": 107.5,
+        "right": 361,
+        "visible": true,
+        "width": 332,
+        "x": 29,
+        "y": 449.484375
+      },
+      "filter": {
+        "bottom": 571.984375,
+        "height": 169,
+        "right": 376,
+        "visible": true,
+        "width": 362,
+        "x": 14,
+        "y": 402.984375
+      },
+      "overflow": [],
+      "products": {
+        "bottom": 1784.984375,
+        "height": 1027.5,
+        "right": 376,
+        "visible": true,
+        "width": 362,
+        "x": 14,
+        "y": 757.484375
+      },
+      "selected": [
+        "Máy rửa xe"
+      ],
+      "shown": 6,
+      "sidebar": {
+        "bottom": 388.984375,
+        "height": 68,
+        "right": 376,
+        "visible": true,
+        "width": 362,
+        "x": 14,
+        "y": 320.984375
+      },
+      "url": "https://desktop-flfkcet-1.tailab761f.ts.net:8443/branch/",
+      "width": 390
+    },
+    "reset": {
+      "brokenImages": 0,
+      "categories": {
+        "bottom": 0,
+        "height": 0,
+        "right": 0,
+        "visible": false,
+        "width": 0,
+        "x": 0,
+        "y": 0
+      },
+      "categoryCount": 11,
+      "documentWidth": 390,
+      "fields": {
+        "bottom": 704.984375,
+        "height": 255.5,
+        "right": 361,
+        "visible": true,
+        "width": 332,
+        "x": 29,
+        "y": 449.484375
+      },
+      "filter": {
+        "bottom": 719.984375,
+        "height": 317,
+        "right": 376,
+        "visible": true,
+        "width": 362,
+        "x": 14,
+        "y": 402.984375
+      },
+      "overflow": [],
+      "products": {
+        "bottom": 6401.484375,
+        "height": 5496,
+        "right": 376,
+        "visible": true,
+        "width": 362,
+        "x": 14,
+        "y": 905.484375
+      },
+      "selected": [
+        "Tất cả sản phẩm"
+      ],
+      "shown": 31,
+      "sidebar": {
+        "bottom": 388.984375,
+        "height": 68,
+        "right": 376,
+        "visible": true,
+        "width": 362,
+        "x": 14,
+        "y": 320.984375
+      },
+      "url": "https://desktop-flfkcet-1.tailab761f.ts.net:8443/branch/",
+      "width": 390
+    },
+    "html": {
+      "sha256": "81d14e059cbe1778e5746003df2ba50536c26fdc25567916fb188010ac16a30e",
+      "status": 200
+    },
+    "consoleErrors": [],
+    "javascriptErrors": [],
+    "loggedOut": true
+  },
+  "release": {
+    "Stamp": "20261111-211008",
+    "Folder": "D:\\System-Validation-Framework\\tools\\catalog-layout-release-20261111-211008",
+    "BaseImage": "sha256:701ddd3dc83c125025a356827fa28d22438849df29d2ac01e464ba78d6af4e44",
+    "BackendHashes": [
+      "16a09ab0d9aefc241699ad87310f6bae939a3aa990e65ef2448094c3bfcf52e8  /app/server.jar",
+      "5eb5eb7f3804f25f229e106612ede6cd544dce416f6cfe174864978fc3e5bb16  /app/client.jar"
+    ],
+    "BackupTag": "phanphoi:before-catalog-20261111-211008",
+    "ReleaseTag": "phanphoi:catalog-20261111-211008"
+  },
+  "backendJarsUnchanged": true,
+  "businessWriteRequests": 0
+}

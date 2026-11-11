@@ -1,0 +1,170 @@
+﻿[
+    {
+        "method":  "GET",
+        "url":  "https://desktop-flfkcet-1.tailab761f.ts.net/api/auth/me",
+        "status":  200,
+        "resourceType":  "Fetch"
+    },
+    {
+        "method":  "POST",
+        "url":  "https://desktop-flfkcet-1.tailab761f.ts.net/api/auth/login",
+        "status":  200,
+        "resourceType":  "Fetch"
+    },
+    {
+        "method":  "GET",
+        "url":  "https://desktop-flfkcet-1.tailab761f.ts.net/api/branches",
+        "status":  200,
+        "resourceType":  "Fetch"
+    },
+    {
+        "method":  "GET",
+        "url":  "https://desktop-flfkcet-1.tailab761f.ts.net/api/alerts",
+        "status":  200,
+        "resourceType":  "Fetch"
+    },
+    {
+        "method":  "GET",
+        "url":  "https://desktop-flfkcet-1.tailab761f.ts.net/api/requests",
+        "status":  200,
+        "resourceType":  "Fetch"
+    },
+    {
+        "method":  "GET",
+        "url":  "https://desktop-flfkcet-1.tailab761f.ts.net/api/products",
+        "status":  200,
+        "resourceType":  "Fetch"
+    },
+    {
+        "method":  "GET",
+        "url":  "https://desktop-flfkcet-1.tailab761f.ts.net/api/stats",
+        "status":  200,
+        "resourceType":  "Fetch"
+    },
+    {
+        "method":  "GET",
+        "url":  "https://desktop-flfkcet-1.tailab761f.ts.net/api/events",
+        "status":  200,
+        "resourceType":  "EventSource"
+    },
+    {
+        "method":  "GET",
+        "url":  "https://desktop-flfkcet-1.tailab761f.ts.net/api/branches",
+        "status":  200,
+        "resourceType":  "Fetch"
+    },
+    {
+        "method":  "GET",
+        "url":  "https://desktop-flfkcet-1.tailab761f.ts.net/api/stats",
+        "status":  200,
+        "resourceType":  "Fetch"
+    },
+    {
+        "method":  "GET",
+        "url":  "https://desktop-flfkcet-1.tailab761f.ts.net/api/stats",
+        "status":  200,
+        "resourceType":  "Fetch"
+    },
+    {
+        "method":  "GET",
+        "url":  "https://desktop-flfkcet-1.tailab761f.ts.net/api/stats",
+        "status":  200,
+        "resourceType":  "Fetch"
+    },
+    {
+        "method":  "GET",
+        "url":  "https://desktop-flfkcet-1.tailab761f.ts.net/api/stats",
+        "status":  200,
+        "resourceType":  "Fetch"
+    },
+    {
+        "method":  "GET",
+        "url":  "https://desktop-flfkcet-1.tailab761f.ts.net/api/stats",
+        "status":  200,
+        "resourceType":  "Fetch"
+    },
+    {
+        "method":  "GET",
+        "url":  "https://desktop-flfkcet-1.tailab761f.ts.net/api/auth/me",
+        "status":  200,
+        "resourceType":  "Fetch"
+    },
+    {
+        "method":  "GET",
+        "url":  "https://desktop-flfkcet-1.tailab761f.ts.net/api/stats",
+        "status":  200,
+        "resourceType":  "Fetch"
+    },
+    {
+        "method":  "GET",
+        "url":  "https://desktop-flfkcet-1.tailab761f.ts.net/api/stats",
+        "status":  200,
+        "resourceType":  "Fetch"
+    },
+    {
+        "method":  "GET",
+        "url":  "https://desktop-flfkcet-1.tailab761f.ts.net/api/stats",
+        "status":  200,
+        "resourceType":  "Fetch"
+    },
+    {
+        "method":  "GET",
+        "url":  "https://desktop-flfkcet-1.tailab761f.ts.net/api/stats",
+        "status":  200,
+        "resourceType":  "Fetch"
+    },
+    {
+        "method":  "GET",
+        "url":  "https://desktop-flfkcet-1.tailab761f.ts.net/api/stats",
+        "status":  200,
+        "resourceType":  "Fetch"
+    },
+    {
+        "method":  "GET",
+        "url":  "https://desktop-flfkcet-1.tailab761f.ts.net/api/stats",
+        "status":  200,
+        "resourceType":  "Fetch"
+    },
+    {
+        "method":  "GET",
+        "url":  "https://desktop-flfkcet-1.tailab761f.ts.net/api/auth/me",
+        "status":  200,
+        "resourceType":  "Fetch"
+    },
+    {
+        "method":  "GET",
+        "url":  "https://desktop-flfkcet-1.tailab761f.ts.net/api/stats",
+        "status":  200,
+        "resourceType":  "Fetch"
+    },
+    {
+        "method":  "GET",
+        "url":  "https://desktop-flfkcet-1.tailab761f.ts.net/api/imports",
+        "status":  200,
+        "resourceType":  "Fetch"
+    },
+    {
+        "method":  "GET",
+        "url":  "https://desktop-flfkcet-1.tailab761f.ts.net/api/categories",
+        "status":  200,
+        "resourceType":  "Fetch"
+    },
+    {
+        "method":  "GET",
+        "url":  "https://desktop-flfkcet-1.tailab761f.ts.net/api/suppliers",
+        "status":  200,
+        "resourceType":  "Fetch"
+    },
+    {
+        "method":  "GET",
+        "url":  "https://desktop-flfkcet-1.tailab761f.ts.net/api/stats",
+        "status":  200,
+        "resourceType":  "Fetch"
+    },
+    {
+        "method":  "GET",
+        "url":  "https://desktop-flfkcet-1.tailab761f.ts.net/api/stats",
+        "status":  200,
+        "resourceType":  "Fetch"
+    }
+]

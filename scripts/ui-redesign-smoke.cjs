@@ -331,43 +331,28 @@ const path = require('node:path');
         await page.goto(`${baseUrl}/branch/`);
         await page.getByRole('heading', {name: 'Bán hàng & tồn kho', exact: true}).waitFor();
         if (width === 1024) await page.getByRole('button', {name: 'Xem dạng bảng', exact: true}).click();
-        const filters = page.getByRole('complementary', {name: 'Bộ lọc sản phẩm'});
-        if (!await filters.locator('details').evaluate(element => element.open)) await filters.locator('summary').click();
-        await page.waitForFunction(() => {
-          const element = document.querySelector('.sales-filters');
-          return element.scrollHeight > element.clientHeight + 100;
-        });
-        await filters.evaluate(element => { element.scrollTop = 0; });
-        const box = await filters.boundingBox();
-        await page.mouse.move(box.x + box.width / 2, box.y + Math.min(150, box.height / 2));
-        const pageY = await page.evaluate(() => scrollY);
-        await page.mouse.wheel(0, 500);
-        await page.waitForFunction(() => document.querySelector('.sales-filters').scrollTop > 100);
-        assert.equal(await page.evaluate(() => scrollY), pageY, `${width}: filter wheel must not scroll the catalog`);
-        if (width >= 1000) {
-          const catalog = await page.locator('.sales-catalog').boundingBox();
-          await page.mouse.move(catalog.x + catalog.width / 2, 400);
-          await page.mouse.wheel(0, 650);
-          await page.waitForFunction(() => scrollY > 100);
+        const filters = page.getByRole('region', {name: 'Bộ lọc sản phẩm', exact: true});
+        const categories = page.getByRole('complementary', {name: 'Danh mục sản phẩm', exact: true});
+        await filters.waitFor();
+        if (width <= 600) await filters.locator('.sales-filter-toggle').click();
+        const filterBox = await filters.boundingBox();
+        const resultsBox = await page.locator('.sales-toolbar').boundingBox();
+        assert(filterBox.y + filterBox.height <= resultsBox.y, `${width}: filters must precede results`);
+        if (width >= 900) {
+          const categoryBox = await categories.boundingBox();
+          assert(categoryBox.x + categoryBox.width <= filterBox.x, `${width}: picture categories belong on the left`);
+        } else {
+          assert.equal(await categories.getByRole('button', {name: /Danh mục sản phẩm/}).getAttribute('aria-expanded'), 'false');
         }
-        // Exercise the lower choices, where a shortened catalog used to disturb scrolling.
-        const level = filters.locator('.filter-group').filter({hasText: 'Mức tồn'}).getByRole('radio').nth(3);
-        await level.scrollIntoViewIfNeeded();
-        const scrollBefore = await filters.evaluate(element => element.scrollTop);
-        await level.check();
+        await filters.getByRole('combobox', {name: 'Mức tồn', exact: true}).selectOption('unset');
         await page.waitForFunction(() => document.querySelectorAll('.product-card, .sales-table tbody tr').length === 5);
-        assert.ok(Math.abs(await filters.evaluate(element => element.scrollTop) - scrollBefore) <= 2, `${width}: selection reset filter scroll`);
-        const supply = filters.locator('.filter-group').filter({hasText: 'Nhập hàng'}).getByRole('radio').nth(1);
-        await supply.scrollIntoViewIfNeeded();
-        const emptyBefore = await filters.evaluate(element => element.scrollTop);
-        await supply.check();
+        await filters.getByRole('combobox', {name: 'Nhập hàng', exact: true}).selectOption('waiting');
         await page.getByText('Không có mặt hàng nào khớp bộ lọc.', {exact: true}).waitFor();
-        assert.ok(Math.abs(await filters.evaluate(element => element.scrollTop) - emptyBefore) <= 2, `${width}: empty results reset filter scroll`);
         const originalThreshold = inventory[0].nguong;
         inventory[0].nguong = inventory[0].soLuong + 1;
         broadcast();
         await page.locator('.sales-results > span:last-child').filter({hasText: '6 mặt hàng dưới ngưỡng'}).waitFor();
-        assert.ok(Math.abs(await filters.evaluate(element => element.scrollTop) - emptyBefore) <= 2, `${width}: refresh reset filter scroll`);
+        assert.equal(await filters.getByRole('combobox', {name: 'Mức tồn', exact: true}).inputValue(), 'unset');
         inventory[0].nguong = originalThreshold;
         broadcast();
         await page.screenshot({path: `tools/ui-redesign/after/filters-${width}.png`, fullPage: true});
@@ -509,7 +494,7 @@ const path = require('node:path');
     await page.getByRole('button', {name: 'Xem dạng thẻ', exact: true}).click();
     assert.equal(await page.locator('.header-cart').count(), 1);
     assert.equal(await page.locator('.sales-toolbar').getByRole('button', {name: /Giỏ hàng/}).count(), 0);
-    assert.equal(await page.locator('.sales-filter-disclosure').evaluate(el => el.open), false);
+    assert(await page.getByRole('region', {name: 'Bộ lọc sản phẩm', exact: true}).isVisible());
     await openMenu();
     const dropdown = page.locator('.functions-dropdown');
     assert.equal(await dropdown.getByRole('button', {name: /Giỏ hàng/, includeHidden: true}).count(), 0);
@@ -585,7 +570,7 @@ const path = require('node:path');
     await page.reload();
     await page.getByRole('heading', {name: 'Chào mừng trở lại!', exact: true}).waitFor();
     assert.deepEqual(errors, []);
-    console.log('PASS: catalog search/sort/grid/table; collapsed filters; animated grouped menu; cart placement; valid/invalid thresholds; checkout payload/total and single confirmation; invoice/PDF; admin edit dialog; all configured views without overflow; read error/retry; login guard.');
+    console.log('PASS: catalog search/sort/grid/table; picture category sidebar and top filters; animated grouped menu; cart placement; valid/invalid thresholds; checkout payload/total and single confirmation; invoice/PDF; admin edit dialog; all configured views without overflow; read error/retry; login guard.');
   } finally {
     await browser.close();
     for (const res of peers) res.end();

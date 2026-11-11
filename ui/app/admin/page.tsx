@@ -175,8 +175,8 @@ function AdminApp({ user, onLogout }: { user: string; onLogout: () => void }) {
         back={tab !== "overview" ? contextBack ?? { label: "Quay lại", onClick: goBack } : undefined}
         nav={[
           { id: "overview", label: "Tổng quan", count: shownAlerts.length, tone: "danger", group: "Vận hành" },
-          { id: "history", label: "Yêu cầu cấp hàng", count: requests.filter((r) => r.chenhLech != null && r.chenhLech !== 0 && (showSim || !isSim(r.maCn))).length, tone: "danger", group: "Vận hành", dropdownOnly: true },
-          { id: "transfers", label: "Điều chuyển", count: shortage, tone: "warn", group: "Vận hành", dropdownOnly: true },
+          { id: "history", label: "Yêu cầu cấp hàng", count: requests.filter((r) => r.chenhLech != null && r.chenhLech !== 0 && (showSim || !isSim(r.maCn))).length, tone: "danger", group: "Vận hành" },
+          { id: "transfers", label: "Điều chuyển", count: shortage, tone: "warn", group: "Vận hành" },
           { id: "products", label: "Hàng hóa", group: "Hàng hóa & kho" },
           { id: "stock", label: "Kho chi nhánh", group: "Hàng hóa & kho" },
           { id: "debts", label: "Công nợ", group: "Quản lý" },
