@@ -70,6 +70,7 @@ Gộp trend: kỳ ≤ 62 ngày gộp theo ngày; dài hơn mà nằm trong một
   - cột ngang top 10 sản phẩm và doanh thu theo danh mục (`BarChart`);
   - bảng sản phẩm có cột ABC; danh sách "Không bán trong kỳ";
   - bảng chi nhánh: doanh thu, % so kỳ trước, chỉ tiêu, % hoàn thành, dự kiến, sell-through, ngày tồn, nợ/hạn mức, đáp ứng, trả hàng, ngày từ lần nhập cuối, badge "Ngừng nhập"/"Vượt hạn mức".
+- Bổ sung (12/11): cột "Bán ra" (doanh thu sell-out của chi nhánh, SL, % so kỳ trước) trong bảng và CSV, biểu đồ cột sell-in cạnh bán ra theo chi nhánh. Σ `branches[].sellOutDoanhThu` = `kpi.sellOutDoanhThu`.
 - Bấm một dòng chi nhánh sẽ gọi lại `summary` với `maCn` và hiện cùng bố cục cho chi nhánh đó, có nút quay lại toàn công ty.
 - Ô chỉ tiêu trong bảng chi nhánh sửa tại chỗ (Enter/blur để lưu, Esc để huỷ), dùng `useAction` như các form hiện có.
 - Xuất CSV phía trình duyệt cho bảng sản phẩm và bảng chi nhánh: UTF-8 có BOM, dấu phẩy, tên file `kinh-doanh-<loai>-<from>_<to>.csv`.
@@ -109,6 +110,7 @@ Các dòng `ban_hang` cũ giữ `don_gia = NULL` (doanh thu sell-out ước tín
     "categories": [ { "maDm": "", "ten": "", "doanhThu": 0, "loiNhuan": 0 } ],
     "branches": [ { "maCn": "", "ten": "", "doanhThu": 0, "doanhThuTruoc": 0, "loiNhuan": 0,
                     "chiTieu": null, "hoanThanh": null, "duKien": null,
+                    "sellOutSoLuong": 0, "sellOutDoanhThu": 0, "sellOutTruoc": 0,
                     "sellThrough": null, "ngayTon": null, "congNo": 0, "hanMuc": 0,
                     "dapUng": null, "traHang": null, "ngayTuLanNhapCuoi": null, "ngungNhap": false } ] }
   ```

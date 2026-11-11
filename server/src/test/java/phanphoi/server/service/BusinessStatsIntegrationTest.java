@@ -187,6 +187,19 @@ class BusinessStatsIntegrationTest {
         assertEquals(6, num(kpi, "sellOutSoLuong"));
         assertEquals(2 * 300 + 4 * 320, num(kpi, "sellOutDoanhThu"));
         assertEquals(1, num(kpi, "sellOutUocTinh"));
+        // từng chi nhánh: CN01 bán 6 cái, SIM01 (50 cái) không tính; Σ chi nhánh = KPI
+        var s = stats.summary(from, to, "");
+        var cn01 = branch(s, "CN01");
+        assertEquals(6, num(cn01, "sellOutSoLuong"));
+        assertEquals(2 * 300 + 4 * 320, num(cn01, "sellOutDoanhThu"));
+        assertEquals(0, num(cn01, "sellOutTruoc"));
+        assertEquals(0, num(branch(s, "CN02"), "sellOutDoanhThu"));
+        assertEquals(num(kpi, "sellOutDoanhThu"),
+                list(s, "branches").stream().mapToLong(b -> num(b, "sellOutDoanhThu")).sum());
+        // bán ở kỳ trước rơi vào sellOutTruoc
+        db.read(c -> Db.update(c, "INSERT INTO ban_hang (ma_cn, ma_sp, so_luong, don_gia, thoi_gian) VALUES ('CN01','SP01',1,310,?)",
+                Timestamp.valueOf(today.minusDays(40).atTime(12, 0))));
+        assertEquals(310, num(branch(stats.summary(from, to, ""), "CN01"), "sellOutTruoc"));
     }
 
     @Test

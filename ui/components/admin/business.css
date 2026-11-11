@@ -13,6 +13,7 @@
 .biz-delta-down { color: var(--danger); }
 .biz-neg { color: var(--danger); }
 .biz-pos { color: var(--success); }
+.biz-sub { display: block; color: var(--text-2); font-size: 11.5px; }
 
 .biz-chart { height: 280px; }
 .biz-bars { width: 100%; }

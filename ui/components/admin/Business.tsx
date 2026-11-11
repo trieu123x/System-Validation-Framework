@@ -13,6 +13,8 @@ type Preset = "7d" | "30d" | "month" | "quarter" | "custom";
 /** Màu chuỗi: doanh thu = màu nhấn của app, lợi nhuận = cam (cặp đã kiểm tra phân biệt được khi mù màu). */
 const REVENUE = "#245bd6";
 const PROFIT = "#d9822b";
+/** Sell-out (chi nhánh bán cho khách): màu thứ ba, đã kiểm tra phân biệt được với hai màu trên. */
+const SELL_OUT = "#1a9b8a";
 const GRID = "#e4e9f0";
 const AXIS = "#536176";
 
@@ -164,13 +166,16 @@ export function Business({ version, push, onBackChange }: {
                 data.products.map((p) => [p.maSp, p.ten, p.maDm, p.soLuong, p.doanhThu, p.loiNhuan, ratioCsv(p.tyTrong), p.abc]))} />
             </>
           )}
+          {!noData && !maCn && <BranchChart rows={data.branches} />}
           <BranchTable rows={data.branches} drilled={maCn != null} push={push} changed={reload}
             onOpen={(id) => setMaCn(id)}
             onCsv={() => downloadCsv(csvName("chi-nhanh"),
-              ["Mã CN", "Tên chi nhánh", "Doanh thu", "Doanh thu kỳ trước", "Lợi nhuận gộp", "Tháng chỉ tiêu", "Chỉ tiêu",
+              ["Mã CN", "Tên chi nhánh", "Doanh thu", "Doanh thu kỳ trước", "Lợi nhuận gộp",
+                "Bán ra SL", "Doanh thu bán ra", "Doanh thu bán ra kỳ trước", "Tháng chỉ tiêu", "Chỉ tiêu",
                 "Doanh thu tháng", "Hoàn thành %", "Dự kiến cuối tháng", "Sell-through %", "Số ngày tồn", "Công nợ",
                 "Hạn mức", "Đáp ứng %", "Trả hàng %", "Ngày từ lần nhập cuối", "Ngừng nhập"],
-              data.branches.map((b) => [b.maCn, b.ten, b.doanhThu, b.doanhThuTruoc, b.loiNhuan, b.thang, b.chiTieu ?? "",
+              data.branches.map((b) => [b.maCn, b.ten, b.doanhThu, b.doanhThuTruoc, b.loiNhuan,
+                b.sellOutSoLuong, b.sellOutDoanhThu, b.sellOutTruoc, b.thang, b.chiTieu ?? "",
                 b.doanhThuThang, ratioCsv(b.hoanThanh), b.duKien ?? "", ratioCsv(b.sellThrough),
                 b.ngayTon == null ? "" : Math.round(b.ngayTon), b.congNo, b.hanMuc, ratioCsv(b.dapUng), ratioCsv(b.traHang),
                 b.ngayTuLanNhapCuoi ?? "", b.ngungNhap ? "Có" : ""]))} />
@@ -304,6 +309,39 @@ function ProductTable({ data, onCsv }: { data: BusinessSummary; onCsv: () => voi
   );
 }
 
+/** % so kỳ trước dạng chữ có màu; kỳ trước bằng 0 thì "—". */
+function ChangeText({ cur, prev }: { cur: number; prev: number }) {
+  const d = change(cur, prev);
+  if (d == null) return <span className="muted" title="Kỳ trước bằng 0">—</span>;
+  return <span className={d < 0 ? "biz-neg" : d > 0 ? "biz-pos" : ""} title={`Kỳ trước: ${fmtMoney(prev)}`}>
+    {`${d > 0 ? "+" : d < 0 ? "−" : ""}${fmtPct(Math.abs(d))}`}
+  </span>;
+}
+
+/** So sánh chi nhánh: sell-in (công ty xuất cho chi nhánh) cạnh sell-out (chi nhánh bán cho khách). */
+function BranchChart({ rows }: { rows: BusinessBranch[] }) {
+  const data = rows.map((b) => ({ ten: b.ten, maCn: b.maCn, doanhThu: b.doanhThu, sellOut: b.sellOutDoanhThu }));
+  return (
+    <Card title={<>Doanh thu theo chi nhánh <span className="muted">· sell-in và bán ra</span></>}>
+      <div className="biz-bars" style={{ height: Math.max(160, data.length * 44 + 50) }}
+        role="img" aria-label={data.map((b) => `${b.ten}: nhập ${fmtMoney(b.doanhThu)}, bán ra ${fmtMoney(b.sellOut)}`).join("; ")}>
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart data={data} layout="vertical" margin={{ top: 0, right: 16, bottom: 0, left: 0 }} barCategoryGap={8} barGap={2}>
+            <CartesianGrid stroke={GRID} horizontal={false} />
+            <XAxis type="number" tickFormatter={(v: number) => compact.format(v)} stroke={AXIS} tick={{ fontSize: 12 }} tickLine={false} />
+            <YAxis type="category" dataKey="ten" width={170} tickFormatter={(v: string) => clip(v.replace(/^Chi nhánh /, ""), 24)}
+              stroke={AXIS} tick={{ fontSize: 12 }} tickLine={false} />
+            <Tooltip formatter={moneyTip} cursor={{ fill: "#f4f7fd" }} />
+            <Legend wrapperStyle={{ fontSize: 12.5 }} />
+            <Bar dataKey="doanhThu" name="Sell-in (công ty xuất)" fill={REVENUE} radius={[0, 4, 4, 0]} maxBarSize={14} />
+            <Bar dataKey="sellOut" name="Bán ra (sell-out)" fill={SELL_OUT} radius={[0, 4, 4, 0]} maxBarSize={14} />
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
+    </Card>
+  );
+}
+
 function BranchTable({ rows, drilled, push, changed, onOpen, onCsv }: {
   rows: BusinessBranch[]; drilled: boolean; push: Push; changed: () => void; onOpen: (maCn: string) => void; onCsv: () => void;
 }) {
@@ -316,7 +354,8 @@ function BranchTable({ rows, drilled, push, changed, onOpen, onCsv }: {
           <table className="biz-branches">
             <thead>
               <tr>
-                <th>Chi nhánh</th><th className="num">Doanh thu</th><th className="num">So kỳ trước</th>
+                <th>Chi nhánh</th><th className="num" title="Công ty xuất cho chi nhánh (sell-in)">Doanh thu</th><th className="num">So kỳ trước</th>
+                <th className="num" title="Chi nhánh bán cho khách (sell-out)">Bán ra</th>
                 <th className="num" title="Bấm để sửa; Enter hoặc rời ô để lưu, Esc để huỷ, để trống để xoá">Chỉ tiêu {month && `T${month.slice(5)}/${month.slice(0, 4)}`}</th>
                 <th className="num">Hoàn thành</th><th className="num">Dự kiến</th>
                 <th className="num" title="Bán ra / (bán ra + tồn hiện tại)">Sell-through</th><th className="num">Ngày tồn</th>
@@ -326,7 +365,6 @@ function BranchTable({ rows, drilled, push, changed, onOpen, onCsv }: {
             </thead>
             <tbody>
               {rows.map((b) => {
-                const d = change(b.doanhThu, b.doanhThuTruoc);
                 const over = b.congNo > b.hanMuc;
                 return (
                   <tr key={b.maCn} className={drilled ? "" : "biz-row"} onClick={drilled ? undefined : () => onOpen(b.maCn)}>
@@ -336,8 +374,10 @@ function BranchTable({ rows, drilled, push, changed, onOpen, onCsv }: {
                       )} <span className="muted">{b.maCn}</span>
                     </td>
                     <td className="num">{fmtMoney(b.doanhThu)}</td>
-                    <td className={`num ${d == null ? "muted" : d < 0 ? "biz-neg" : "biz-pos"}`}>
-                      {d == null ? "—" : `${d > 0 ? "+" : d < 0 ? "−" : ""}${fmtPct(Math.abs(d))}`}
+                    <td className="num"><ChangeText cur={b.doanhThu} prev={b.doanhThuTruoc} /></td>
+                    <td className="num">
+                      {fmtMoney(b.sellOutDoanhThu)}
+                      <small className="biz-sub">SL {fmtNumber(b.sellOutSoLuong)} · <ChangeText cur={b.sellOutDoanhThu} prev={b.sellOutTruoc} /></small>
                     </td>
                     <td className="num biz-target-cell" onClick={(e) => e.stopPropagation()}>
                       <TargetCell branch={b} push={push} changed={changed} />

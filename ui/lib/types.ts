@@ -285,6 +285,8 @@ export type BusinessProduct = {
 export type BusinessBranch = {
   maCn: string; ten: string; doanhThu: number; doanhThuTruoc: number; loiNhuan: number;
   thang: string; doanhThuThang: number; chiTieu: number | null; hoanThanh: number | null; duKien: number | null;
+  /** Chi nhánh bán ra cho khách trong kỳ (ban_hang) và doanh thu bán ra kỳ trước. */
+  sellOutSoLuong: number; sellOutDoanhThu: number; sellOutTruoc: number;
   sellThrough: number | null; ngayTon: number | null; congNo: number; hanMuc: number;
   dapUng: number | null; traHang: number | null; ngayTuLanNhapCuoi: number | null; ngungNhap: boolean;
 };

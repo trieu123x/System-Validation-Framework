@@ -329,9 +329,11 @@ public final class BusinessStatsService {
                 + SELL_IN + ") s GROUP BY ma_cn)"
                 + ", prev AS (SELECT ma_cn, sum(so_luong * don_gia) AS dt FROM (" + SELL_IN + ") s GROUP BY ma_cn)"
                 + ", mtd AS (SELECT ma_cn, sum(so_luong * don_gia) AS dt FROM (" + SELL_IN + ") s GROUP BY ma_cn)"
-                + ", full_month AS (SELECT ma_cn, sum(so_luong * don_gia) AS dt FROM (" + SELL_IN + ") s GROUP BY ma_cn)" + """
-                , ban AS (SELECT b.ma_cn, sum(b.so_luong) AS sl FROM ban_hang b JOIN cn_that r ON r.ma_cn = b.ma_cn
-                          WHERE b.thoi_gian >= ? AND b.thoi_gian < ? GROUP BY b.ma_cn),
+                + ", full_month AS (SELECT ma_cn, sum(so_luong * don_gia) AS dt FROM (" + SELL_IN + ") s GROUP BY ma_cn)"
+                // sell-out của chi nhánh: cùng nguồn với KPI nên Σ chi nhánh = kpi.sellOutDoanhThu
+                + ", ban AS (SELECT ma_cn, sum(so_luong) AS sl, sum(thanh_tien) AS dt FROM (" + SELL_OUT + ") s GROUP BY ma_cn)"
+                + ", ban_truoc AS (SELECT ma_cn, sum(thanh_tien) AS dt FROM (" + SELL_OUT + ") s GROUP BY ma_cn)" + """
+                ,
                 ton AS (SELECT k.ma_cn, sum(k.so_luong) AS sl FROM kho_chi_nhanh k JOIN cn_that r ON r.ma_cn = k.ma_cn
                         GROUP BY k.ma_cn),
                 xuat AS (SELECT px.ma_cn, sum(px.so_luong) FILTER (WHERE y.trang_thai = 'TU_CHOI') AS tra,
@@ -352,7 +354,8 @@ public final class BusinessStatsService {
                 SELECT cn.ma_cn, cn.ten, COALESCE(cur.dt, 0) AS doanh_thu, COALESCE(prev.dt, 0) AS doanh_thu_truoc,
                        COALESCE(round(cur.ln), 0) AS loi_nhuan, COALESCE(mtd.dt, 0) AS mtd, COALESCE(full_month.dt, 0) AS ca_thang,
                        mt.so_tien AS chi_tieu,
-                       COALESCE(ban.sl, 0) AS ban, COALESCE(ton.sl, 0) AS ton,
+                       COALESCE(ban.sl, 0) AS ban, COALESCE(ban.dt, 0) AS ban_dt, COALESCE(ban_truoc.dt, 0) AS ban_dt_truoc,
+                       COALESCE(ton.sl, 0) AS ton,
                        COALESCE(xuat.tra, 0) AS tra, COALESCE(xuat.tong, 0) AS xuat,
                        COALESCE(dap.giao, 0) AS giao, COALESCE(dap.tong, 0) AS xu_ly, cuoi.t AS nhap_cuoi,
                        """ + StockService.DEBT_SQL + """
@@ -364,6 +367,7 @@ public final class BusinessStatsService {
                 LEFT JOIN mtd ON mtd.ma_cn = cn.ma_cn
                 LEFT JOIN full_month ON full_month.ma_cn = cn.ma_cn
                 LEFT JOIN ban ON ban.ma_cn = cn.ma_cn
+                LEFT JOIN ban_truoc ON ban_truoc.ma_cn = cn.ma_cn
                 LEFT JOIN ton ON ton.ma_cn = cn.ma_cn
                 LEFT JOIN xuat ON xuat.ma_cn = cn.ma_cn
                 LEFT JOIN dap ON dap.ma_cn = cn.ma_cn
@@ -391,6 +395,9 @@ public final class BusinessStatsService {
             m.put("chiTieu", chiTieu);
             m.put("hoanThanh", chiTieu == null ? null : ratio(mtd, chiTieu));
             m.put("duKien", duKien);
+            m.put("sellOutSoLuong", ban);
+            m.put("sellOutDoanhThu", rs.getLong("ban_dt"));
+            m.put("sellOutTruoc", rs.getLong("ban_dt_truoc"));
             m.put("sellThrough", ratio(ban, ban + ton));
             m.put("ngayTon", ban == 0 ? null : ton / ((double) ban / days));
             m.put("congNo", rs.getLong("cong_no"));
@@ -406,6 +413,7 @@ public final class BusinessStatsService {
                 start(monthStart), mtdEnd,
                 start(monthStart), fullEnd,
                 start(r.from()), end(r.to()),
+                start(prev.from()), end(prev.to()),
                 start(r.from()), end(r.to()),
                 start(r.from()), end(r.to()),
                 monthStart);
