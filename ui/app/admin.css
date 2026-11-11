@@ -200,3 +200,11 @@
   .admin-overview-workbench { display: block; }
   .admin-overview-sidebar, .admin-request-controls { display: none; }
 }
+
+/* Hàng hóa (admin): bố cục chung với trang bán hàng chi nhánh (branch/sales.css); admin chỉ có 1 ô chọn nên 2 cột */
+.admin-product-catalog .sales-filter-fields { grid-template-columns: minmax(160px, 1.6fr) minmax(160px, 1fr); }
+.admin-product-catalog .admin-catalog-create { margin-left: auto; }
+@media (max-width: 600px) {
+  .admin-product-catalog .sales-filter-fields { grid-template-columns: minmax(0, 1fr); }
+  .admin-product-catalog .admin-catalog-create { flex-basis: 100%; margin-left: 0; }
+}
