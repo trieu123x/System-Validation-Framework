@@ -32,18 +32,18 @@ export function SidePanel({ title, onClose, children }: { title: string; onClose
   </dialog>;
 }
 
-/** Shared frame: functional groups above, context-specific views below. */
-export function Shell<T extends string>({ sub, nav, value, onChange, status, title, actions, children, menu = false, navigationDisabled = false, back, menuLabel = "Chức năng chi nhánh", notificationId, className = "", description, catalogView, cartId }: {
+/** Shared frame: group dropdowns and context-specific views share the navigation bar. */
+export function Shell<T extends string>({ sub, nav, value, onChange, status, navigationStatus, title, actions, children, menu = false, navigationDisabled = false, back, menuLabel = "Chức năng chi nhánh", notificationId, className = "", description, catalogView, cartId }: {
   sub?: ReactNode; nav: NavItem<T>[]; value: T; onChange: (value: T) => void;
-  status?: ReactNode; title: ReactNode; actions?: ReactNode; children: ReactNode;
+  status?: ReactNode; navigationStatus?: ReactNode; title: ReactNode; actions?: ReactNode; children: ReactNode;
   menu?: boolean; navigationDisabled?: boolean; back?: BackAction; menuLabel?: string;
   notificationId?: T; className?: string; description?: string; catalogView?: T; cartId?: T;
 }) {
-  const dropdown = useRef<HTMLDivElement>(null);
+  const navigationBar = useRef<HTMLElement>(null);
   const menuTrigger = useRef<HTMLButtonElement | null>(null);
   const menuId = useId();
-  const [menuOpen, setMenuOpen] = useState(false);
-  const [expandedGroup, setExpandedGroup] = useState<string | null>(() => nav.find((item) => item.id === value)?.group ?? nav.find((item) => item.group)?.group ?? null);
+  const [openGroup, setOpenGroup] = useState<string | null>(null);
+  const menuOpen = openGroup !== null;
   const [query, setQuery] = useState("");
   const notification = nav.find((item) => item.id === notificationId);
   const cart = nav.find((item) => item.id === cartId);
@@ -56,10 +56,10 @@ export function Shell<T extends string>({ sub, nav, value, onChange, status, tit
     if (!menuOpen) return;
     const outside = (event: Event) => {
       const target = event.target;
-      if (target instanceof Element && !dropdown.current?.contains(target) && !target.closest("[data-functions-trigger]")) setMenuOpen(false);
+      if (target instanceof Element && !navigationBar.current?.contains(target)) setOpenGroup(null);
     };
     const escape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") { event.preventDefault(); setMenuOpen(false); menuTrigger.current?.focus(); }
+      if (event.key === "Escape") { event.preventDefault(); setOpenGroup(null); menuTrigger.current?.focus(); }
     };
     document.addEventListener("pointerdown", outside);
     document.addEventListener("focusin", outside);
@@ -70,10 +70,10 @@ export function Shell<T extends string>({ sub, nav, value, onChange, status, tit
       document.removeEventListener("keydown", escape);
     };
   }, [menuOpen]);
-  useEffect(() => { if (navigationDisabled) setMenuOpen(false); }, [navigationDisabled]);
+  useEffect(() => { if (navigationDisabled) setOpenGroup(null); }, [navigationDisabled]);
 
-  const toggleMenu = (trigger: HTMLButtonElement) => { menuTrigger.current = trigger; setMenuOpen((open) => !open); };
-  const select = (id: T) => { if (menuOpen) menuTrigger.current?.focus(); onChange(id); setMenuOpen(false); };
+  const toggleMenu = (group: string, trigger: HTMLButtonElement) => { menuTrigger.current = trigger; setOpenGroup((open) => open === group ? null : group); };
+  const select = (id: T) => { if (menuOpen) menuTrigger.current?.focus(); onChange(id); setOpenGroup(null); };
   const viewButton = (item: NavItem<T>) => <button type="button" key={item.id} className={value === item.id ? "active" : ""}
     aria-current={value === item.id ? "page" : undefined} disabled={navigationDisabled} onClick={() => select(item.id)}>
     <span>{item.label}</span>{!!item.count && <span className={`nav-count count-${item.tone ?? "muted"}`}>{item.count}</span>}
@@ -82,10 +82,6 @@ export function Shell<T extends string>({ sub, nav, value, onChange, status, tit
   return <CatalogSearchContext.Provider value={{ query, setQuery }}><div className={`workspace-shell industry-shell trade-shell ${className}`}>
     <div className="app-workspace">
       <header className="appbar appbar-compact industry-header">
-        {menu && <button type="button" className="menu-toggle" data-functions-trigger aria-label="Tất cả chức năng" title="Tất cả chức năng" aria-expanded={menuOpen} aria-controls={menuId}
-          disabled={navigationDisabled} onClick={(event) => toggleMenu(event.currentTarget)}>
-          <svg width="25" height="25" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18" /></svg>
-        </button>}
         <div className="industry-brand"><b>TOBOKI</b></div>
         {catalogView && <div className="trade-searchbar">
           <form className="trade-search" role="search" onSubmit={(event) => { event.preventDefault(); if (!navigationDisabled) select(catalogView); }}>
@@ -107,28 +103,26 @@ export function Shell<T extends string>({ sub, nav, value, onChange, status, tit
           </button>}
           {status}
         </div>
-        {menu && <div ref={dropdown} id={menuId} className={`functions-dropdown${menuOpen ? " is-open" : ""}`} inert={!menuOpen}>
-          <div className="functions-dropdown-clip"><nav className="functions-dropdown-content" aria-label="Tất cả chức năng">
-            {groups.map((group, index) => {
-              const expanded = expandedGroup === group;
-              const groupId = `${menuId}-group-${index}`;
-              return <div key={group} className={`functions-group${expanded ? " is-expanded" : ""}`}>
-                <button type="button" className={`functions-group-toggle${activeGroup === group ? " is-current" : ""}`} aria-expanded={expanded} aria-controls={groupId} disabled={navigationDisabled} onClick={() => setExpandedGroup(expanded ? null : group)}>
-                  <FunctionGroupIcon index={index} /><span>{group}</span><span className="functions-group-chevron"><MenuChevron /></span>
-                </button>
-                <div id={groupId} className="functions-group-panel" inert={!expanded}><div className="functions-group-clip"><div className="functions-group-links">{navigation.filter((item) => item.group === group).map(viewButton)}</div></div></div>
-              </div>;
-            })}
-            {navigation.filter((item) => !item.group).map(viewButton)}
-          </nav></div>
-        </div>}
       </header>
 
-      {menu && <nav className="industry-navigation" aria-label={menuLabel}>
-        {groups.length > 0 && <div className="industry-sections" role="group" aria-label="Nhóm chức năng">{groups.map((group) => <button type="button" key={group}
-          className={activeGroup === group ? "is-current" : ""} aria-current={activeGroup === group ? "true" : undefined} disabled={navigationDisabled}
-          onClick={() => { const first = navigation.find((item) => item.group === group); if (first) select(first.id); }}>{group}</button>)}</div>}
-        <div className="industry-view-links">{currentViews.map(viewButton)}</div><span className="industry-space-label">{sub}</span>
+      {menu && <nav ref={navigationBar} className="industry-navigation" aria-label={menuLabel}>
+        {groups.length > 0 && <div className="industry-sections" role="group" aria-label="Nhóm chức năng">{groups.map((group, index) => {
+          const expanded = openGroup === group;
+          const groupId = `${menuId}-group-${index}`;
+          return <div key={group} className="industry-section">
+            <button type="button" className={`industry-section-toggle${activeGroup === group ? " is-current" : ""}`} aria-current={activeGroup === group ? "true" : undefined}
+              aria-expanded={expanded} aria-controls={groupId} disabled={navigationDisabled} onClick={(event) => toggleMenu(group, event.currentTarget)}>
+              <span>{group}</span><MenuChevron />
+            </button>
+            <div id={groupId} className={`functions-dropdown${expanded ? " is-open" : ""}`} inert={!expanded}>
+              <div className="functions-dropdown-clip"><div className="functions-dropdown-content" role="group" aria-label={group}>
+                <div className="functions-group-links">{navigation.filter((item) => item.group === group).map(viewButton)}</div>
+              </div></div>
+            </div>
+          </div>;
+        })}</div>}
+        <div className="industry-view-links">{currentViews.map(viewButton)}</div>
+        <div className="industry-workspace-status"><span className="industry-space-label">{sub}</span>{navigationStatus}</div>
       </nav>}
 
       <div className="store-poster-layout">
@@ -158,9 +152,4 @@ export function Shell<T extends string>({ sub, nav, value, onChange, status, tit
 
 function MenuChevron() {
   return <svg className="functions-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>;
-}
-
-function FunctionGroupIcon({ index }: { index: number }) {
-  const paths = ["M3 3h7v7H3ZM14 3h7v7h-7ZM3 14h7v7H3ZM14 14h7v7h-7Z", "m12 3 9 5v9l-9 5-9-5V8Zm-9 5 9 5 9-5M12 13v9", "M4 5h16v16H4ZM8 3v4M16 3v4M8 11h8M8 15h5"];
-  return <svg className="functions-group-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round" strokeLinecap="round" aria-hidden="true"><path d={paths[index % paths.length]} /></svg>;
 }

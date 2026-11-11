@@ -1,0 +1,109 @@
+{
+  "ok": true,
+  "fixtureApis": true,
+  "checks": [
+    {
+      "route": "admin",
+      "width": 1920
+    },
+    {
+      "route": "branch",
+      "width": 1920
+    },
+    {
+      "route": "admin",
+      "width": 1440
+    },
+    {
+      "route": "branch",
+      "width": 1440
+    },
+    {
+      "route": "admin",
+      "width": 1250
+    },
+    {
+      "route": "branch",
+      "width": 1250
+    },
+    {
+      "route": "admin",
+      "width": 1100
+    },
+    {
+      "route": "branch",
+      "width": 1100
+    },
+    {
+      "route": "admin",
+      "width": 1050
+    },
+    {
+      "route": "branch",
+      "width": 1050
+    },
+    {
+      "route": "admin",
+      "width": 1024
+    },
+    {
+      "route": "branch",
+      "width": 1024
+    },
+    {
+      "route": "admin",
+      "width": 900
+    },
+    {
+      "route": "branch",
+      "width": 900
+    },
+    {
+      "route": "admin",
+      "width": 899
+    },
+    {
+      "route": "branch",
+      "width": 899
+    },
+    {
+      "route": "admin",
+      "width": 768
+    },
+    {
+      "route": "branch",
+      "width": 768
+    },
+    {
+      "route": "admin",
+      "width": 600
+    },
+    {
+      "route": "branch",
+      "width": 600
+    },
+    {
+      "route": "admin",
+      "width": 390
+    },
+    {
+      "route": "branch",
+      "width": 390
+    },
+    {
+      "route": "admin",
+      "width": 320
+    },
+    {
+      "route": "branch",
+      "width": 320
+    }
+  ],
+  "actions": [
+    "status visible in navigation on every size",
+    "identity and branch code visible",
+    "notification and navigation work",
+    "SSE and branch offline state visible",
+    "logout contracts preserved"
+  ]
+}

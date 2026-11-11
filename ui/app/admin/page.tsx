@@ -188,16 +188,16 @@ function AdminApp({ user, onLogout }: { user: string; onLogout: () => void }) {
           { id: "monitor", label: "Giám sát", count: highCount, tone: "danger", group: "Quản lý" },
           { id: "broadcast", label: "Thông báo" },
         ]}
-        status={
+        navigationStatus={
           <>
             <span className="admin-status-extra">{online} chi nhánh online</span>
-            <span title={connected ? "Đang nhận thông báo trực tiếp" : "Không nhận được thông báo trực tiếp"}>
+            <span className="workspace-connection" role="status" title={connected ? "Đang nhận thông báo trực tiếp" : "Không nhận được thông báo trực tiếp"}>
               <Dot on={connected} />{connected ? "Đã kết nối" : "Mất kết nối"}
             </span>
-            <span className="admin-status-extra">{user}</span>
-            <button className="btn btn-sm workspace-logout" onClick={onLogout}>Đăng xuất</button>
+            <span className="workspace-user">{user}</span>
           </>
         }
+        status={<button className="btn btn-sm workspace-logout" onClick={onLogout}>Đăng xuất</button>}
         actions={(tab === "overview" || tab === "debts" || tab === "thresholds") && (
           <label className="row muted">
             <input type="checkbox" checked={showSim} onChange={(e) => setShowSim(e.target.checked)} /> Hiện chi nhánh kiểm thử

@@ -167,12 +167,8 @@ export default function BranchPage() {
           { id: "security", label: "An ninh", count: sec?.suKien.length ?? 0, tone: "danger", group: "Quản lý" },
           { id: "news", label: "Thông báo", count: unread, tone: "warn" },
         ]}
-        status={
-          <>
-            <span title={s.statusDetail}><Dot on={online} />{STATUS_TEXT[s.status]}</span>
-            <button className="btn btn-sm workspace-logout" disabled={checkoutBusy} onClick={() => api("/api/logout", {}).then(() => window.location.reload()).catch(() => {})}>Đăng xuất</button>
-          </>
-        }>
+        navigationStatus={<span className="workspace-connection" role="status" title={s.statusDetail}><Dot on={online} />{STATUS_TEXT[s.status]}</span>}
+        status={<button className="btn btn-sm workspace-logout" disabled={checkoutBusy} onClick={() => api("/api/logout", {}).then(() => window.location.reload()).catch(() => {})}>Đăng xuất</button>}>
         {duplicateAlert && (
           <div className="banner banner-danger" role="alert" style={{ marginBottom: 16 }}>
             <strong>Cảnh báo bảo mật — {duplicateAlert.maCn}</strong>

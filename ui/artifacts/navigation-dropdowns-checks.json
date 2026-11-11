@@ -1,0 +1,366 @@
+{
+  "ok": true,
+  "fixtureApis": true,
+  "checks": [
+    {
+      "route": "admin",
+      "width": 1920,
+      "visited": [
+        "Tổng quan",
+        "Yêu cầu cấp hàng",
+        "Điều chuyển",
+        "Hàng hóa",
+        "Kho chi nhánh",
+        "Đặt ngưỡng",
+        "Công nợ",
+        "Đối soát",
+        "Giám sát"
+      ]
+    },
+    {
+      "route": "branch",
+      "width": 1920,
+      "visited": [
+        "Sản phẩm",
+        "Hóa đơn",
+        "Nhận hàng",
+        "Điều chuyển",
+        "Đặt ngưỡng",
+        "Lịch sử nhập",
+        "Công nợ",
+        "Nhật ký",
+        "An ninh"
+      ]
+    },
+    {
+      "route": "admin",
+      "width": 1440,
+      "visited": [
+        "Tổng quan",
+        "Yêu cầu cấp hàng",
+        "Điều chuyển",
+        "Hàng hóa",
+        "Kho chi nhánh",
+        "Đặt ngưỡng",
+        "Công nợ",
+        "Đối soát",
+        "Giám sát"
+      ]
+    },
+    {
+      "route": "branch",
+      "width": 1440,
+      "visited": [
+        "Sản phẩm",
+        "Hóa đơn",
+        "Nhận hàng",
+        "Điều chuyển",
+        "Đặt ngưỡng",
+        "Lịch sử nhập",
+        "Công nợ",
+        "Nhật ký",
+        "An ninh"
+      ]
+    },
+    {
+      "route": "admin",
+      "width": 1250,
+      "visited": [
+        "Tổng quan",
+        "Yêu cầu cấp hàng",
+        "Điều chuyển",
+        "Hàng hóa",
+        "Kho chi nhánh",
+        "Đặt ngưỡng",
+        "Công nợ",
+        "Đối soát",
+        "Giám sát"
+      ]
+    },
+    {
+      "route": "branch",
+      "width": 1250,
+      "visited": [
+        "Sản phẩm",
+        "Hóa đơn",
+        "Nhận hàng",
+        "Điều chuyển",
+        "Đặt ngưỡng",
+        "Lịch sử nhập",
+        "Công nợ",
+        "Nhật ký",
+        "An ninh"
+      ]
+    },
+    {
+      "route": "admin",
+      "width": 1050,
+      "visited": [
+        "Tổng quan",
+        "Yêu cầu cấp hàng",
+        "Điều chuyển",
+        "Hàng hóa",
+        "Kho chi nhánh",
+        "Đặt ngưỡng",
+        "Công nợ",
+        "Đối soát",
+        "Giám sát"
+      ]
+    },
+    {
+      "route": "branch",
+      "width": 1050,
+      "visited": [
+        "Sản phẩm",
+        "Hóa đơn",
+        "Nhận hàng",
+        "Điều chuyển",
+        "Đặt ngưỡng",
+        "Lịch sử nhập",
+        "Công nợ",
+        "Nhật ký",
+        "An ninh"
+      ]
+    },
+    {
+      "route": "admin",
+      "width": 1024,
+      "visited": [
+        "Tổng quan",
+        "Yêu cầu cấp hàng",
+        "Điều chuyển",
+        "Hàng hóa",
+        "Kho chi nhánh",
+        "Đặt ngưỡng",
+        "Công nợ",
+        "Đối soát",
+        "Giám sát"
+      ]
+    },
+    {
+      "route": "branch",
+      "width": 1024,
+      "visited": [
+        "Sản phẩm",
+        "Hóa đơn",
+        "Nhận hàng",
+        "Điều chuyển",
+        "Đặt ngưỡng",
+        "Lịch sử nhập",
+        "Công nợ",
+        "Nhật ký",
+        "An ninh"
+      ]
+    },
+    {
+      "route": "admin",
+      "width": 900,
+      "visited": [
+        "Tổng quan",
+        "Yêu cầu cấp hàng",
+        "Điều chuyển",
+        "Hàng hóa",
+        "Kho chi nhánh",
+        "Đặt ngưỡng",
+        "Công nợ",
+        "Đối soát",
+        "Giám sát"
+      ]
+    },
+    {
+      "route": "branch",
+      "width": 900,
+      "visited": [
+        "Sản phẩm",
+        "Hóa đơn",
+        "Nhận hàng",
+        "Điều chuyển",
+        "Đặt ngưỡng",
+        "Lịch sử nhập",
+        "Công nợ",
+        "Nhật ký",
+        "An ninh"
+      ]
+    },
+    {
+      "route": "admin",
+      "width": 899,
+      "visited": [
+        "Tổng quan",
+        "Yêu cầu cấp hàng",
+        "Điều chuyển",
+        "Hàng hóa",
+        "Kho chi nhánh",
+        "Đặt ngưỡng",
+        "Công nợ",
+        "Đối soát",
+        "Giám sát"
+      ]
+    },
+    {
+      "route": "branch",
+      "width": 899,
+      "visited": [
+        "Sản phẩm",
+        "Hóa đơn",
+        "Nhận hàng",
+        "Điều chuyển",
+        "Đặt ngưỡng",
+        "Lịch sử nhập",
+        "Công nợ",
+        "Nhật ký",
+        "An ninh"
+      ]
+    },
+    {
+      "route": "admin",
+      "width": 768,
+      "visited": [
+        "Tổng quan",
+        "Yêu cầu cấp hàng",
+        "Điều chuyển",
+        "Hàng hóa",
+        "Kho chi nhánh",
+        "Đặt ngưỡng",
+        "Công nợ",
+        "Đối soát",
+        "Giám sát"
+      ]
+    },
+    {
+      "route": "branch",
+      "width": 768,
+      "visited": [
+        "Sản phẩm",
+        "Hóa đơn",
+        "Nhận hàng",
+        "Điều chuyển",
+        "Đặt ngưỡng",
+        "Lịch sử nhập",
+        "Công nợ",
+        "Nhật ký",
+        "An ninh"
+      ]
+    },
+    {
+      "route": "admin",
+      "width": 600,
+      "visited": [
+        "Tổng quan",
+        "Yêu cầu cấp hàng",
+        "Điều chuyển",
+        "Hàng hóa",
+        "Kho chi nhánh",
+        "Đặt ngưỡng",
+        "Công nợ",
+        "Đối soát",
+        "Giám sát"
+      ]
+    },
+    {
+      "route": "branch",
+      "width": 600,
+      "visited": [
+        "Sản phẩm",
+        "Hóa đơn",
+        "Nhận hàng",
+        "Điều chuyển",
+        "Đặt ngưỡng",
+        "Lịch sử nhập",
+        "Công nợ",
+        "Nhật ký",
+        "An ninh"
+      ]
+    },
+    {
+      "route": "admin",
+      "width": 390,
+      "visited": [
+        "Tổng quan",
+        "Yêu cầu cấp hàng",
+        "Điều chuyển",
+        "Hàng hóa",
+        "Kho chi nhánh",
+        "Đặt ngưỡng",
+        "Công nợ",
+        "Đối soát",
+        "Giám sát"
+      ]
+    },
+    {
+      "route": "branch",
+      "width": 390,
+      "visited": [
+        "Sản phẩm",
+        "Hóa đơn",
+        "Nhận hàng",
+        "Điều chuyển",
+        "Đặt ngưỡng",
+        "Lịch sử nhập",
+        "Công nợ",
+        "Nhật ký",
+        "An ninh"
+      ]
+    },
+    {
+      "route": "admin",
+      "width": 360,
+      "visited": [
+        "Tổng quan",
+        "Yêu cầu cấp hàng",
+        "Điều chuyển",
+        "Hàng hóa",
+        "Kho chi nhánh",
+        "Đặt ngưỡng",
+        "Công nợ",
+        "Đối soát",
+        "Giám sát"
+      ]
+    },
+    {
+      "route": "branch",
+      "width": 360,
+      "visited": [
+        "Sản phẩm",
+        "Hóa đơn",
+        "Nhận hàng",
+        "Điều chuyển",
+        "Đặt ngưỡng",
+        "Lịch sử nhập",
+        "Công nợ",
+        "Nhật ký",
+        "An ninh"
+      ]
+    },
+    {
+      "route": "admin",
+      "width": 320,
+      "visited": [
+        "Tổng quan",
+        "Yêu cầu cấp hàng",
+        "Điều chuyển",
+        "Hàng hóa",
+        "Kho chi nhánh",
+        "Đặt ngưỡng",
+        "Công nợ",
+        "Đối soát",
+        "Giám sát"
+      ]
+    },
+    {
+      "route": "branch",
+      "width": 320,
+      "visited": [
+        "Sản phẩm",
+        "Hóa đơn",
+        "Nhận hàng",
+        "Điều chuyển",
+        "Đặt ngưỡng",
+        "Lịch sử nhập",
+        "Công nợ",
+        "Nhật ký",
+        "An ninh"
+      ]
+    }
+  ]
+}

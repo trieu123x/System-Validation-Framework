@@ -1,0 +1,782 @@
+﻿{
+    "ok":  true,
+    "fixtureApis":  true,
+    "checks":  [
+                   {
+                       "route":  "admin",
+                       "view":  "overview",
+                       "width":  216,
+                       "height":  472,
+                       "scrollWidth":  214,
+                       "clientWidth":  214,
+                       "controls":  [
+                                        32,
+                                        32,
+                                        32,
+                                        32,
+                                        32
+                                    ],
+                       "radioHeights":  [
+
+                                        ],
+                       "viewport":  1440
+                   },
+                   {
+                       "route":  "admin",
+                       "view":  "history",
+                       "width":  216,
+                       "height":  622,
+                       "scrollWidth":  214,
+                       "clientWidth":  214,
+                       "controls":  [
+                                        32,
+                                        32,
+                                        32,
+                                        32
+                                    ],
+                       "radioHeights":  [
+                                            26,
+                                            26,
+                                            26,
+                                            26,
+                                            26,
+                                            26,
+                                            26
+                                        ],
+                       "viewport":  1440
+                   },
+                   {
+                       "route":  "admin",
+                       "view":  "products",
+                       "width":  220,
+                       "height":  450,
+                       "scrollWidth":  218,
+                       "clientWidth":  218,
+                       "controls":  [
+
+                                    ],
+                       "radioHeights":  [
+                                            26,
+                                            26,
+                                            26,
+                                            26,
+                                            26,
+                                            26,
+                                            26,
+                                            26,
+                                            26,
+                                            26,
+                                            26
+                                        ],
+                       "viewport":  1440
+                   },
+                   {
+                       "route":  "branch",
+                       "view":  "stock",
+                       "width":  220,
+                       "height":  610,
+                       "scrollWidth":  218,
+                       "clientWidth":  218,
+                       "controls":  [
+
+                                    ],
+                       "radioHeights":  [
+                                            26,
+                                            26,
+                                            26,
+                                            26,
+                                            26,
+                                            26,
+                                            26,
+                                            26,
+                                            26,
+                                            26,
+                                            26,
+                                            26,
+                                            26,
+                                            26,
+                                            26
+                                        ],
+                       "viewport":  1440
+                   },
+                   {
+                       "route":  "admin",
+                       "view":  "overview",
+                       "width":  215,
+                       "height":  472,
+                       "scrollWidth":  213,
+                       "clientWidth":  213,
+                       "controls":  [
+                                        32,
+                                        32,
+                                        32,
+                                        32,
+                                        32
+                                    ],
+                       "radioHeights":  [
+
+                                        ],
+                       "viewport":  1024
+                   },
+                   {
+                       "route":  "admin",
+                       "view":  "history",
+                       "width":  216,
+                       "height":  622,
+                       "scrollWidth":  214,
+                       "clientWidth":  214,
+                       "controls":  [
+                                        32,
+                                        32,
+                                        32,
+                                        32
+                                    ],
+                       "radioHeights":  [
+                                            26,
+                                            26,
+                                            26,
+                                            26,
+                                            26,
+                                            26,
+                                            26
+                                        ],
+                       "viewport":  1024
+                   },
+                   {
+                       "route":  "admin",
+                       "view":  "products",
+                       "width":  220,
+                       "height":  450,
+                       "scrollWidth":  218,
+                       "clientWidth":  218,
+                       "controls":  [
+
+                                    ],
+                       "radioHeights":  [
+                                            26,
+                                            26,
+                                            26,
+                                            26,
+                                            26,
+                                            26,
+                                            26,
+                                            26,
+                                            26,
+                                            26,
+                                            26
+                                        ],
+                       "viewport":  1024
+                   },
+                   {
+                       "route":  "branch",
+                       "view":  "stock",
+                       "width":  220,
+                       "height":  610,
+                       "scrollWidth":  218,
+                       "clientWidth":  218,
+                       "controls":  [
+
+                                    ],
+                       "radioHeights":  [
+                                            26,
+                                            26,
+                                            26,
+                                            26,
+                                            26,
+                                            26,
+                                            26,
+                                            26,
+                                            26,
+                                            26,
+                                            26,
+                                            26,
+                                            26,
+                                            26,
+                                            26
+                                        ],
+                       "viewport":  1024
+                   },
+                   {
+                       "route":  "admin",
+                       "view":  "overview",
+                       "width":  215,
+                       "height":  472,
+                       "scrollWidth":  213,
+                       "clientWidth":  213,
+                       "controls":  [
+                                        32,
+                                        32,
+                                        32,
+                                        32,
+                                        32
+                                    ],
+                       "radioHeights":  [
+
+                                        ],
+                       "viewport":  899
+                   },
+                   {
+                       "route":  "admin",
+                       "view":  "history",
+                       "width":  835,
+                       "height":  622,
+                       "scrollWidth":  833,
+                       "clientWidth":  833,
+                       "controls":  [
+                                        32,
+                                        32,
+                                        32,
+                                        32
+                                    ],
+                       "radioHeights":  [
+                                            26,
+                                            26,
+                                            26,
+                                            26,
+                                            26,
+                                            26,
+                                            26
+                                        ],
+                       "viewport":  899
+                   },
+                   {
+                       "route":  "admin",
+                       "view":  "products",
+                       "width":  835,
+                       "height":  450,
+                       "scrollWidth":  833,
+                       "clientWidth":  833,
+                       "controls":  [
+
+                                    ],
+                       "radioHeights":  [
+                                            26,
+                                            26,
+                                            26,
+                                            26,
+                                            26,
+                                            26,
+                                            26,
+                                            26,
+                                            26,
+                                            26,
+                                            26
+                                        ],
+                       "viewport":  899
+                   },
+                   {
+                       "route":  "branch",
+                       "view":  "stock",
+                       "width":  835,
+                       "height":  608,
+                       "scrollWidth":  833,
+                       "clientWidth":  833,
+                       "controls":  [
+
+                                    ],
+                       "radioHeights":  [
+                                            26,
+                                            26,
+                                            26,
+                                            26,
+                                            26,
+                                            26,
+                                            26,
+                                            26,
+                                            26,
+                                            26,
+                                            26,
+                                            26,
+                                            26,
+                                            26,
+                                            26
+                                        ],
+                       "viewport":  899
+                   },
+                   {
+                       "route":  "admin",
+                       "view":  "overview",
+                       "width":  786,
+                       "height":  326,
+                       "scrollWidth":  784,
+                       "clientWidth":  784,
+                       "controls":  [
+                                        32,
+                                        32,
+                                        32,
+                                        32,
+                                        32
+                                    ],
+                       "radioHeights":  [
+
+                                        ],
+                       "viewport":  850
+                   },
+                   {
+                       "route":  "admin",
+                       "view":  "history",
+                       "width":  786,
+                       "height":  622,
+                       "scrollWidth":  784,
+                       "clientWidth":  784,
+                       "controls":  [
+                                        32,
+                                        32,
+                                        32,
+                                        32
+                                    ],
+                       "radioHeights":  [
+                                            26,
+                                            26,
+                                            26,
+                                            26,
+                                            26,
+                                            26,
+                                            26
+                                        ],
+                       "viewport":  850
+                   },
+                   {
+                       "route":  "admin",
+                       "view":  "products",
+                       "width":  786,
+                       "height":  450,
+                       "scrollWidth":  784,
+                       "clientWidth":  784,
+                       "controls":  [
+
+                                    ],
+                       "radioHeights":  [
+                                            26,
+                                            26,
+                                            26,
+                                            26,
+                                            26,
+                                            26,
+                                            26,
+                                            26,
+                                            26,
+                                            26,
+                                            26
+                                        ],
+                       "viewport":  850
+                   },
+                   {
+                       "route":  "branch",
+                       "view":  "stock",
+                       "width":  786,
+                       "height":  608,
+                       "scrollWidth":  784,
+                       "clientWidth":  784,
+                       "controls":  [
+
+                                    ],
+                       "radioHeights":  [
+                                            26,
+                                            26,
+                                            26,
+                                            26,
+                                            26,
+                                            26,
+                                            26,
+                                            26,
+                                            26,
+                                            26,
+                                            26,
+                                            26,
+                                            26,
+                                            26,
+                                            26
+                                        ],
+                       "viewport":  850
+                   },
+                   {
+                       "route":  "admin",
+                       "view":  "overview",
+                       "width":  704,
+                       "height":  326,
+                       "scrollWidth":  702,
+                       "clientWidth":  702,
+                       "controls":  [
+                                        32,
+                                        32,
+                                        32,
+                                        32,
+                                        32
+                                    ],
+                       "radioHeights":  [
+
+                                        ],
+                       "viewport":  768
+                   },
+                   {
+                       "route":  "admin",
+                       "view":  "history",
+                       "width":  704,
+                       "height":  622,
+                       "scrollWidth":  702,
+                       "clientWidth":  702,
+                       "controls":  [
+                                        32,
+                                        32,
+                                        32,
+                                        32
+                                    ],
+                       "radioHeights":  [
+                                            26,
+                                            26,
+                                            26,
+                                            26,
+                                            26,
+                                            26,
+                                            26
+                                        ],
+                       "viewport":  768
+                   },
+                   {
+                       "route":  "admin",
+                       "view":  "products",
+                       "width":  704,
+                       "height":  450,
+                       "scrollWidth":  702,
+                       "clientWidth":  702,
+                       "controls":  [
+
+                                    ],
+                       "radioHeights":  [
+                                            26,
+                                            26,
+                                            26,
+                                            26,
+                                            26,
+                                            26,
+                                            26,
+                                            26,
+                                            26,
+                                            26,
+                                            26
+                                        ],
+                       "viewport":  768
+                   },
+                   {
+                       "route":  "branch",
+                       "view":  "stock",
+                       "width":  704,
+                       "height":  608,
+                       "scrollWidth":  702,
+                       "clientWidth":  702,
+                       "controls":  [
+
+                                    ],
+                       "radioHeights":  [
+                                            26,
+                                            26,
+                                            26,
+                                            26,
+                                            26,
+                                            26,
+                                            26,
+                                            26,
+                                            26,
+                                            26,
+                                            26,
+                                            26,
+                                            26,
+                                            26,
+                                            26
+                                        ],
+                       "viewport":  768
+                   },
+                   {
+                       "route":  "admin",
+                       "view":  "overview",
+                       "width":  362,
+                       "height":  430,
+                       "scrollWidth":  360,
+                       "clientWidth":  360,
+                       "controls":  [
+                                        32,
+                                        32,
+                                        32,
+                                        32,
+                                        32
+                                    ],
+                       "radioHeights":  [
+
+                                        ],
+                       "viewport":  390
+                   },
+                   {
+                       "route":  "admin",
+                       "view":  "history",
+                       "width":  362,
+                       "height":  622,
+                       "scrollWidth":  360,
+                       "clientWidth":  360,
+                       "controls":  [
+                                        32,
+                                        32,
+                                        32,
+                                        32
+                                    ],
+                       "radioHeights":  [
+                                            26,
+                                            26,
+                                            26,
+                                            26,
+                                            26,
+                                            26,
+                                            26
+                                        ],
+                       "viewport":  390
+                   },
+                   {
+                       "route":  "admin",
+                       "view":  "products",
+                       "width":  362,
+                       "height":  450,
+                       "scrollWidth":  360,
+                       "clientWidth":  360,
+                       "controls":  [
+
+                                    ],
+                       "radioHeights":  [
+                                            26,
+                                            26,
+                                            26,
+                                            26,
+                                            26,
+                                            26,
+                                            26,
+                                            26,
+                                            26,
+                                            26,
+                                            26
+                                        ],
+                       "viewport":  390
+                   },
+                   {
+                       "route":  "branch",
+                       "view":  "stock",
+                       "width":  362,
+                       "height":  610,
+                       "scrollWidth":  360,
+                       "clientWidth":  360,
+                       "controls":  [
+
+                                    ],
+                       "radioHeights":  [
+                                            26,
+                                            26,
+                                            26,
+                                            26,
+                                            26,
+                                            26,
+                                            26,
+                                            26,
+                                            26,
+                                            26,
+                                            26,
+                                            26,
+                                            26,
+                                            26,
+                                            26
+                                        ],
+                       "viewport":  390
+                   },
+                   {
+                       "route":  "admin",
+                       "view":  "overview",
+                       "width":  332,
+                       "height":  430,
+                       "scrollWidth":  330,
+                       "clientWidth":  330,
+                       "controls":  [
+                                        32,
+                                        32,
+                                        32,
+                                        32,
+                                        32
+                                    ],
+                       "radioHeights":  [
+
+                                        ],
+                       "viewport":  360
+                   },
+                   {
+                       "route":  "admin",
+                       "view":  "history",
+                       "width":  332,
+                       "height":  622,
+                       "scrollWidth":  330,
+                       "clientWidth":  330,
+                       "controls":  [
+                                        32,
+                                        32,
+                                        32,
+                                        32
+                                    ],
+                       "radioHeights":  [
+                                            26,
+                                            26,
+                                            26,
+                                            26,
+                                            26,
+                                            26,
+                                            26
+                                        ],
+                       "viewport":  360
+                   },
+                   {
+                       "route":  "admin",
+                       "view":  "products",
+                       "width":  332,
+                       "height":  450,
+                       "scrollWidth":  330,
+                       "clientWidth":  330,
+                       "controls":  [
+
+                                    ],
+                       "radioHeights":  [
+                                            26,
+                                            26,
+                                            26,
+                                            26,
+                                            26,
+                                            26,
+                                            26,
+                                            26,
+                                            26,
+                                            26,
+                                            26
+                                        ],
+                       "viewport":  360
+                   },
+                   {
+                       "route":  "branch",
+                       "view":  "stock",
+                       "width":  332,
+                       "height":  610,
+                       "scrollWidth":  330,
+                       "clientWidth":  330,
+                       "controls":  [
+
+                                    ],
+                       "radioHeights":  [
+                                            26,
+                                            26,
+                                            26,
+                                            26,
+                                            26,
+                                            26,
+                                            26,
+                                            26,
+                                            26,
+                                            26,
+                                            26,
+                                            26,
+                                            26,
+                                            26,
+                                            26
+                                        ],
+                       "viewport":  360
+                   },
+                   {
+                       "route":  "admin",
+                       "view":  "overview",
+                       "width":  292,
+                       "height":  430,
+                       "scrollWidth":  290,
+                       "clientWidth":  290,
+                       "controls":  [
+                                        32,
+                                        32,
+                                        32,
+                                        32,
+                                        32
+                                    ],
+                       "radioHeights":  [
+
+                                        ],
+                       "viewport":  320
+                   },
+                   {
+                       "route":  "admin",
+                       "view":  "history",
+                       "width":  292,
+                       "height":  622,
+                       "scrollWidth":  290,
+                       "clientWidth":  290,
+                       "controls":  [
+                                        32,
+                                        32,
+                                        32,
+                                        32
+                                    ],
+                       "radioHeights":  [
+                                            26,
+                                            26,
+                                            26,
+                                            26,
+                                            26,
+                                            26,
+                                            26
+                                        ],
+                       "viewport":  320
+                   },
+                   {
+                       "route":  "admin",
+                       "view":  "products",
+                       "width":  292,
+                       "height":  450,
+                       "scrollWidth":  290,
+                       "clientWidth":  290,
+                       "controls":  [
+
+                                    ],
+                       "radioHeights":  [
+                                            26,
+                                            26,
+                                            26,
+                                            26,
+                                            26,
+                                            26,
+                                            26,
+                                            26,
+                                            26,
+                                            26,
+                                            26
+                                        ],
+                       "viewport":  320
+                   },
+                   {
+                       "route":  "branch",
+                       "view":  "stock",
+                       "width":  292,
+                       "height":  610,
+                       "scrollWidth":  290,
+                       "clientWidth":  290,
+                       "controls":  [
+
+                                    ],
+                       "radioHeights":  [
+                                            26,
+                                            26,
+                                            26,
+                                            26,
+                                            26,
+                                            26,
+                                            26,
+                                            26,
+                                            26,
+                                            26,
+                                            26,
+                                            26,
+                                            26,
+                                            26,
+                                            26
+                                        ],
+                       "viewport":  320
+                   }
+               ]
+}

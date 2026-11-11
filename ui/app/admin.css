@@ -39,29 +39,31 @@
 .workspace-shell.industry-shell.trade-shell.admin-shell .operations-overview { grid-template-columns: minmax(0, 1fr); gap: 20px; }
 .admin-shell .overview-scope { color: #7d8991; font-size: 11px; }
 .admin-shell .scope-mark { width: 6px; height: 6px; border-radius: 0; }
-.workspace-shell.industry-shell.trade-shell.admin-shell .overview-metrics { gap: 14px; }
-.workspace-shell.industry-shell.trade-shell.admin-shell .overview-metric { position: relative; padding: 17px 19px; gap: 10px; border-color: var(--admin-line); border-radius: 4px; border-top: 3px solid #364954; }
+.workspace-shell.industry-shell.trade-shell.admin-shell .overview-metrics { gap: 12px; }
+.workspace-shell.industry-shell.trade-shell.admin-shell .overview-metric { position: relative; padding: 10px 12px; gap: 6px; border-color: var(--admin-line); border-radius: 4px; border-top: 3px solid #364954; }
 .workspace-shell.industry-shell.trade-shell.admin-shell .overview-metric.metric-danger { border-top-color: var(--accent); }
 .workspace-shell.industry-shell.trade-shell.admin-shell .overview-metric.metric-amber { border-top-color: #be8a36; }
 .workspace-shell.industry-shell.trade-shell.admin-shell .overview-metric:hover { border-left-color: #aabac5; border-right-color: #aabac5; border-bottom-color: #aabac5; box-shadow: 0 4px 14px #25313a08; }
-.admin-shell .metric-top { color: #64747f; font-size: 12px; font-weight: 500; }
-.admin-shell .metric-icon { width: 28px; height: 28px; border-radius: 3px; background: #f5f7f9; }
-.workspace-shell.industry-shell.trade-shell.admin-shell .overview-metric > strong { font-size: 32px; font-weight: 700; color: #27343e; }
+.admin-shell .metric-top { color: #64747f; font-size: 11px; font-weight: 500; line-height: 1.4; }
+.admin-shell .metric-icon { width: 22px; height: 22px; border-radius: 3px; background: #f5f7f9; }
+.admin-shell .metric-icon svg { width: 16px; height: 16px; }
+.workspace-shell.industry-shell.trade-shell.admin-shell .overview-metric > strong { font-size: 26px; font-weight: 700; color: #27343e; }
 .workspace-shell.industry-shell.trade-shell.admin-shell .metric-danger > strong { color: var(--accent); }
-.admin-shell .metric-bottom { color: #819099; font-size: 11px; }
-.admin-overview-workbench { display: grid; grid-template-columns: 232px minmax(0, 1fr); gap: 22px; align-items: start; min-width: 0; }
+.admin-shell .metric-bottom { color: #819099; font-size: 10px; line-height: 1.4; }
+.admin-overview-workbench { display: grid; grid-template-columns: 216px minmax(0, 1fr); gap: 18px; align-items: start; min-width: 0; }
 .admin-overview-sidebar, .admin-overview-main { display: grid; grid-template-columns: minmax(0, 1fr); gap: 22px; min-width: 0; }
 .admin-overview-sidebar { position: sticky; top: 20px; }
 .admin-filter-disclosure { border: 1px solid var(--admin-line); border-radius: 4px; background: white; overflow: hidden; }
-.admin-filter-disclosure > summary { position: relative; padding: 18px 16px; color: #35434e; font-size: 14px; font-weight: 700; cursor: pointer; background: white; }
+.admin-filter-disclosure > summary { position: relative; padding: 12px; color: #35434e; font-size: 13px; font-weight: 700; cursor: pointer; background: white; }
 .admin-filter-disclosure[open] > summary { border-bottom: 1px solid var(--admin-line); }
 .admin-filter-dot { display: inline-block; width: 6px; height: 6px; margin-left: 8px; border-radius: 50%; background: var(--accent); }
 .workspace-shell.industry-shell.trade-shell.admin-shell .overview-filter-panel { border: 0; border-radius: 0; background: white; }
-.workspace-shell.industry-shell.trade-shell.admin-shell .overview-filter-panel .filterbar { display: flex; flex-direction: column; align-items: stretch; gap: 17px; padding: 18px 15px; margin: 0; background: white; }
+.workspace-shell.industry-shell.trade-shell.admin-shell .overview-filter-panel .filterbar { display: flex; flex-direction: column; align-items: stretch; gap: 10px; padding: 12px; margin: 0; background: white; }
+.workspace-shell.industry-shell.trade-shell.admin-shell .overview-filter-panel label.field { gap: 4px; font-size: 11px; }
 .workspace-shell.industry-shell.trade-shell.admin-shell .overview-filter-panel .field, .workspace-shell.industry-shell.trade-shell.admin-shell .overview-filter-panel .filterbar-search { flex: none; width: 100%; min-width: 0; }
-.workspace-shell.industry-shell.trade-shell.admin-shell .overview-filter-panel input, .workspace-shell.industry-shell.trade-shell.admin-shell .overview-filter-panel select { width: 100%; font-size: 12px; min-height: 37px; }
-.workspace-shell.industry-shell.trade-shell.admin-shell .overview-filter-panel .btn { min-height: 35px; }
-.admin-shell .overview-advanced-filters { grid-template-columns: minmax(0, 1fr); padding: 17px 15px; gap: 17px; }
+.workspace-shell.industry-shell.trade-shell.admin-shell .overview-filter-panel input:not([type="checkbox"]):not([type="radio"]), .workspace-shell.industry-shell.trade-shell.admin-shell .overview-filter-panel select { width: 100%; font-size: 12px; min-height: 32px; height: 32px; padding: 4px 8px; }
+.workspace-shell.industry-shell.trade-shell.admin-shell .overview-filter-panel .btn { min-height: 32px; padding: 6px 10px; font-size: 11px; }
+.admin-shell .overview-advanced-filters { grid-template-columns: minmax(0, 1fr); padding: 12px; gap: 10px; }
 .admin-shell .overview-filter-toggle { justify-content: center; }
 .admin-shell .overview-filter-toggle.is-active { color: #ad2234; border-color: #d8aab1; }
 .admin-shell .overview-alert-section { scroll-margin-top: 22px; }
@@ -160,11 +162,9 @@
 @media (max-width: 650px) {
   .workspace-shell.industry-shell.trade-shell.admin-shell .subbar { padding: 22px 14px 18px; }
   .workspace-shell.industry-shell.trade-shell.admin-shell h1 { font-size: 22px; }
-  .workspace-shell.industry-shell.trade-shell.admin-shell .overview-metrics { gap: 10px; }
-  .workspace-shell.industry-shell.trade-shell.admin-shell .overview-metric { padding: 13px; gap: 9px; }
-  .workspace-shell.industry-shell.trade-shell.admin-shell .overview-metric > strong { font-size: 28px; }
-  .admin-shell .metric-top { font-size: 11px; }
-  .admin-shell .metric-bottom { font-size: 10px; line-height: 1.5; }
+  .workspace-shell.industry-shell.trade-shell.admin-shell .overview-metrics { gap: 8px; }
+  .workspace-shell.industry-shell.trade-shell.admin-shell .overview-metric { padding: 9px 10px; }
+  .workspace-shell.industry-shell.trade-shell.admin-shell .overview-metric > strong { font-size: 24px; }
   .admin-request-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 11px; }
   .admin-request-image { height: 112px; padding: 8px 10px 28px; }
   .admin-request-image .thumb { height: 76px !important; }

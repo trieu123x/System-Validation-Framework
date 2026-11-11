@@ -1,0 +1,61 @@
+{
+  "ok": true,
+  "fixtureApis": true,
+  "checks": [
+    {
+      "width": 1920,
+      "beforeHeight": 133,
+      "afterHeight": 99,
+      "columns": 4
+    },
+    {
+      "width": 1440,
+      "beforeHeight": 133,
+      "afterHeight": 99,
+      "columns": 4
+    },
+    {
+      "width": 1366,
+      "beforeHeight": 133,
+      "afterHeight": 99,
+      "columns": 4
+    },
+    {
+      "width": 1024,
+      "beforeHeight": 133,
+      "afterHeight": 99,
+      "columns": 4
+    },
+    {
+      "width": 768,
+      "beforeHeight": 133,
+      "afterHeight": 99,
+      "columns": 2
+    },
+    {
+      "width": 650,
+      "beforeHeight": 119,
+      "afterHeight": 94,
+      "columns": 2
+    },
+    {
+      "width": 390,
+      "beforeHeight": 119,
+      "afterHeight": 94,
+      "columns": 2
+    },
+    {
+      "width": 360,
+      "beforeHeight": 122,
+      "afterHeight": 94,
+      "columns": 2
+    },
+    {
+      "width": 320,
+      "beforeHeight": 137,
+      "afterHeight": 103,
+      "columns": 2
+    }
+  ],
+  "actions": "All four metric actions checked at every width"
+}
