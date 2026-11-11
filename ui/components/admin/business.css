@@ -33,3 +33,9 @@
   .biz-products { grid-template-columns: minmax(0, 1fr); }
   .biz-scope { margin-left: 0; }
 }
+
+/* tab nhóm số liệu: kiểu gạch chân để không lẫn với nút chọn kỳ phía trên */
+.biz-tabs { display: flex; flex-wrap: wrap; gap: 4px; border-bottom: 1px solid var(--border); }
+.biz-tabs .btn { height: auto; padding: 10px 14px; margin-bottom: -1px; border: 0; border-bottom: 2px solid transparent; border-radius: 0; background: none; color: var(--text-2); font-weight: 600; }
+.biz-tabs .btn:hover:not(:disabled) { background: none; color: var(--text); }
+.biz-tabs .btn[aria-pressed="true"] { background: none; color: var(--btn-primary); border-bottom-color: var(--btn-primary); filter: none; }

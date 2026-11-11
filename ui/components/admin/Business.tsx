@@ -1,6 +1,6 @@
 "use client";
 
-import { KeyboardEvent, useCallback, useEffect, useRef, useState } from "react";
+import { KeyboardEvent, ReactNode, useCallback, useEffect, useRef, useState } from "react";
 import { Bar, BarChart, CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { api, fmtMoney, fmtNumber, today } from "@/lib/api";
 import type { BusinessBranch, BusinessKpi, BusinessSummary } from "@/lib/types";
@@ -25,6 +25,18 @@ const PRESETS: { id: Preset; label: string }[] = [
   { id: "quarter", label: "Quý này" },
   { id: "custom", label: "Tùy chọn" },
 ];
+
+/** Chia màn hình thành 3 nhóm để không phải cuộn qua mọi bảng; kỳ và KPI luôn nằm trên cùng. */
+type Part = "overview" | "products" | "branches";
+const PARTS: { id: Part; label: string }[] = [
+  { id: "overview", label: "Tổng quan" },
+  { id: "products", label: "Sản phẩm" },
+  { id: "branches", label: "Chi nhánh" },
+];
+
+function SeeAll({ onClick }: { onClick: () => void }) {
+  return <button type="button" className="btn-link" onClick={onClick}>Xem tất cả →</button>;
+}
 
 function presetRange(p: Preset): [string, string] {
   const end = today();
@@ -89,6 +101,7 @@ export function Business({ version, push, onBackChange }: {
   const [preset, setPreset] = useState<Preset>("30d");
   const [custom, setCustom] = useState<[string, string]>(() => presetRange("30d"));
   const [maCn, setMaCn] = useState<string | null>(null);
+  const [part, setPart] = useState<Part>("overview");
   const [data, setData] = useState<BusinessSummary | null>(null);
   const [loading, setLoading] = useState(false);
   const [mine, setMine] = useState(0);
@@ -150,25 +163,50 @@ export function Business({ version, push, onBackChange }: {
       {!data ? <Empty>{loading ? "Đang tải thống kê..." : "Chưa có số liệu."}</Empty> : (
         <>
           <Kpis kpi={data.kpi} prev={data.prevKpi} />
-          {noData ? <Card><Empty>Chưa có giao dịch trong kỳ.</Empty></Card> : (
-            <>
-              <TrendChart data={data} />
-              <div className="grid grid-2">
-                <Card title="Top 10 sản phẩm theo doanh thu">
-                  <HorizontalBars rows={data.products.slice(0, 10).map((p) => ({ ten: p.ten, doanhThu: p.doanhThu }))} />
+          <div className="biz-tabs" role="group" aria-label="Nhóm số liệu">
+            {PARTS.map((p) => (
+              <button key={p.id} type="button" className="btn"
+                aria-pressed={part === p.id} onClick={() => setPart(p.id)}>
+                {p.label}{p.id === "products" ? ` (${data.products.length})` : p.id === "branches" && !maCn ? ` (${data.branches.length})` : ""}
+              </button>
+            ))}
+          </div>
+
+          {/* Tổng quan: xu hướng + top 5, mỗi khối có lối sang tab đầy đủ */}
+          {part === "overview" && (noData ? <Card><Empty>Chưa có giao dịch trong kỳ.</Empty></Card> : <>
+            <TrendChart data={data} />
+            <div className="grid grid-2">
+              <Card title="Top 5 sản phẩm theo doanh thu" actions={<SeeAll onClick={() => setPart("products")} />}>
+                <HorizontalBars rows={data.products.slice(0, 5).map((p) => ({ ten: p.ten, doanhThu: p.doanhThu }))} />
+              </Card>
+              {maCn ? (
+                <Card title="Doanh thu theo danh mục" actions={<SeeAll onClick={() => setPart("products")} />}>
+                  <HorizontalBars rows={data.categories.filter((c) => c.doanhThu > 0).slice(0, 5).map((c) => ({ ten: c.ten, doanhThu: c.doanhThu }))} />
                 </Card>
-                <Card title="Doanh thu theo danh mục">
-                  <HorizontalBars rows={data.categories.filter((c) => c.doanhThu > 0).map((c) => ({ ten: c.ten, doanhThu: c.doanhThu }))} />
-                </Card>
-              </div>
-              <ProductTable data={data} onCsv={() => downloadCsv(csvName("san-pham"),
-                ["Mã hàng", "Tên hàng", "Danh mục", "Số lượng", "Doanh thu", "Lợi nhuận gộp", "Tỷ trọng %", "Nhóm ABC"],
-                data.products.map((p) => [p.maSp, p.ten, p.maDm, p.soLuong, p.doanhThu, p.loiNhuan, ratioCsv(p.tyTrong), p.abc]))} />
-            </>
-          )}
-          {!noData && !maCn && <BranchChart rows={data.branches} />}
+              ) : (
+                <BranchChart rows={data.branches.slice(0, 5)} title="Top 5 chi nhánh" actions={<SeeAll onClick={() => setPart("branches")} />} />
+              )}
+            </div>
+          </>)}
+
+          {part === "products" && (noData ? <Card><Empty>Chưa có giao dịch trong kỳ.</Empty></Card> : <>
+            <div className="grid grid-2">
+              <Card title="Top 10 sản phẩm theo doanh thu">
+                <HorizontalBars rows={data.products.slice(0, 10).map((p) => ({ ten: p.ten, doanhThu: p.doanhThu }))} />
+              </Card>
+              <Card title="Doanh thu theo danh mục">
+                <HorizontalBars rows={data.categories.filter((c) => c.doanhThu > 0).map((c) => ({ ten: c.ten, doanhThu: c.doanhThu }))} />
+              </Card>
+            </div>
+            <ProductTable data={data} onCsv={() => downloadCsv(csvName("san-pham"),
+              ["Mã hàng", "Tên hàng", "Danh mục", "Số lượng", "Doanh thu", "Lợi nhuận gộp", "Tỷ trọng %", "Nhóm ABC"],
+              data.products.map((p) => [p.maSp, p.ten, p.maDm, p.soLuong, p.doanhThu, p.loiNhuan, ratioCsv(p.tyTrong), p.abc]))} />
+          </>)}
+
+          {part === "branches" && <>
+          {!noData && !maCn && <BranchChart rows={data.branches} title="Doanh thu theo chi nhánh" />}
           <BranchTable rows={data.branches} drilled={maCn != null} push={push} changed={reload}
-            onOpen={(id) => setMaCn(id)}
+            onOpen={(id) => { setMaCn(id); setPart("overview"); }}
             onCsv={() => downloadCsv(csvName("chi-nhanh"),
               ["Mã CN", "Tên chi nhánh", "Doanh thu", "Doanh thu kỳ trước", "Lợi nhuận gộp",
                 "Bán ra SL", "Doanh thu bán ra", "Doanh thu bán ra kỳ trước", "Tháng chỉ tiêu", "Chỉ tiêu",
@@ -179,6 +217,7 @@ export function Business({ version, push, onBackChange }: {
                 b.doanhThuThang, ratioCsv(b.hoanThanh), b.duKien ?? "", ratioCsv(b.sellThrough),
                 b.ngayTon == null ? "" : Math.round(b.ngayTon), b.congNo, b.hanMuc, ratioCsv(b.dapUng), ratioCsv(b.traHang),
                 b.ngayTuLanNhapCuoi ?? "", b.ngungNhap ? "Có" : ""]))} />
+          </>}
         </>
       )}
     </div>
@@ -319,11 +358,11 @@ function ChangeText({ cur, prev }: { cur: number; prev: number }) {
 }
 
 /** So sánh chi nhánh: sell-in (công ty xuất cho chi nhánh) cạnh sell-out (chi nhánh bán cho khách). */
-function BranchChart({ rows }: { rows: BusinessBranch[] }) {
+function BranchChart({ rows, title, actions }: { rows: BusinessBranch[]; title: string; actions?: ReactNode }) {
   const data = rows.map((b) => ({ ten: b.ten, maCn: b.maCn, doanhThu: b.doanhThu, sellOut: b.sellOutDoanhThu }));
   return (
-    <Card title={<>Doanh thu theo chi nhánh <span className="muted">· sell-in và bán ra</span></>}>
-      <div className="biz-bars" style={{ height: Math.max(160, data.length * 44 + 50) }}
+    <Card title={<>{title} <span className="muted">· sell-in và bán ra</span></>} actions={actions}>
+      <div className="biz-bars" style={{ height: Math.max(160, data.length * 34 + 50) }}
         role="img" aria-label={data.map((b) => `${b.ten}: nhập ${fmtMoney(b.doanhThu)}, bán ra ${fmtMoney(b.sellOut)}`).join("; ")}>
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={data} layout="vertical" margin={{ top: 0, right: 16, bottom: 0, left: 0 }} barCategoryGap={8} barGap={2}>
@@ -333,8 +372,8 @@ function BranchChart({ rows }: { rows: BusinessBranch[] }) {
               stroke={AXIS} tick={{ fontSize: 12 }} tickLine={false} />
             <Tooltip formatter={moneyTip} cursor={{ fill: "#f4f7fd" }} />
             <Legend wrapperStyle={{ fontSize: 12.5 }} />
-            <Bar dataKey="doanhThu" name="Sell-in (công ty xuất)" fill={REVENUE} radius={[0, 4, 4, 0]} maxBarSize={14} />
-            <Bar dataKey="sellOut" name="Bán ra (sell-out)" fill={SELL_OUT} radius={[0, 4, 4, 0]} maxBarSize={14} />
+            <Bar dataKey="doanhThu" name="Sell-in (công ty xuất)" fill={REVENUE} radius={[0, 4, 4, 0]} maxBarSize={11} />
+            <Bar dataKey="sellOut" name="Bán ra (sell-out)" fill={SELL_OUT} radius={[0, 4, 4, 0]} maxBarSize={11} />
           </BarChart>
         </ResponsiveContainer>
       </div>
