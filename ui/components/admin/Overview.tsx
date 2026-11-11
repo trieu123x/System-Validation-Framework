@@ -127,7 +127,7 @@ export function Overview({ branches, products, alerts: allAlerts, requests, stat
             const product = productById.get(a.maSp);
             const canSupply = a.tonTong >= a.goiY;
             return <article key={a.maYc} className={`admin-request-card${freshIds.has(a.maYc) ? " request-fresh" : ""}`} aria-label={`Yêu cầu YC${a.maYc}`}>
-              <div className="admin-request-image"><ProductImage src={product?.anhUrl} alt={a.tenSp} category={product?.tenDm} size={220} fit="contain" /><span className="admin-request-priority">{a.mucThieu > 0 ? `Thiếu ${fmtNumber(a.mucThieu)}${product?.donVi ? ` ${product.donVi}` : ""}` : "Yêu cầu bổ sung hàng"}</span></div>
+              <div className="admin-request-image"><ProductImage src={product?.anhUrl} alt={a.tenSp} category={product?.tenDm} size={360} fit="limit" /><span className="admin-request-priority">{a.mucThieu > 0 ? `Thiếu ${fmtNumber(a.mucThieu)}${product?.donVi ? ` ${product.donVi}` : ""}` : "Yêu cầu bổ sung hàng"}</span></div>
               <div className="admin-request-content"><div className="admin-request-meta"><span>YC{a.maYc}</span><time>{a.taoLuc.slice(11, 16)} · {a.taoLuc.slice(8, 10)}/{a.taoLuc.slice(5, 7)}</time></div>
                 <h3 title={a.tenSp}>{a.tenSp}</h3><span className="admin-request-code">{a.maSp}{product?.model ? ` · ${product.model}` : ""}</span>
                 <div className="admin-request-branch"><span className="admin-branch-icon"><OverviewIcon name="network" /></span><span><b>{a.tenCn}</b><small>{a.maCn}</small></span></div>

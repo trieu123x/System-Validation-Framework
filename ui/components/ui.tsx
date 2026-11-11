@@ -2,7 +2,7 @@
 
 import { ReactNode, useCallback, useState } from "react";
 import { STATE_LABEL, STATE_TONE, TRANSFER_LABEL } from "@/lib/api";
-import { imageUrl } from "@/lib/images";
+import { imageUrl, type ImageFit } from "@/lib/images";
 
 export function Badge({ tone = "muted", children }: { tone?: string; children: ReactNode }) {
   return <span className={`badge badge-${tone}`}>{children}</span>;
@@ -16,7 +16,7 @@ export function StateBadge({ state, transfer }: { state: string | null | undefin
 
 /** Ảnh tượng trưng của mặt hàng; chưa có ảnh hoặc tải lỗi (mất mạng) thì hiện chữ đầu của danh mục. */
 export function ProductImage({ src, alt, category, size = 40, fit = "cover" }: {
-  src: string | null | undefined; alt: string; category?: string; size?: number; fit?: "cover" | "contain";
+  src: string | null | undefined; alt: string; category?: string; size?: number; fit?: ImageFit;
 }) {
   const [failed, setFailed] = useState(false);
   const url = imageUrl(src, size * 2, fit);

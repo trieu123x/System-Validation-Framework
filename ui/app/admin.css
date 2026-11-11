@@ -84,8 +84,9 @@
 .admin-request-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
 .admin-request-card { display: flex; flex-direction: column; min-width: 0; border: 1px solid var(--admin-line); border-radius: 4px; background: white; overflow: hidden; transition: border-color .15s, box-shadow .15s; }
 .admin-request-card:hover { border-color: #e0aaa4; box-shadow: 0 4px 16px #39241e09; }
-.admin-request-image { position: relative; display: grid; place-items: center; flex-shrink: 0; height: 140px; padding: 10px 12px 32px; background: white; border-bottom: 1px solid #f0f0f0; }
-.admin-request-image .thumb { width: 100% !important; max-width: 160px; height: 96px !important; object-fit: contain; background: transparent; border: 0; border-radius: 0; }
+/* ảnh giữ tỉ lệ (fit="limit"), co vào toàn bộ khung phía trên dải nhãn "Thiếu ..." */
+.admin-request-image { position: relative; display: grid; place-items: center; flex-shrink: 0; height: 184px; padding: 10px 12px 34px; background: white; border-bottom: 1px solid #f0f0f0; }
+.admin-request-image .thumb { width: 100% !important; height: 100% !important; min-height: 0; object-fit: contain; background: transparent; border: 0; border-radius: 0; }
 .admin-request-image .thumb-empty { display: grid; place-items: center; color: #aebfc9; font-size: 34px; }
 .admin-request-priority { position: absolute; left: 12px; bottom: 11px; padding: 4px 7px; border: 1px solid #ffd3cc; border-radius: 3px; background: #fff2ef; color: #c12318; font-size: 10px; font-weight: 600; }
 .admin-request-content { display: flex; flex: 1; flex-direction: column; gap: 6px; padding: 12px; }
@@ -168,8 +169,7 @@
   .workspace-shell.industry-shell.trade-shell.admin-shell .overview-metric { padding: 9px 10px; }
   .workspace-shell.industry-shell.trade-shell.admin-shell .overview-metric > strong { font-size: 24px; }
   .admin-request-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 11px; }
-  .admin-request-image { height: 112px; padding: 8px 10px 28px; }
-  .admin-request-image .thumb { height: 76px !important; }
+  .admin-request-image { height: 144px; padding: 8px 10px 30px; }
   .admin-request-priority { font-size: 9px; left: 8px; bottom: 8px; }
   .admin-request-content { padding: 10px; }
   .admin-request-content h3 { min-height: 36px; font-size: 12px; line-height: 18px; }
