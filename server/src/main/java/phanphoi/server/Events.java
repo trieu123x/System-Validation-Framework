@@ -20,6 +20,8 @@ public final class Events {
     public static final String NOTICE = "notice";
     /** Một sự kiện an ninh (su_kien_bao_mat). */
     public static final String SECURITY = "security";
+    /** Chỉ tiêu doanh thu đổi: {maCn, thang}. */
+    public static final String BUSINESS = "business";
 
     private final SseHub hub = new SseHub();
 

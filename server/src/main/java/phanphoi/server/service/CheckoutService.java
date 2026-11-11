@@ -141,6 +141,7 @@ public final class CheckoutService {
         JsonObject paid = db.tx(c -> {
             JsonObject order = load(c, branch, id, true);
             if ("PAID".equals(Http.str(order, "status"))) return order;
+            Map<String, Long> prices = quotedPrices(order);
             // Sorted product locks avoid deadlocks between overlapping baskets.
             for (var entry : quantities(order).entrySet()) {
                 Integer left = Db.one(c, """
@@ -148,7 +149,9 @@ public final class CheckoutService {
                         WHERE ma_cn=? AND ma_sp=? AND so_luong>=? RETURNING so_luong""",
                         r -> r.getInt(1), entry.getValue(), branch, entry.getKey(), entry.getValue());
                 if (left == null) throw bad("Không đủ tồn kho: " + entry.getKey() + ". Vui lòng sửa giỏ hàng.");
-                Db.update(c, "INSERT INTO ban_hang (ma_cn,ma_sp,so_luong) VALUES (?,?,?)", branch, entry.getKey(), entry.getValue());
+                // Sell-out revenue uses the quoted pre-VAT retail price, not the current catalogue price.
+                Db.update(c, "INSERT INTO ban_hang (ma_cn,ma_sp,so_luong,don_gia) VALUES (?,?,?,?)",
+                        branch, entry.getKey(), entry.getValue(), prices.get(entry.getKey()));
             }
             order.addProperty("status", "PAID");
             order.addProperty("paidAt", Instant.now().toString());
@@ -159,6 +162,23 @@ public final class CheckoutService {
         });
         events.publish(Events.STOCK, Map.of("maCn", branch));
         return paid;
+    }
+
+    /** giaBanLe của từng dòng trong đơn đã báo giá; thiếu hoặc hỏng thì null (dòng ban_hang ước tính theo giá hiện tại). */
+    static Map<String, Long> quotedPrices(JsonObject order) {
+        Map<String, Long> prices = new TreeMap<>();
+        if (!order.has("items") || !order.get("items").isJsonArray()) return prices;
+        for (var element : order.getAsJsonArray("items")) {
+            if (!element.isJsonObject()) continue;
+            JsonObject row = element.getAsJsonObject();
+            try {
+                long price = row.get("giaBanLe").getAsLong();
+                if (price >= 0) prices.put(Http.str(row, "maHang"), price);
+            } catch (RuntimeException ignored) {
+                // đơn cũ không có giá: để null
+            }
+        }
+        return prices;
     }
 
     private static JsonObject find(Connection c, String branch, String id, boolean lock) throws SQLException {

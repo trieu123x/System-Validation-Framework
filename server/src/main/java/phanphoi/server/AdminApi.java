@@ -286,6 +286,37 @@ public final class AdminApi implements AutoCloseable {
             Http.ok(ex, Map.of("conNo", con));
         });
 
+        // ---- thống kê kinh doanh ----
+        r.get("/api/business/summary", (ex, p) -> {
+            Map<String, String> q = Http.query(ex);
+            try {
+                Http.ok(ex, ctx.business().summary(q.get("from"), q.get("to"), q.getOrDefault("maCn", "")));
+            } catch (java.sql.SQLException err) {
+                throw new Http.ApiException(503, "Không đọc được CSDL, thử lại sau");
+            }
+        });
+        r.put("/api/business/targets/{maCn}", (ex, p) -> {
+            JsonObject b = Http.body(ex);
+            java.time.YearMonth thang;
+            try {
+                thang = java.time.YearMonth.parse(Http.str(b, "thang"));
+            } catch (java.time.format.DateTimeParseException bad) {
+                throw new Http.ApiException(400, "Tháng phải có dạng yyyy-MM");
+            }
+            long soTien;
+            try {
+                soTien = new BigDecimal(Http.str(b, "soTien")).longValueExact();
+            } catch (NumberFormatException | ArithmeticException bad) {
+                throw new Http.ApiException(400, "Chỉ tiêu phải là số nguyên đồng");
+            }
+            try {
+                ctx.business().setTarget(p.get(0), thang, soTien, auth.user(), clientIp(ex));
+            } catch (java.sql.SQLException err) {
+                throw new Http.ApiException(503, "Không ghi được CSDL, thử lại sau");
+            }
+            Http.ok(ex, Map.of("ok", true));
+        });
+
         // ---- điều chuyển (7.2-B) ----
         r.get("/api/transfers", (ex, p) -> Http.ok(ex, ctx.transfers().list()));
 
@@ -557,6 +588,8 @@ public final class AdminApi implements AutoCloseable {
                 "/api/debts/branches/{maCn}", "/api/debts/suppliers/{maNcc}",
                 "/api/notices/{id}", "/api/logs").contains(template)) return;
         if (method.equals("GET") && template.equals("/api/logs")) return;
+        // Đặt chỉ tiêu thành công đã có dòng SET_TARGET (BusinessStatsService); chỉ ghi ở đây khi lỗi.
+        if (template.equals("/api/business/targets/{maCn}") && status < 400) return;
         Object extra = ex.getAttribute("audit.detail");
         String detail = extra instanceof String ? (String) extra : AuditLog.routeDetail(template, pathParams);
         ctx.audit().record("ADMIN", auth.user(), method + " " + template,

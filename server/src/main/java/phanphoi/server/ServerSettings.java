@@ -52,8 +52,11 @@ public final class ServerSettings {
     /** Giám sát an ninh (thực nghiệm E8): off = baseline, detect = chỉ ghi sự kiện, block = đề xuất. */
     public volatile SecurityRules.Mode securityMode;
     public final SecurityRules securityRules;
+    /** Thống kê kinh doanh: quá số ngày này không nhập hàng thì chi nhánh bị gắn cờ "Ngừng nhập". */
+    public final int statsInactiveDays;
 
     public ServerSettings(Config cfg) {
+        statsInactiveDays = Math.max(1, cfg.getInt("stats.inactive.days", 14));
         ioMode = IoMode.valueOf(cfg.get("io.mode", "nio").toUpperCase());
         acceptStrategy = AcceptStrategy.valueOf(cfg.get("accept.strategy", "conditional").toUpperCase());
         delivery = Delivery.valueOf(cfg.get("delivery", "queue_resync").toUpperCase());

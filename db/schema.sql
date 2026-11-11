@@ -134,16 +134,27 @@ CREATE TABLE phieu_nhap (
     thoi_gian  TIMESTAMP(3)  NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
--- Nguồn cho dự báo và biểu đồ
+-- Nguồn cho dự báo và biểu đồ. don_gia = giá bán lẻ lúc bán (NULL ở dữ liệu cũ: sell-out ước tính theo giá hiện tại)
 CREATE TABLE ban_hang (
     id         BIGSERIAL    PRIMARY KEY,
     ma_cn      VARCHAR(10)  NOT NULL REFERENCES chi_nhanh(ma_cn),
     ma_sp      VARCHAR(10)  NOT NULL REFERENCES san_pham(ma_sp),
     so_luong   INTEGER      NOT NULL CHECK (so_luong > 0),
+    don_gia    NUMERIC(15,0) CHECK (don_gia >= 0),
     thoi_gian  TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE INDEX idx_ban_hang_cn_sp_thoi_gian ON ban_hang (ma_cn, ma_sp, thoi_gian);
+CREATE INDEX idx_ban_hang_thoi_gian ON ban_hang (thoi_gian);
+CREATE INDEX idx_phieu_xuat_thoi_gian ON phieu_xuat (thoi_gian);
+
+-- Chỉ tiêu doanh thu sell-in theo tháng của từng chi nhánh (màn hình Kinh doanh)
+CREATE TABLE muc_tieu_doanh_so (
+    ma_cn    VARCHAR(10)   NOT NULL REFERENCES chi_nhanh(ma_cn),
+    thang    DATE          NOT NULL CHECK (thang = date_trunc('month', thang)::date),
+    so_tien  NUMERIC(15,0) NOT NULL CHECK (so_tien > 0),
+    PRIMARY KEY (ma_cn, thang)
+);
 
 -- Tin chờ gửi cho CN offline, gửi lại sau LOGIN_OK (FR-21)
 CREATE TABLE hang_doi_tin (

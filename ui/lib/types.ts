@@ -272,3 +272,28 @@ export type BrowserConnection = {
   maCn: string; browserId: string; trangThai: "ONLINE" | "OFFLINE";
   ip: string; lanCuoi: string; offlineTu: string | null;
 };
+
+/** Màn hình Kinh doanh: GET /api/business/summary. Tiền là số nguyên đồng, tỉ lệ 0..1 (null khi mẫu số 0). */
+export type BusinessKpi = {
+  doanhThu: number; loiNhuan: number; bienLoiNhuan: number | null; soPhieu: number; tbPhieu: number;
+  sellOutSoLuong: number; sellOutDoanhThu: number; sellOutUocTinh: number;
+};
+export type BusinessProduct = {
+  maSp: string; ten: string; maDm: string; soLuong: number; doanhThu: number; loiNhuan: number;
+  tyTrong: number | null; abc: "A" | "B" | "C";
+};
+export type BusinessBranch = {
+  maCn: string; ten: string; doanhThu: number; doanhThuTruoc: number; loiNhuan: number;
+  thang: string; doanhThuThang: number; chiTieu: number | null; hoanThanh: number | null; duKien: number | null;
+  sellThrough: number | null; ngayTon: number | null; congNo: number; hanMuc: number;
+  dapUng: number | null; traHang: number | null; ngayTuLanNhapCuoi: number | null; ngungNhap: boolean;
+};
+export type BusinessSummary = {
+  from: string; to: string; prevFrom: string; prevTo: string; granularity: "day" | "week" | "month"; maCn: string | null;
+  kpi: BusinessKpi; prevKpi: BusinessKpi;
+  trend: { moc: string; doanhThu: number; loiNhuan: number; sellOutDoanhThu: number }[];
+  products: BusinessProduct[];
+  khongBan: { maSp: string; ten: string; tonTong: number }[];
+  categories: { maDm: string; ten: string; doanhThu: number; loiNhuan: number }[];
+  branches: BusinessBranch[];
+};

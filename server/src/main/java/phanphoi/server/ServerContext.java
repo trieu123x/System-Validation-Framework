@@ -32,6 +32,7 @@ public final class ServerContext {
     private final TransferService transfers;
     private final DebtService debts;
     private final NoticeService notices;
+    private final phanphoi.server.service.BusinessStatsService business;
     private final SecurityEventLog securityLog;
     private final SecurityMonitor security;
     private final ServerSettings settings;
@@ -79,6 +80,7 @@ public final class ServerContext {
         outbox.addResyncSource(requests::resync);
         outbox.addResyncSource(transfers::resync);
         this.notices = new NoticeService(db, outbox, events, requests, email);
+        this.business = new phanphoi.server.service.BusinessStatsService(db, events, audit, settings.statsInactiveDays);
         outbox.addResyncSource(notices::resync);
     }
 
@@ -143,6 +145,10 @@ public final class ServerContext {
 
     public DebtService debts() {
         return debts;
+    }
+
+    public phanphoi.server.service.BusinessStatsService business() {
+        return business;
     }
 
     public NoticeService notices() {

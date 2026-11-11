@@ -288,13 +288,16 @@ FROM (SELECT (SELECT sum(so_luong * don_gia) FROM phieu_nhap WHERE ma_ncc = 'NCC
 WHERE t.id = x.id AND x.lech <> 0;
 
 -- ---------- bán hàng 60 ngày (~35% cặp CN–SP có bán mỗi ngày, máy móc bán 1–2 cái) ----------
-INSERT INTO ban_hang (ma_cn, ma_sp, so_luong, thoi_gian)
-SELECT ma_cn, ma_sp, so_luong, thoi_gian
+-- don_gia = giá bán lẻ lúc bán (CSDL cũ chưa có cột thì thêm, giống BusinessSchema của server)
+ALTER TABLE ban_hang ADD COLUMN IF NOT EXISTS don_gia NUMERIC(15,0) CHECK (don_gia >= 0);
+INSERT INTO ban_hang (ma_cn, ma_sp, so_luong, don_gia, thoi_gian)
+SELECT ma_cn, ma_sp, so_luong, don_gia, thoi_gian
 FROM (
-    SELECT k.ma_cn, k.ma_sp, 1 + floor(random() * 2)::int AS so_luong,
+    SELECT k.ma_cn, k.ma_sp, 1 + floor(random() * 2)::int AS so_luong, sp.gia_ban_le AS don_gia,
            d + interval '7 hours' + random() * interval '14 hours' AS thoi_gian
     FROM kho_chi_nhanh k
     JOIN chi_nhanh c ON c.ma_cn = k.ma_cn AND NOT c.gia_lap
+    JOIN san_pham sp ON sp.ma_sp = k.ma_sp
     CROSS JOIN generate_series((current_date - 59)::timestamp, current_date::timestamp, interval '1 day') AS d
     WHERE random() < 0.35
 ) s

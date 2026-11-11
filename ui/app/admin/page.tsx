@@ -13,9 +13,15 @@ import { Notices } from "@/components/admin/Notices";
 import { Security } from "@/components/admin/Security";
 import { Debts } from "@/components/admin/Debts";
 import { useWorkspaceNavigation } from "@/lib/navigation";
+import dynamic from "next/dynamic";
 
-type Tab = "overview" | "products" | "stock" | "debts" | "history" | "transfers" | "broadcast" | "monitor" | "reconcile";
-const ADMIN_VIEWS: readonly Tab[] = ["overview", "products", "stock", "debts", "history", "transfers", "broadcast", "monitor", "reconcile"];
+// Recharts chỉ cần cho tab Kinh doanh: tải riêng để các tab khác không phải tải thư viện biểu đồ
+const Business = dynamic(() => import("@/components/admin/Business").then((m) => m.Business), {
+  ssr: false, loading: () => <p className="empty" role="status">Đang tải thống kê...</p>,
+});
+
+type Tab = "overview" | "products" | "stock" | "debts" | "business" | "history" | "transfers" | "broadcast" | "monitor" | "reconcile";
+const ADMIN_VIEWS: readonly Tab[] = ["overview", "products", "stock", "debts", "business", "history", "transfers", "broadcast", "monitor", "reconcile"];
 
 /** Cổng đăng nhập công ty: chưa có phiên (hoặc phiên hết hạn) thì hiện trang đăng nhập. */
 export default function AdminPage() {
@@ -66,7 +72,7 @@ function AdminApp({ user, onLogout }: { user: string; onLogout: () => void }) {
   const [live, setLive] = useState<LogRow[]>([]);
   const [showSim, setShowSim] = useState(false);
   const [overviewFilter, setOverviewFilter] = useState<OverviewFilter>(NO_FILTER);
-  const [v, setV] = useState({ stock: 0, requests: 0, transfers: 0, products: 0, debts: 0, security: 0, notices: 0 });
+  const [v, setV] = useState({ stock: 0, requests: 0, transfers: 0, products: 0, debts: 0, security: 0, notices: 0, business: 0 });
   const [loadError, setLoadError] = useState("");
 
   const bump = (k: keyof typeof v) => setV((x) => ({ ...x, [k]: x[k] + 1 }));
@@ -95,6 +101,8 @@ function AdminApp({ user, onLogout }: { user: string; onLogout: () => void }) {
   const refreshBranches = useDebounced(loadBranches, 300);
   const refreshDebts = useDebounced(() => bump("debts"), 800);
   const refreshSecurity = useDebounced(() => bump("security"), 500);
+  // Kinh doanh: truy vấn gộp nặng hơn, gom sự kiện 5 giây rồi mới tải lại
+  const refreshBusiness = useDebounced(() => bump("business"), 5000);
   const [highCount, setHighCount] = useState(0);
   useEffect(() => { if (tab === "monitor") setHighCount(0); }, [tab]);
   const navigate = (next: Tab) => {
@@ -129,11 +137,13 @@ function AdminApp({ user, onLogout }: { user: string; onLogout: () => void }) {
       }
       flash(r.maYc);
       refreshRequests();
+      refreshBusiness();
     },
-    stock: () => refreshStock(),
+    stock: () => { refreshStock(); refreshBusiness(); },
     products: () => refreshProducts(),
     transfer: () => refreshTransfers(),
-    debt: () => refreshDebts(),
+    debt: () => { refreshDebts(); refreshBusiness(); },
+    business: () => refreshBusiness(),
     notice: () => bump("notices"),
     security: (e: SecurityEventRow) => {
       if (e.loai === "DUPLICATE_LOGIN") setDuplicateAlert(e);
@@ -152,6 +162,7 @@ function AdminApp({ user, onLogout }: { user: string; onLogout: () => void }) {
   const shownAlerts = alerts.filter((a) => showSim || !isSim(a.maCn));
   const TITLES: Record<Tab, string> = {
     overview: "Tổng quan vận hành", products: "Hàng hóa & kho tổng", stock: "Quản lý kho chi nhánh", debts: "Công nợ",
+    business: "Kinh doanh",
     history: "Yêu cầu cấp hàng",
     transfers: "Điều chuyển hàng", broadcast: "Thông báo tới chi nhánh", monitor: "Giám sát hệ thống", reconcile: "Đối soát kho",
   };
@@ -165,6 +176,7 @@ function AdminApp({ user, onLogout }: { user: string; onLogout: () => void }) {
           products: "Danh mục thiết bị, giá bán và nguồn hàng tại kho tổng.",
           stock: "Nắm tình hình tồn kho và chủ động bổ sung hàng cho từng chi nhánh.",
           debts: "Theo dõi phải thu từ chi nhánh và phải trả cho nhà cung cấp.",
+          business: "Doanh thu, lợi nhuận gộp, mặt hàng bán chạy và kết quả từng chi nhánh so với kỳ trước.",
           history: "Tra cứu tiến độ cấp hàng, giao nhận và các yêu cầu cần đối chiếu.",
           transfers: "Theo dõi điều chuyển thiết bị giữa các chi nhánh.",
           broadcast: "Gửi thông tin và tiếp nhận nhu cầu hàng hóa từ chi nhánh.",
@@ -179,6 +191,7 @@ function AdminApp({ user, onLogout }: { user: string; onLogout: () => void }) {
           { id: "transfers", label: "Điều chuyển", count: shortage, tone: "warn", group: "Vận hành" },
           { id: "products", label: "Hàng hóa", group: "Hàng hóa & kho" },
           { id: "stock", label: "Kho chi nhánh", group: "Hàng hóa & kho" },
+          { id: "business", label: "Kinh doanh", group: "Quản lý" },
           { id: "debts", label: "Công nợ", group: "Quản lý" },
           { id: "reconcile", label: "Đối soát", group: "Quản lý" },
           { id: "monitor", label: "Giám sát", count: highCount, tone: "danger", group: "Quản lý" },
@@ -217,6 +230,7 @@ function AdminApp({ user, onLogout }: { user: string; onLogout: () => void }) {
         )}
         {tab === "products" && <Products products={products} version={v.products} push={push} onBackChange={setContextBack} />}
         {tab === "stock" && <Warehouses products={products} version={v.stock + v.requests + v.debts} push={push} onBackChange={setContextBack} />}
+        {tab === "business" && <Business version={v.business} push={push} onBackChange={setContextBack} />}
         {tab === "debts" && <Debts version={v.debts + v.requests} showSim={showSim} push={push} onBackChange={setContextBack} />}
         {tab === "history" && <RequestHistory branches={realBranches} products={products} version={v.requests} />}
         {tab === "transfers" && <Transfers version={v.transfers} />}

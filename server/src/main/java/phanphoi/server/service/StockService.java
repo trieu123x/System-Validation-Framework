@@ -80,7 +80,9 @@ public final class StockService {
                 throw new ServiceException(ErrorCode.E05,
                         "Ban vuot ton: " + maSp + " chi con " + (have == null ? 0 : have));
             }
-            Db.update(c, "INSERT INTO ban_hang (ma_cn, ma_sp, so_luong) VALUES (?, ?, ?)", maCn, maSp, soLuong);
+            // giữ giá bán lẻ lúc bán để đổi giá sau này không làm đổi doanh thu sell-out
+            Db.update(c, "INSERT INTO ban_hang (ma_cn, ma_sp, so_luong, don_gia) SELECT ?, ma_sp, ?, gia_ban_le FROM san_pham WHERE ma_sp = ?",
+                    maCn, soLuong, maSp);
             return left;
         });
         events.publish(Events.STOCK, Map.of("maCn", maCn));
@@ -346,7 +348,8 @@ public final class StockService {
                  WHEN k.so_luong < 1.5 * k.nguong_toi_thieu THEN 'warning'
                  ELSE 'ok' END""";
 
-    private static final String DEBT_SQL = """
+    /** Còn nợ của chi nhánh {@code cn}; BusinessStatsService dùng lại cùng công thức. */
+    static final String DEBT_SQL = """
             COALESCE((SELECT sum(CASE WHEN n.loai IN ('XUAT', 'DC_NHAN', 'TRA_GIAO') THEN n.so_tien ELSE -n.so_tien END)
                       FROM cong_no_cn n WHERE n.ma_cn = cn.ma_cn), 0)""";
 

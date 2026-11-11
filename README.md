@@ -24,6 +24,7 @@ cho chi nhánh. Mặc định tắt; xem [cấu hình SMTP, thử Mailpit và gi
 - Đẩy (push) tin tới chi nhánh. Giữ tin cho chi nhánh offline và gửi lại khi nó đăng nhập.
 - Điều phối điều chuyển hàng giữa các chi nhánh.
 - Theo dõi công nợ hai chiều: chi nhánh nợ công ty tiền hàng đã nhận (phiếu thu, hạn mức nợ chỉ cảnh báo), công ty nợ nhà cung cấp tiền phiếu nhập (phiếu chi).
+- Thống kê kinh doanh (màn hình *Kinh doanh*): doanh thu sell-in, lợi nhuận gộp (giá vốn bình quân gia quyền), doanh thu sell-out, so với kỳ liền trước; xu hướng theo ngày/tuần/tháng, top sản phẩm, doanh thu theo danh mục, phân nhóm ABC, hàng không bán; xếp hạng chi nhánh kèm sell-through, số ngày tồn, tỉ lệ đáp ứng, trả hàng, công nợ, chỉ tiêu tháng (% hoàn thành, dự kiến cuối tháng); xuất CSV. Không tính chi nhánh giả lập.
 - Quản lý kho chi nhánh: mỗi chi nhánh một thẻ (số mặt hàng thiếu / sắp thiếu / đủ, giá trị tồn, công nợ), chi tiết theo danh mục, ma trận mặt hàng × chi nhánh, bổ sung chủ động (tạo YC và gửi hàng ngay).
 - Thông báo có phản hồi tới tất cả hoặc một vài chi nhánh: tin thường, hỏi chi nhánh sắp chạm ngưỡng có cần hàng không, giới thiệu sản phẩm mới. Chi nhánh bấm *Cần hàng* / *Muốn nhập* thì server tạo yêu cầu cấp hàng để admin duyệt (`NOTICE`, `NOTICE_REPLY`).
 - Mỗi mặt hàng có ảnh tượng trưng (Wikimedia Commons, nén bằng Python, lưu trên Cloudinary).
@@ -89,7 +90,7 @@ cho chi nhánh. Mặc định tắt; xem [cấu hình SMTP, thử Mailpit và gi
 | Đồng thời | Thread pool, worker pool + hàng đợi tuần tự theo kết nối, `ConcurrentHashMap`, transaction CSDL |
 | CSDL | PostgreSQL, JDBC |
 | Thư viện Java ngoài | PostgreSQL JDBC 42.7.4, HikariCP 5.1.0 (pool kết nối), Gson 2.11.0 (JSON cho API cục bộ), SLF4J NOP 1.7.36, JUnit 5.11.3 (test) |
-| Giao diện | Next.js 15.5, React 19.1, TypeScript 5.9 (build tĩnh, không chạy Node khi vận hành) |
+| Giao diện | Next.js 15.5, React 19.1, TypeScript 5.9 (build tĩnh, không chạy Node khi vận hành); Recharts 3.10.1 cho biểu đồ màn hình Kinh doanh (tải riêng khi mở tab) |
 | Build | Maven 3.9 (đóng gói fat jar bằng maven-shade-plugin), npm |
 | Ảnh hàng hoá (công cụ, chạy một lần) | Python 3 + Pillow (`scripts/images/upload_images.py`): tải ảnh Wikimedia Commons, nén WebP, upload có chữ ký lên Cloudinary; giao diện lấy ảnh qua CDN Cloudinary |
 
@@ -215,6 +216,7 @@ Cấu hình đọc từ file `.properties`, rồi file `*.local.properties` cùn
 | `security.allowed.origins` | `http://localhost:3000,http://localhost:3001` | Origin được gọi API admin ngoài chính trang (cho `next dev`) |
 | `admin.lock.fails`, `admin.lock.minutes` | 5, 1 | Sai mật khẩu trang công ty 5 lần trong 5 phút thì khóa trình duyệt đó 60 giây (`ADMIN_BRUTE_FORCE`, cả ở `detect`) |
 | `admin.session.idle.seconds` | 60 | Giải phóng phiên admin sau 60 giây không có hoạt động; heartbeat vẫn giữ phiên đang dùng |
+| `stats.inactive.days` | 14 | Màn hình Kinh doanh: chi nhánh không nhận phiếu xuất quá số ngày này thì gắn cờ *Ngừng nhập* |
 
 | Khóa (`config/client.properties`) | Mặc định | Ý nghĩa |
 |---|---|---|
@@ -230,6 +232,7 @@ Cấu hình đọc từ file `.properties`, rồi file `*.local.properties` cùn
 - `phieu_nhap` ghi `ma_ncc` và `don_gia`; `phieu_xuat`, `dieu_chuyen` có `don_gia` chốt lúc gửi hàng.
 - `cong_no_cn` (sổ công nợ chi nhánh), `thanh_toan_ncc` (phiếu chi nhà cung cấp), `chi_nhanh.han_muc_no`, `su_kien_bao_mat` (giám sát an ninh).
 - `thong_bao`, `thong_bao_cn` (thông báo và trạng thái từng chi nhánh: đã xem, cần hàng, ... kèm mã YC tạo ra); `san_pham.anh_url`; `yeu_cau.so_luong_xin` (số chi nhánh xin khi trả lời thông báo).
+- `ban_hang.don_gia` (giá bán lẻ lúc bán; dòng cũ `NULL` thì sell-out ước tính theo giá hiện tại), `muc_tieu_doanh_so` (chỉ tiêu doanh thu tháng của chi nhánh). Server tự thêm khi khởi động (`BusinessSchema`), chạy lại nhiều lần không lỗi.
 
 Các ràng buộc quan trọng:
 - `kho_tong.so_luong >= 0`: kho tổng không âm.
