@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useEffect, useId, useRef, useState, type ReactNode } from "react";
 
-type NavItem<T extends string> = { id: T; label: string; count?: number; tone?: string; group?: string };
+type NavItem<T extends string> = { id: T; label: string; count?: number; tone?: string; group?: string; dropdownOnly?: boolean };
 export type BackAction = { label: string; onClick: () => void };
 
 const CatalogSearchContext = createContext<{ query: string; setQuery: (value: string) => void } | null>(null);
@@ -39,6 +39,7 @@ export function Shell<T extends string>({ sub, nav, value, onChange, status, nav
   menu?: boolean; navigationDisabled?: boolean; back?: BackAction; menuLabel?: string;
   notificationId?: T; className?: string; description?: string; catalogView?: T; cartId?: T;
 }) {
+  const header = useRef<HTMLElement>(null);
   const navigationBar = useRef<HTMLElement>(null);
   const menuTrigger = useRef<HTMLButtonElement | null>(null);
   const menuId = useId();
@@ -50,7 +51,24 @@ export function Shell<T extends string>({ sub, nav, value, onChange, status, nav
   const navigation = nav.filter((item) => item.id !== notificationId && item.id !== cartId);
   const groups = [...new Set(navigation.map((item) => item.group).filter((group): group is string => !!group))];
   const activeGroup = nav.find((item) => item.id === value)?.group ?? groups[0];
-  const currentViews = navigation.filter((item) => !activeGroup || item.group === activeGroup);
+  const currentViews = navigation.filter((item) => !item.dropdownOnly && (!activeGroup || item.group === activeGroup));
+
+  useEffect(() => {
+    const element = header.current;
+    if (!element) return;
+    const root = document.documentElement;
+    const property = "--workspace-toolbar-height";
+    const previous = root.style.getPropertyValue(property);
+    const measure = () => root.style.setProperty(property, `${Math.ceil(element.getBoundingClientRect().height)}px`);
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(element);
+    return () => {
+      observer.disconnect();
+      if (previous) root.style.setProperty(property, previous);
+      else root.style.removeProperty(property);
+    };
+  }, []);
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -81,7 +99,7 @@ export function Shell<T extends string>({ sub, nav, value, onChange, status, nav
 
   return <CatalogSearchContext.Provider value={{ query, setQuery }}><div className={`workspace-shell industry-shell trade-shell ${className}`}>
     <div className="app-workspace">
-      <header className="appbar appbar-compact industry-header">
+      <header ref={header} className="appbar appbar-compact industry-header">
         <div className="industry-brand"><b>TOBOKI</b></div>
         {catalogView && <div className="trade-searchbar">
           <form className="trade-search" role="search" onSubmit={(event) => { event.preventDefault(); if (!navigationDisabled) select(catalogView); }}>
@@ -126,12 +144,6 @@ export function Shell<T extends string>({ sub, nav, value, onChange, status, nav
       </nav>}
 
       <div className="store-poster-layout">
-        <aside className="store-side-poster store-side-poster-left" aria-label="Máy hút bụi công nghiệp TOBOKI">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/posters/toboki-vacuum.webp" width={400} height={1200} alt="" />
-          <div className="store-poster-copy"><span>TOBOKI</span><h2>Máy hút bụi<br />công nghiệp</h2><i aria-hidden="true" /></div>
-          <div className="store-poster-caption"><span>THIẾT BỊ & MÁY MÓC</span><p>Cho không gian<br />làm việc sạch.</p></div>
-        </aside>
         <div className="store-workspace-content">
       <div className="subbar"><div className="page-heading"><div className="page-title-row">
         {back && <button type="button" className="btn btn-back" disabled={navigationDisabled} onClick={back.onClick}>← {back.label}</button>}<h1>{title}</h1>
@@ -139,12 +151,6 @@ export function Shell<T extends string>({ sub, nav, value, onChange, status, nav
       <main className="page">{children}</main>
       <footer className="industry-workspace-footer"><span>TOBOKI · Hệ thống phân phối</span><span>{sub}</span></footer>
         </div>
-        <aside className="store-side-poster store-side-poster-right" aria-label="Thiết bị nâng hạ TOBOKI">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/posters/toboki-hoist.webp" width={400} height={1200} alt="" />
-          <div className="store-poster-copy"><span>TOBOKI</span><h2>Thiết bị<br />nâng hạ</h2><i aria-hidden="true" /></div>
-          <div className="store-poster-caption"><span>MÁY TỜI · PA LĂNG</span><p>Đồng hành cùng<br />mọi công trình.</p></div>
-        </aside>
       </div>
     </div>
   </div></CatalogSearchContext.Provider>;

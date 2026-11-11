@@ -83,6 +83,7 @@ Desktop.ini
 *.iml
 .vscode/*.local.json
 
-# Assistant-specific local files (keep shared agent config)
+# Assistant-specific local files
+/AGENTS.md
 CLAUDE.local.md
 .claude/settings.local.json

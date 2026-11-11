@@ -68,7 +68,9 @@ const path = require('node:path');
         const request = JSON.parse(body);
         createdBodies.push(request);
         const items = request.items.map(line => { const item = inventory.find(i => i.maHang === line.maHang); return { ...line, tenHang: item.tenHang, model: item.model, donVi: 'cái', giaBanLe: item.giaBanLe, thanhTien: item.giaBanLe * line.soLuong }; });
-        const order = { id: request.id, customer: request.customer, maCn: 'CN01', tenCn: state.tenCn, status: 'PENDING', createdAt: new Date().toISOString(), total: items.reduce((n, i) => n + i.thanhTien, 0), quantity: items.reduce((n,i) => n + i.soLuong, 0), items };
+        const subtotal = items.reduce((n, i) => n + i.thanhTien, 0);
+        const vatAmount = Math.floor(subtotal / 10) + (subtotal % 10 >= 5 ? 1 : 0);
+        const order = { id: request.id, customer: request.customer, maCn: 'CN01', tenCn: state.tenCn, status: 'PENDING', createdAt: new Date().toISOString(), subtotal, vatRate: 10, vatAmount, total: subtotal + vatAmount, quantity: items.reduce((n,i) => n + i.soLuong, 0), items };
         orders.set(order.id, order); return send(res, order);
       }
       const confirmed = pathname.match(/^\/api\/checkout\/(.+)\/confirm$/);
@@ -92,6 +94,77 @@ const path = require('node:path');
     page.setDefaultTimeout(5000);
     const errors = [];
     page.on('pageerror', e => { errors.push(e.message); console.error('BROWSER:', e.message); });
+    if (process.env.UI_VAT_CHECK === '1') {
+      await fs.mkdir('ui/artifacts', {recursive: true});
+      const money = amount => `${amount.toLocaleString('vi-VN')} đ`;
+      const fits = async label => assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false, label);
+      const summary = async subtotal => {
+        const panel = page.locator('.checkout-summary');
+        const vat = Number((BigInt(subtotal) + 5n) / 10n);
+        assert.equal(await panel.locator('.checkout-summary-row').filter({hasText: 'Tiền hàng'}).locator('b').innerText(), money(subtotal));
+        assert.equal(await panel.locator('.checkout-summary-row').filter({hasText: 'VAT 10%'}).locator('b').innerText(), money(vat));
+        assert.equal(await panel.locator('.checkout-total strong').innerText(), money(subtotal + vat));
+        return subtotal + vat;
+      };
+      for (const width of [1440,768,390]) {
+        await context.clearCookies(); await page.goto(baseUrl + '/branch/');
+        await page.evaluate(() => localStorage.clear()); await page.reload();
+        await page.setViewportSize({width,height:1000});
+        await page.locator('.product-card').first().waitFor();
+        for (let index = 0; index < 2; index++) await page.locator('.product-card').nth(index).getByRole('button', {name: '+ Thêm hàng', exact: true}).click();
+        await page.locator('.header-cart').click();
+        await page.getByRole('button', {name: /Tiến hành thanh toán/}).waitFor();
+        await summary(inventory[0].giaBanLe + inventory[1].giaBanLe);
+        await page.getByLabel(`Số lượng ${inventory[0].maHang}`, {exact:true}).fill('2');
+        const subtotal = 2 * inventory[0].giaBanLe + inventory[1].giaBanLe;
+        const total = await summary(subtotal);
+        await fits(`cart ${width}`);
+        if(width !== 768) await page.screenshot({path:`ui/artifacts/checkout-vat-cart-${width}.png`,fullPage:true});
+        await page.getByRole('button', {name: /Tiến hành thanh toán/}).click();
+        await page.locator('.payment-qr img').waitFor(); await summary(subtotal);
+        assert.equal(await page.locator('.payment-amount').innerText(),money(total));
+        const order = orders.get(createdBodies.at(-1).id);
+        assert.equal(order.total,total); assert.equal(order.subtotal,subtotal);
+        assert.equal(order.vatRate,10); assert.equal(order.vatAmount,total-subtotal);
+        assert.deepEqual(Object.keys(createdBodies.at(-1)).sort(),['customer','id','items']);
+        await page.reload(); await page.locator('.payment-qr img').waitFor();
+        await summary(subtotal); await fits(`payment ${width}`);
+        if(width !== 768) await page.screenshot({path:`ui/artifacts/checkout-vat-payment-${width}.png`,fullPage:true});
+        const before = confirms;
+        await page.getByRole('button', {name:'Xác nhận thanh toán',exact:true}).evaluate(button=>{button.click();button.click();});
+        await page.locator('.invoice-paper').waitFor();
+        assert.equal(confirms,before+1);
+        const invoice = page.locator('.invoice-totals');
+        assert.equal(await invoice.locator('div').filter({has:page.locator('span', {hasText:/^Tiền hàng$/})}).filter({has:page.locator('b')}).last().locator('b').innerText(),money(subtotal));
+        assert.match(await invoice.innerText(),/VAT 10%/);
+        assert.equal(await invoice.locator('div').filter({has:page.locator('span', {hasText:/^VAT 10%$/})}).filter({has:page.locator('b')}).last().locator('b').innerText(),money(total-subtotal));
+        assert.equal(await page.locator('.invoice-grand-total strong').innerText(),money(total));
+        await fits(`invoice ${width}`);
+        if(width !== 768) await page.screenshot({path:`ui/artifacts/checkout-vat-invoice-${width}.png`,fullPage:true});
+        if(width===1440) await page.pdf({path:'ui/artifacts/checkout-vat-invoice.pdf',format:'A4',printBackground:true,preferCSSPageSize:true});
+        await page.goto(baseUrl+'/branch/#view=invoices');
+        await page.getByRole('button',{name:'Xem hóa đơn',exact:true}).last().waitFor();
+        await page.getByRole('button',{name:'Xem hóa đơn',exact:true}).last().click();
+        await page.locator('.invoice-paper').waitFor();
+        assert.equal(await page.locator('.invoice-grand-total strong').innerText(),money(total));
+        assert.match(await page.locator('.invoice-totals').innerText(),/VAT 10%/);
+      }
+      // Previously stored pending and paid invoices retain their original tax-free totals.
+      const legacy = {...orders.values().next().value, id:'HD'+'a'.repeat(32), status:'PENDING', total:500};
+      delete legacy.subtotal; delete legacy.vatRate; delete legacy.vatAmount;
+      orders.set(legacy.id,legacy);
+      await page.evaluate(id=>localStorage.setItem('toboki-checkout:CN01',id),legacy.id);
+      await page.goto(baseUrl+'/branch/#view=cart'); await page.locator('.payment-amount').waitFor();
+      assert.equal(await page.locator('.payment-amount').innerText(),money(500));
+      assert.doesNotMatch(await page.locator('.checkout-summary').innerText(),/VAT/);
+      await page.getByRole('button',{name:'Xác nhận thanh toán',exact:true}).click();
+      await page.locator('.invoice-paper').waitFor();
+      assert.equal(await page.locator('.invoice-grand-total strong').innerText(),money(500));
+      assert.doesNotMatch(await page.locator('.invoice-totals').innerText(),/VAT/);
+      assert.deepEqual(errors,[]);
+      console.log('PASS: VAT 10% in cart, quantity changes, payment/QR amount, restored order, single confirmation, invoice history/PDF at 1440/768/390px; old invoices preserve their totals.');
+      return;
+    }
     if (process.env.UI_CAPTURE_BEFORE === '1' || process.env.UI_CAPTURE_AFTER === '1') {
       const phase = process.env.UI_CAPTURE_BEFORE === '1' ? 'before' : 'after';
       await fs.mkdir(`tools/ui-redesign/${phase}`, {recursive: true});
@@ -302,7 +375,7 @@ const path = require('node:path');
       }
       await page.setViewportSize({width: 1440, height: 900});
       await page.goto(`${baseUrl}/branch/`);
-      await page.getByRole('button', {name: '+ Thêm vào giỏ', exact: true}).first().click();
+      await page.getByRole('button', {name: '+ Thêm hàng', exact: true}).first().click();
       const refreshed = page.waitForResponse(response => response.url().endsWith('/api/inventory/refresh') && response.request().method() === 'POST');
       await page.reload();
       assert.equal((await refreshed).ok(), true);
@@ -361,7 +434,7 @@ const path = require('node:path');
       await page.goForward();
       await page.getByRole('heading', {name: 'Nhật ký hoạt động', exact: true}).waitFor();
       await page.goto(`${baseUrl}/branch/`);
-      await page.getByRole('button', {name: '+ Thêm vào giỏ', exact: true}).first().click();
+      await page.getByRole('button', {name: '+ Thêm hàng', exact: true}).first().click();
       await page.getByRole('button', {name: /Giỏ hàng/}).click();
       await page.getByRole('button', {name: /Tiến hành thanh toán/}).click();
       let releasePayment, paymentStarted;
@@ -455,7 +528,7 @@ const path = require('node:path');
     assert.deepEqual(changes, [{maHang: 'TB01', nguong: 5}]);
 
     await navigate('Sản phẩm');
-    await page.getByRole('button', {name: '+ Thêm vào giỏ', exact: true}).first().click();
+    await page.getByRole('button', {name: '+ Thêm hàng', exact: true}).first().click();
     await page.locator('.header-cart').click();
     await page.getByRole('button', {name: '← Tiếp tục chọn hàng', exact: true}).waitFor();
     await page.getByRole('button', {name: /Tiến hành thanh toán/}).click();
@@ -465,7 +538,7 @@ const path = require('node:path');
     await page.getByRole('button', {name: '← Quay lại bán hàng', exact: true}).waitFor();
     assert.equal(confirms, 1);
     assert.deepEqual(createdBodies.at(-1).items, [{maHang: 'TB01', soLuong: 1}]);
-    assert.equal(orders.get(createdBodies.at(-1).id).total, 1090000);
+    assert.equal(orders.get(createdBodies.at(-1).id).total, 1199000);
     await page.pdf({path: 'tools/ui-redesign/after/invoice.pdf', format: 'A4', printBackground: true, preferCSSPageSize: true});
     await navigate('Hóa đơn');
     await page.getByRole('button', {name: 'Xem hóa đơn', exact: true}).click();
@@ -487,7 +560,7 @@ const path = require('node:path');
     await page.locator('tbody tr').filter({hasText: 'CN01'}).first().waitFor();
 
     const views = {
-      admin: ['overview','products','stock','thresholds','debts','history','transfers','broadcast','monitor','reconcile'],
+      admin: ['overview','products','stock','debts','history','transfers','broadcast','monitor','reconcile'],
       branch: ['stock','cart','invoices','thresholds','offers','transfers','debt','news','history','activity','security'],
     };
     for (const width of [1440,1024,768,390]) {
@@ -512,7 +585,7 @@ const path = require('node:path');
     await page.reload();
     await page.getByRole('heading', {name: 'Chào mừng trở lại!', exact: true}).waitFor();
     assert.deepEqual(errors, []);
-    console.log('PASS: catalog search/sort/grid/table; collapsed filters; animated grouped menu; cart placement; valid/invalid thresholds; checkout payload/total and single confirmation; invoice/PDF; admin edit dialog; all 21 views without overflow; read error/retry; login guard.');
+    console.log('PASS: catalog search/sort/grid/table; collapsed filters; animated grouped menu; cart placement; valid/invalid thresholds; checkout payload/total and single confirmation; invoice/PDF; admin edit dialog; all configured views without overflow; read error/retry; login guard.');
   } finally {
     await browser.close();
     for (const res of peers) res.end();

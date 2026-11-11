@@ -31,22 +31,22 @@ body:has(.login-split) { background: #f5f6f7; }
 .login-page.login-split .login-form-heading p { margin: 15px 0 0; color: #626a72; font-size: 14px; line-height: 1.9; }
 .login-page.login-split .login { width: 100%; margin: 0; border: 0; border-radius: 0; box-shadow: none; background: transparent; overflow: visible; }
 .login-page.login-split .login-tabs { display: flex; align-items: center; gap: 24px; margin: 0 0 24px; padding: 0; background: transparent; border: 0; border-bottom: 1px solid #e6e8eb; border-radius: 0; }
-.login-page.login-split .login-tabs button { position: relative; min-height: 39px; height: auto; padding: 8px 0 11px; border: 0; border-radius: 0; color: #7b8288; background: transparent; font-size: 13px; font-weight: 500; cursor: pointer; }
+.login-page.login-split .login-tabs button { position: relative; min-height: 39px; height: auto; padding: 8px 0 11px; border: 0; border-radius: 0; color: #626d76; background: transparent; font-size: 13px; font-weight: 500; cursor: pointer; }
 .login-page.login-split .login-tabs button.active { background: transparent; color: var(--accent); font-weight: 650; }
 .login-page.login-split .login-tabs button.active::after { position: absolute; content: ""; height: 2px; bottom: -1px; left: 0; right: 0; background: var(--accent); border-radius: 2px; }
 .login-page.login-split .form-stack { gap: 20px; }
 .login-page.login-split .field { color: #363b40; font-size: 12px; gap: 8px; font-weight: 500; }
-.login-page.login-split .login-method-field { display: flex; flex-direction: row; align-items: center; justify-content: space-between; gap: 16px; color: #6c747b; font-size: 11px; }
+.login-page.login-split .login-method-field { display: flex; flex-direction: row; align-items: center; justify-content: space-between; gap: 16px; color: #626d76; font-size: 11px; }
 .login-page.login-split .login-method-field select { width: auto; max-width: 64%; min-height: 32px; height: auto; padding: 5px 24px 5px 10px; border: 1px solid #dadddf; color: #4e565e; background-color: #fafafa; font-size: 11px; border-radius: 6px; }
 .login-page.login-split input, .login-page.login-split select { min-height: 48px; height: auto; border: 1px solid #dadddf; border-radius: 9px; padding: 12px 14px; font-size: 13px; background: white; color: #24282b; }
-.login-page.login-split input::placeholder { color: #8b9299; opacity: 1; font-weight: 400; }
+.login-page.login-split input::placeholder { color: #626d76; opacity: 1; font-weight: 400; }
 .login-page.login-split input:focus, .login-page.login-split select:focus { outline: none; border-color: #df2118; box-shadow: 0 0 0 3px #df211812; }
 .login-input { position: relative; display: flex; align-items: center; width: 100%; min-width: 0; }
 .login-page.login-split .login-input input { width: 100%; padding-left: 42px; }
 .login-page.login-split .login-input-password input { padding-right: 47px; }
-.login-input-icon { position: absolute; left: 15px; top: 50%; display: flex; transform: translateY(-50%); color: #858b91; pointer-events: none; }
+.login-input-icon { position: absolute; left: 15px; top: 50%; display: flex; transform: translateY(-50%); color: #626d76; pointer-events: none; }
 .login-input:focus-within .login-input-icon { color: #df2118; }
-.login-password-toggle { position: absolute; right: 5px; top: 50%; transform: translateY(-50%); display: grid; place-items: center; width: 38px; height: 38px; border: 0; border-radius: 6px; background: transparent; color: #838b91; cursor: pointer; }
+.login-password-toggle { position: absolute; right: 5px; top: 50%; transform: translateY(-50%); display: grid; place-items: center; width: 38px; height: 38px; border: 0; border-radius: 6px; background: transparent; color: #626d76; cursor: pointer; }
 .login-password-toggle:hover { color: var(--login-ink); background: #fff1ee; }
 .login-page.login-split .login-forgot { align-self: flex-end; margin-top: -10px; padding: 0; border: 0; background: none; color: var(--accent-hover); font-size: 12px; font-weight: 600; cursor: pointer; }
 .login-forgot:hover { text-decoration: underline; }
@@ -54,14 +54,14 @@ body:has(.login-split) { background: #f5f6f7; }
 .login-page.login-split .btn-primary { background: var(--accent); border-color: var(--accent); color: white; }
 .login-page.login-split .btn-primary:hover:not(:disabled) { background: #bd1b14; border-color: #bd1b14; filter: none; }
 .login-page.login-split .login-submit { margin-top: 3px; min-height: 49px; }
-.login-page.login-split .note { font-size: 12px; line-height: 1.8; color: #747c84; }
+.login-page.login-split .note { font-size: 12px; line-height: 1.8; color: #626d76; }
 .login-page.login-split .error { padding: 10px 12px; background: #fff4f2; border: 1px solid #f3dad6; border-radius: 7px; font-size: 12px; line-height: 1.7; }
 .login-support { margin-top: 32px; }
-.login-support > span { display: flex; align-items: center; gap: 14px; color: #8a9198; font-size: 9px; letter-spacing: 1.1px; white-space: nowrap; }
+.login-support > span { display: flex; align-items: center; gap: 14px; color: #626d76; font-size: 9px; letter-spacing: 1.1px; white-space: nowrap; }
 .login-support > span::before, .login-support > span::after { content: ""; display: block; height: 1px; background: #e6e8eb; flex: 1; }
-.login-support p { margin: 20px 0 0; color: #7c848b; font-size: 11px; line-height: 1.8; text-align: center; }
+.login-support p { margin: 20px 0 0; color: #626d76; font-size: 11px; line-height: 1.8; text-align: center; }
 .login-support p > span { color: #5f6870; }
-.login-page.login-split .company-footer { margin: auto auto 0; max-width: 448px; padding: 0; border: 0; color: #92999f; text-align: left; font-size: 9px; line-height: 1.9; }
+.login-page.login-split .company-footer { margin: auto auto 0; max-width: 448px; padding: 0; border: 0; color: #626d76; text-align: left; font-size: 9px; line-height: 1.9; }
 .login-story-panel { position: relative; display: flex; flex-direction: column; min-width: 0; padding: 58px 60px; background: radial-gradient(ellipse at 105% 0%, #df21185c 0%, transparent 60%), linear-gradient(145deg, #282c31, #16181b); color: #f5f6f7; }
 .login-story-content { position: relative; margin-top: 127px; }
 .login-story-content h2 { margin: 0; font-size: clamp(32px, 3.1vw, 45px); font-weight: 450; letter-spacing: -1.7px; line-height: 1.45; color: #ffffff; }

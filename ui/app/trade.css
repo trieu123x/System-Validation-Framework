@@ -5,6 +5,7 @@
   --accent-soft: #fff0ed;
   --btn-primary: #df2118;
   --bg: #f5f6f7;
+  --text-2: #626d76;
   --border: #e4e5e7;
   --border-strong: #cfd2d5;
   --radius: 4px;
@@ -19,27 +20,15 @@
   color: #24282b;
 }
 body:has(.trade-shell) { background: #f5f6f7; }
+html:has(.trade-shell) { scroll-padding-top: calc(var(--workspace-toolbar-height, 116px) + 12px); }
+body:has(.trade-shell) .toasts { top: calc(var(--workspace-toolbar-height, 116px) + 12px); }
 .workspace-shell.industry-shell.trade-shell .app-workspace { background: var(--bg); }
 .store-poster-layout { display: grid; grid-template-columns: minmax(0, 1fr); align-items: start; }
 .store-workspace-content { min-width: 0; }
-.store-side-poster { display: none; }
-@media (min-width: 1440px) {
-  .store-poster-layout { --side-poster-width: clamp(176px, calc((100vw - 1536px) / 2), 240px); grid-template-columns: var(--side-poster-width) minmax(0, 1fr) var(--side-poster-width); }
-  .store-side-poster { position: sticky; top: 0; display: block; height: min(800px, 100dvh); overflow: hidden; background: #161718; color: white; }
-  .store-side-poster img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
-  .store-poster-copy, .store-poster-caption { position: absolute; z-index: 1; left: 18px; right: 12px; }
-  .store-poster-copy { top: 27px; }
-  .store-poster-copy > span { color: white; font-size: 24px; font-weight: 900; letter-spacing: -.8px; }
-  .workspace-shell.industry-shell.trade-shell .store-poster-copy h2 { margin-top: 18px; color: white; font-size: 20px; line-height: 1.4; font-weight: 600; }
-  .store-poster-copy i { display: block; margin-top: 17px; width: 35px; height: 3px; background: var(--accent); }
-  .store-poster-caption { bottom: 30px; }
-  .store-poster-caption > span { color: #efaaa4; font-size: 8px; font-weight: 600; letter-spacing: 1px; }
-  .store-poster-caption p { margin: 10px 0 0; color: #dde0e2; font-size: 12px; line-height: 1.7; }
-}
 @media (min-width: 1440px) and (max-width: 1679px) {
   .workspace-shell.industry-shell.trade-shell .industry-product-grid, .workspace-shell.industry-shell.trade-shell .product-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
-.workspace-shell.industry-shell.trade-shell .appbar.industry-header { position: relative; z-index: 50; display: grid; grid-template-columns: 180px minmax(0, 1fr) auto; align-items: center; min-height: 100px; gap: 24px; padding: 20px 32px; border: 0; border-radius: 0; background: var(--accent); color: white; }
+.workspace-shell.industry-shell.trade-shell .appbar.industry-header { position: sticky; top: 0; z-index: 50; display: grid; grid-template-columns: 180px minmax(0, 1fr) auto; align-items: center; min-height: 100px; gap: 24px; padding: 20px 32px; border: 0; border-radius: 0; background: var(--accent); color: white; }
 .trade-shell .industry-brand { gap: 0; }
 .trade-shell .industry-brand b { display: block; padding: 0; color: white; font-size: 38px; line-height: 1; font-weight: 900; font-style: normal; letter-spacing: -1.5px; }
 .trade-shell .industry-sections { display: flex; flex: 0 0 auto; justify-content: flex-start; gap: 24px; padding-right: 24px; border-right: 1px solid var(--border); }
@@ -48,8 +37,8 @@ body:has(.trade-shell) { background: #f5f6f7; }
 .trade-shell .industry-section-toggle:hover, .trade-shell .industry-section-toggle[aria-expanded="true"], .trade-shell .industry-sections .is-current { color: var(--accent); }
 .trade-shell .industry-sections .is-current { font-weight: 700; }
 .workspace-shell.industry-shell.trade-shell .appbar-status { margin: 0; color: white; font-size: 12px; gap: 15px; white-space: nowrap; }
-.workspace-shell.industry-shell.trade-shell .appbar-status .btn { min-height: 38px; padding: 8px 13px; color: white; background: #ffffff12; border: 1px solid #ffffff66; border-radius: 4px; font-size: 12px; }
-.workspace-shell.industry-shell.trade-shell .appbar-status .btn:hover:not(:disabled) { background: #ffffff26; border-color: white; color: white; }
+.workspace-shell.industry-shell.trade-shell .appbar-status .btn { min-height: 38px; padding: 8px 13px; color: white; background: transparent; border: 1px solid #ffffff66; border-radius: 4px; font-size: 12px; }
+.workspace-shell.industry-shell.trade-shell .appbar-status .btn:hover:not(:disabled) { background: var(--accent-hover); border-color: white; color: white; }
 .workspace-shell.industry-shell.trade-shell .header-notification { width: 38px; height: 38px; color: white; background: transparent; border: 1px solid transparent; border-radius: 4px; }
 .workspace-shell.industry-shell.trade-shell .header-notification:hover:not(:disabled), .workspace-shell.industry-shell.trade-shell .header-notification.active { background: #ffffff24; border-color: #ffffff44; }
 .trade-shell .header-notification-count { background: white; color: var(--accent); border-color: var(--accent); }
@@ -66,13 +55,13 @@ body:has(.trade-shell) { background: #f5f6f7; }
 .functions-chevron { flex-shrink: 0; transition: transform .25s ease; }
 .industry-section-toggle[aria-expanded="true"] .functions-chevron { transform: rotate(180deg); }
 .functions-group-links { display: grid; gap: 2px; }
-.functions-group-links button { display: flex; align-items: center; gap: 7px; width: 100%; min-height: 32px; padding: 6px 9px; border: 0; border-radius: 4px; background: transparent; color: #74797d; text-align: left; font-size: 12px; line-height: 1.4; cursor: pointer; }
+.functions-group-links button { display: flex; align-items: center; gap: 7px; width: 100%; min-height: 32px; padding: 6px 9px; border: 0; border-radius: 4px; background: transparent; color: #626d76; text-align: left; font-size: 12px; line-height: 1.4; cursor: pointer; }
 .functions-group-links button:hover, .functions-dropdown-content > button:hover { background: #f5f5f3; color: #303a41; }
 .functions-group-links button.active { color: #bf2118; font-weight: 600; background: #fff1ee; }
 .functions-group-links button .nav-count { margin-left: auto; }
 .functions-dropdown button:focus-visible { outline: 2px solid #aabac5; outline-offset: -2px; }
 .trade-search { display: flex; flex: 1; align-items: center; min-width: 0; height: 44px; background: white; border: 0; border-radius: 3px; overflow: hidden; }
-.store-search-icon { margin-left: 13px; flex-shrink: 0; color: #91a1a5; }
+.store-search-icon { margin-left: 13px; flex-shrink: 0; color: #626d76; }
 .workspace-shell.industry-shell.trade-shell .trade-search input[type="search"] { width: 100%; min-width: 0; height: 44px; min-height: 44px; border: 0; border-radius: 0; padding: 10px 12px; background: white; color: #323b41; font-size: 14px; box-shadow: none; }
 .trade-search:focus-within { outline: 2px solid #ffc2b7; outline-offset: 3px; }
 .trade-search > button { display: flex; align-items: center; justify-content: center; width: 100px; align-self: stretch; flex-shrink: 0; border: 0; border-left: 1px solid #e1e3e5; border-radius: 0; background: #f0f0f0; color: #2a2d30; font-size: 14px; cursor: pointer; }
@@ -84,15 +73,18 @@ body:has(.trade-shell) { background: #f5f6f7; }
 .trade-shell .industry-view-links button:hover { color: #20272c; background: transparent; }
 .trade-shell .industry-view-links button.active { color: var(--accent); font-weight: 700; background: transparent; border-color: var(--accent); }
 .trade-shell .industry-view-links .active .nav-count { color: #a11c2c; background: #f9e7e9; }
-.trade-shell .industry-workspace-status { display: flex; align-items: center; flex-shrink: 0; gap: 12px; margin-left: auto; padding-left: 16px; border-left: 1px solid #d6dce3; color: #64747f; font-size: 11px; white-space: nowrap; }
-.trade-shell .industry-workspace-status .industry-space-label { display: inline; padding: 0; border: 0; font-size: 11px; color: #7b848c; }
+.trade-shell .industry-workspace-status { display: flex; align-items: center; flex-shrink: 0; gap: 12px; margin-left: auto; padding-left: 16px; border-left: 1px solid #d6dce3; color: #626d76; font-size: 11px; white-space: nowrap; }
+.trade-shell .industry-workspace-status .industry-space-label { display: inline; padding: 0; border: 0; font-size: 11px; color: #626d76; }
 .workspace-connection { display: inline-flex; align-items: center; gap: 6px; }
 .workspace-connection .dot { flex-shrink: 0; margin: 0; }
 .workspace-user { color: #35434e; font-weight: 600; }
 .workspace-shell.industry-shell.trade-shell .subbar { padding: 24px 32px 20px; }
 .workspace-shell.industry-shell.trade-shell h1 { font-size: 23px; font-weight: 700; letter-spacing: -.5px; }
-.trade-shell .page-description { color: #747e86; font-size: 12px; margin-top: 6px; }
+.trade-shell .page-description { color: #626d76; font-size: 12px; margin-top: 6px; }
 .workspace-shell.industry-shell.trade-shell .page { padding: 0 32px 30px; }
+.workspace-shell.industry-shell.trade-shell .financial-kpis { grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr)); }
+.workspace-shell.industry-shell.trade-shell .kpi { min-width: 0; }
+.workspace-shell.industry-shell.trade-shell .kpi-value { overflow-wrap: anywhere; }
 .workspace-shell.industry-shell.trade-shell h2 { font-size: 17px; font-weight: 700; }
 .workspace-shell.industry-shell.trade-shell .card { border-radius: 3px; border-color: #dfe3e6; box-shadow: none; }
 .workspace-shell.industry-shell.trade-shell .card-head { min-height: 54px; padding: 15px 18px; }
@@ -103,18 +95,20 @@ body:has(.trade-shell) { background: #f5f6f7; }
 .workspace-shell.industry-shell.trade-shell .btn-primary { color: white; background: var(--accent); border-color: var(--accent); }
 .workspace-shell.industry-shell.trade-shell .btn-primary:hover:not(:disabled) { background: var(--accent-hover); border-color: var(--accent-hover); }
 .workspace-shell.industry-shell.trade-shell .btn-link { color: #176780; }
+.trade-shell .badge-accent { color: var(--accent-hover); }
+.company-footer.note { color: #626d76; }
 .workspace-shell.industry-shell.trade-shell input:not([type="checkbox"]):not([type="radio"]), .workspace-shell.industry-shell.trade-shell select { border-color: #cfd6da; border-radius: 2px; min-height: 35px; font-size: 12px; }
 .workspace-shell.industry-shell.trade-shell .badge { border-radius: 2px; font-size: 10px; }
 .workspace-shell.industry-shell.trade-shell .filterbar { border-radius: 3px; background: #f6f7f8; border-color: #e1e5e8; }
 .trade-shell .industry-workspace-footer { margin: 0 32px; padding: 20px 0; font-size: 11px; }
 .trade-shell .industry-side-panel .industry-panel-close { border-radius: 2px; }
 .trade-discovery { min-width: 0; margin-bottom: 24px; }
-.store-catalog-sidebar { position: sticky; top: 20px; display: grid; gap: 18px; min-width: 0; }
+.store-catalog-sidebar { position: sticky; top: calc(var(--workspace-toolbar-height, 116px) + 20px); display: grid; gap: 18px; min-width: 0; }
 .store-brand-panel { border: 1px solid #e4e5e7; border-radius: 3px; background: white; text-align: center; overflow: hidden; }
 .store-brand-wordmark { margin: 20px 16px 12px; padding: 9px 5px; background: #df2118; color: white; font-size: clamp(24px, 2.3vw, 43px); line-height: 1; font-weight: 900; letter-spacing: -1.5px; }
-.store-brand-panel p { padding-bottom: 15px; margin: 0; color: #788087; font-size: 12px; }
+.store-brand-panel p { padding-bottom: 15px; margin: 0; color: #626d76; font-size: 12px; }
 .trade-category-heading { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; margin-bottom: 14px; }
-.trade-category-heading > span { font-size: 12px; color: #81878d; }
+.trade-category-heading > span { font-size: 12px; color: #626d76; }
 .trade-category-grid { --category-gap: 12px; --category-active-columns: var(--category-columns); display: flex; flex-wrap: wrap; justify-content: center; gap: var(--category-gap); border: 0; }
 .trade-category-grid > button { position: relative; display: flex; flex-direction: column; align-items: center; gap: 8px; flex: 0 0 calc((100% - (var(--category-active-columns) - 1) * var(--category-gap)) / var(--category-active-columns)); min-width: 0; min-height: 160px; padding: 12px; border: 1px solid #dedfe2; border-radius: 3px; color: #272e32; background: white; cursor: pointer; text-align: center; transition: border-color .18s, box-shadow .18s, color .18s; }
 .trade-category-grid > button:hover { color: #cf2016; border-color: #df938d; box-shadow: 0 3px 12px #35201c0c; }
@@ -124,7 +118,7 @@ body:has(.trade-shell) { background: #f5f6f7; }
 .trade-category-grid .thumb-empty { display: grid; place-items: center; font-size: 28px; color: #a8b5bd; }
 .trade-category-copy { display: flex; flex: 1; flex-direction: column; align-items: center; gap: 4px; min-width: 0; width: 100%; }
 .trade-category-grid strong { display: flex; align-items: center; justify-content: center; min-height: 32px; font-size: 13px; line-height: 16px; font-weight: 500; }
-.trade-category-grid small { display: block; font-size: 11px; color: #81909a; }
+.trade-category-grid small { display: block; font-size: 11px; color: #626d76; }
 .trade-shell .admin-product-catalog, .trade-shell .sales-layout { scroll-margin-top: 18px; }
 .workspace-shell.industry-shell.trade-shell .industry-catalog-layout, .workspace-shell.industry-shell.trade-shell .sales-layout { grid-template-columns: 220px minmax(0, 1fr); gap: 20px; }
 .workspace-shell.industry-shell.trade-shell .filter-group { padding: 10px 12px; }
@@ -147,7 +141,7 @@ body:has(.trade-shell) { background: #f5f6f7; }
 .trade-shell .catalog-toolbar > select { max-width: 170px; }
 .trade-shell .catalog-view-switch { border-radius: 2px; padding: 2px; border-color: #d5dce0; }
 .trade-shell .catalog-view-switch button { width: 27px; height: 27px; border-radius: 0; font-size: 19px; }
-.trade-shell .catalog-results { margin: 16px 0; font-size: 12px; color: #78838b; }
+.trade-shell .catalog-results { margin: 16px 0; font-size: 12px; color: #626d76; }
 .workspace-shell.industry-shell.trade-shell .industry-product-grid, .workspace-shell.industry-shell.trade-shell .product-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
 .workspace-shell.industry-shell.trade-shell .industry-product-card, .workspace-shell.industry-shell.trade-shell .product-card { display: flex; flex-direction: column; border: 1px solid #e4e5e7; border-radius: 4px; background: white; overflow: hidden; transition: border-color .18s, box-shadow .18s; }
 .workspace-shell.industry-shell.trade-shell .industry-product-card:hover, .workspace-shell.industry-shell.trade-shell .product-card:hover { border-color: #e0aaa4; box-shadow: 0 4px 16px #39241e09; }
@@ -155,17 +149,19 @@ body:has(.trade-shell) { background: #f5f6f7; }
 .workspace-shell.industry-shell.trade-shell .industry-product-image .thumb, .workspace-shell.industry-shell.trade-shell .product-card-image .thumb { width: 100% !important; height: 148px !important; max-height: 148px; min-height: 0; object-fit: contain; mix-blend-mode: normal; }
 .workspace-shell.industry-shell.trade-shell .industry-product-image .thumb-empty, .workspace-shell.industry-shell.trade-shell .product-card-image .thumb-empty { min-height: 0; }
 .workspace-shell.industry-shell.trade-shell .industry-product-info, .workspace-shell.industry-shell.trade-shell .product-card-body { display: flex; flex: 1; flex-direction: column; gap: 6px; padding: 12px; }
-.trade-shell .catalog-category { font-size: 10px; color: #7b868f; margin: 0; }
+.trade-shell .catalog-category { font-size: 10px; color: #626d76; margin: 0; }
 .workspace-shell.industry-shell.trade-shell .catalog-product-heading { flex-direction: column; align-items: flex-start; gap: 6px; }
 .workspace-shell.industry-shell.trade-shell .catalog-product-heading h3, .workspace-shell.industry-shell.trade-shell .product-card h3 { flex: none; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; width: 100%; height: 40px; min-height: 40px; font-size: 14px; font-weight: 500; line-height: 20px; }
 .workspace-shell.industry-shell.trade-shell .catalog-product-heading > strong, .workspace-shell.industry-shell.trade-shell .product-card-price { font-size: 18px; font-weight: 700; color: #df2118; margin: 0; }
 .trade-shell .catalog-product-meta, .workspace-shell.industry-shell.trade-shell .product-card-code { font-size: 10px; margin: 0; }
 .trade-shell .catalog-admin-prices { font-size: 10px; gap: 3px; margin: 4px 0; }
-.trade-shell .catalog-product-actions { gap: 8px; padding-top: 4px; margin-top: auto; }
+.trade-shell .catalog-product-actions { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 6px; padding-top: 4px; margin-top: auto; }
+.workspace-shell.industry-shell.trade-shell .industry-product-card .catalog-product-actions > button { min-width: 0; min-height: 32px; margin: 0; font-size: 11px; line-height: 1.4; white-space: nowrap; }
+.trade-shell .catalog-product-actions .btn span { display: none; }
 .workspace-shell.industry-shell.trade-shell .product-card-status { min-height: 20px; margin: 0; }
 .workspace-shell.industry-shell.trade-shell .product-card-status .badge { padding: 2px 6px; line-height: 16px; }
 .trade-shell .product-card-body > .stock-quantity { margin-top: auto; }
-.workspace-shell.industry-shell.trade-shell .catalog-product-actions .btn { padding: 7px 11px; min-height: 30px; }
+.workspace-shell.industry-shell.trade-shell .industry-product-card .catalog-product-actions .btn { padding: 6px 7px; }
 .trade-shell .catalog-product-actions .btn-link { font-size: 11px; }
 .trade-shell .catalog-image-action { width: 29px; height: 29px; top: 10px; right: 10px; border-radius: 2px; }
 .trade-shell .catalog-stock-label, .workspace-shell.industry-shell.trade-shell .product-stock-label { top: auto; right: auto; border-radius: 3px; font-size: 10px; bottom: 10px; left: 10px; }
@@ -186,6 +182,7 @@ body:has(.trade-shell) { background: #f5f6f7; }
 .workspace-shell.industry-shell.trade-shell .operations-overview .card { border-radius: 3px; }
 .workspace-shell.industry-shell.trade-shell .overview-filter-panel, .workspace-shell.industry-shell.trade-shell .overview-filter-panel .btn, .workspace-shell.industry-shell.trade-shell .overview-process { border-radius: 2px; }
 .workspace-shell.industry-shell.trade-shell .checkout-panel { border-radius: 3px; }
+.workspace-shell.industry-shell.trade-shell .checkout-summary { top: calc(var(--workspace-toolbar-height, 116px) + 20px); }
 .workspace-shell.industry-shell.trade-shell .checkout-heading h2 { font-weight: 700; font-size: 24px; }
 .workspace-shell.industry-shell.trade-shell .cart-quantity { border-radius: 2px; }
 .workspace-shell.industry-shell.trade-shell .invoice-paper .invoice-table th { color: white; background: #194f72; }
@@ -264,10 +261,7 @@ body:has(.trade-shell) { background: #f5f6f7; }
   .workspace-shell.industry-shell.trade-shell .stock-quantity-controls .btn { width: auto; flex-basis: 100%; font-size: 10px; min-height: 31px; }
   .workspace-shell.industry-shell.trade-shell .product-card .stock-quantity-controls { flex-wrap: nowrap; gap: 5px; }
   .workspace-shell.industry-shell.trade-shell .product-card .stock-quantity-controls input { width: 38px; min-height: 32px; height: 32px; }
-  .workspace-shell.industry-shell.trade-shell .product-card .stock-quantity-controls .btn { flex: 1 1 0; min-height: 32px; padding: 7px 4px; font-size: 10px; white-space: nowrap; }
-  .workspace-shell.industry-shell.trade-shell .catalog-product-actions .btn { font-size: 11px; padding: 6px 9px; }
-  .trade-shell .catalog-product-actions .btn-link { font-size: 10px; }
-  .trade-shell .catalog-product-actions { gap: 8px; }
+  .workspace-shell.industry-shell.trade-shell .product-card .stock-quantity-controls .btn { flex: 1 1 0; min-height: 32px; padding: 7px 4px; font-size: 10px; white-space: normal; overflow-wrap: anywhere; }
   .trade-shell .trade-results-heading { flex-basis: 100%; }
   .trade-shell .catalog-toolbar > select { max-width: none; flex: 1; }
   .trade-shell .catalog-toolbar > .btn-primary { flex-basis: 100%; }
@@ -280,7 +274,6 @@ body:has(.trade-shell) { background: #f5f6f7; }
 @media (prefers-reduced-motion: reduce) { .functions-dropdown, .functions-chevron { transition: none; } }
 @media print {
   .store-poster-layout { display: block; }
-  .store-side-poster { display: none; }
   .workspace-shell.industry-shell.trade-shell { width: 100%; margin: 0; border: 0; }
   .workspace-shell.industry-shell.trade-shell .appbar.industry-header, .trade-searchbar, .trade-discovery, .store-catalog-sidebar { display: none; }
 }

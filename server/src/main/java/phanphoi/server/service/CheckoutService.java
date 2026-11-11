@@ -16,6 +16,7 @@ import java.util.TreeMap;
 
 /** Server-authoritative quotes and atomic, idempotent manual payment confirmation. */
 public final class CheckoutService {
+    private static final long MAX_TOTAL = 9_000_000_000_000_000L;
     private final Db db;
     private final Events events;
 
@@ -63,6 +64,16 @@ public final class CheckoutService {
         return quantities;
     }
 
+    record Totals(long subtotal, int vatRate, long vatAmount, long total) { }
+
+    static Totals totals(long subtotal) {
+        if (subtotal < 0 || subtotal > MAX_TOTAL) throw bad("Tổng tiền vượt giới hạn");
+        // Round 10% VAT once on the basket, half up to a whole VND, without floating point.
+        long vat = (subtotal + 5) / 10;
+        if (vat > MAX_TOTAL - subtotal) throw bad("Tổng tiền gồm VAT vượt giới hạn");
+        return new Totals(subtotal, 10, vat, subtotal + vat);
+    }
+
     private JsonObject create(String branch, JsonObject body) throws SQLException {
         String id = id(body);
         Map<String, Integer> quantities = quantities(body);
@@ -99,7 +110,7 @@ public final class CheckoutService {
                 long price = line.get("giaBanLe").getAsLong();
                 if (price < 0 || price > 1_000_000_000_000L) throw bad("Giá bán không hợp lệ");
                 long subtotal = price * entry.getValue();
-                if (subtotal > 9_000_000_000_000_000L - total) throw bad("Tổng tiền vượt giới hạn");
+                if (subtotal > MAX_TOTAL - total) throw bad("Tổng tiền vượt giới hạn");
                 line.addProperty("thanhTien", subtotal);
                 total += subtotal;
                 count += entry.getValue();
@@ -113,7 +124,11 @@ public final class CheckoutService {
             order.addProperty("customer", customer);
             order.addProperty("status", "PENDING");
             order.addProperty("createdAt", Instant.now().toString());
-            order.addProperty("total", total);
+            Totals amounts = totals(total);
+            order.addProperty("subtotal", amounts.subtotal());
+            order.addProperty("vatRate", amounts.vatRate());
+            order.addProperty("vatAmount", amounts.vatAmount());
+            order.addProperty("total", amounts.total());
             order.addProperty("quantity", count);
             order.add("items", lines);
             Db.update(c, "INSERT INTO hoa_don_ban (id,ma_cn,trang_thai,noi_dung) VALUES (?,?,'PENDING',?::jsonb)",

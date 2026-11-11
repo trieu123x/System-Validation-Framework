@@ -86,7 +86,7 @@ export function Products({ products, version, push, onBackChange }: {
           onImport={(p) => { setImp({ ...imp, maSp: p.maSp }); setPanel("import"); }} onRemove={remove} />
         <Card title="Phiếu nhập kho gần đây">
           {imports.length === 0 ? <Empty>Chưa có phiếu nhập.</Empty> : (
-            <div className="table-wrap scroll" style={{ maxHeight: 300 }}>
+            <div className="table-wrap scroll" tabIndex={0} style={{ maxHeight: 300 }}>
               <table>
                 <thead>
                   <tr>

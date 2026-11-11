@@ -1,0 +1,392 @@
+﻿[
+    {
+        "method":  "GET",
+        "url":  "http://host.docker.internal:4319/api/state",
+        "status":  200,
+        "resourceType":  "Fetch"
+    },
+    {
+        "method":  "POST",
+        "url":  "http://host.docker.internal:4319/api/browser/heartbeat",
+        "status":  200,
+        "resourceType":  "Fetch"
+    },
+    {
+        "method":  "GET",
+        "url":  "http://host.docker.internal:4319/api/events",
+        "status":  200,
+        "resourceType":  "EventSource"
+    },
+    {
+        "method":  "POST",
+        "url":  "http://host.docker.internal:4319/api/inventory/refresh",
+        "status":  200,
+        "resourceType":  "Fetch"
+    },
+    {
+        "method":  "POST",
+        "url":  "http://host.docker.internal:4319/api/browser/heartbeat",
+        "status":  200,
+        "resourceType":  "Fetch"
+    },
+    {
+        "method":  "POST",
+        "url":  "http://host.docker.internal:4319/api/browser/heartbeat",
+        "status":  200,
+        "resourceType":  "Fetch"
+    },
+    {
+        "method":  "POST",
+        "url":  "http://host.docker.internal:4319/api/browser/heartbeat",
+        "status":  200,
+        "resourceType":  "Fetch"
+    },
+    {
+        "method":  "POST",
+        "url":  "http://host.docker.internal:4319/api/browser/heartbeat",
+        "status":  200,
+        "resourceType":  "Fetch"
+    },
+    {
+        "method":  "POST",
+        "url":  "http://host.docker.internal:4319/api/browser/heartbeat",
+        "status":  200,
+        "resourceType":  "Fetch"
+    },
+    {
+        "method":  "POST",
+        "url":  "http://host.docker.internal:4319/api/browser/heartbeat",
+        "status":  200,
+        "resourceType":  "Fetch"
+    },
+    {
+        "method":  "GET",
+        "url":  "http://host.docker.internal:4319/api/auth/me",
+        "status":  200,
+        "resourceType":  "Fetch"
+    },
+    {
+        "method":  "GET",
+        "url":  "http://host.docker.internal:4319/api/branches",
+        "status":  200,
+        "resourceType":  "Fetch"
+    },
+    {
+        "method":  "GET",
+        "url":  "http://host.docker.internal:4319/api/alerts",
+        "status":  200,
+        "resourceType":  "Fetch"
+    },
+    {
+        "method":  "GET",
+        "url":  "http://host.docker.internal:4319/api/requests",
+        "status":  200,
+        "resourceType":  "Fetch"
+    },
+    {
+        "method":  "GET",
+        "url":  "http://host.docker.internal:4319/api/products",
+        "status":  200,
+        "resourceType":  "Fetch"
+    },
+    {
+        "method":  "GET",
+        "url":  "http://host.docker.internal:4319/api/stats",
+        "status":  200,
+        "resourceType":  "Fetch"
+    },
+    {
+        "method":  "GET",
+        "url":  "http://host.docker.internal:4319/api/events",
+        "status":  200,
+        "resourceType":  "EventSource"
+    },
+    {
+        "method":  "GET",
+        "url":  "http://host.docker.internal:4319/api/stats",
+        "status":  200,
+        "resourceType":  "Fetch"
+    },
+    {
+        "method":  "GET",
+        "url":  "http://host.docker.internal:4319/api/stats",
+        "status":  200,
+        "resourceType":  "Fetch"
+    },
+    {
+        "method":  "GET",
+        "url":  "http://host.docker.internal:4319/api/stats",
+        "status":  200,
+        "resourceType":  "Fetch"
+    },
+    {
+        "method":  "GET",
+        "url":  "http://host.docker.internal:4319/api/stats",
+        "status":  200,
+        "resourceType":  "Fetch"
+    },
+    {
+        "method":  "GET",
+        "url":  "http://host.docker.internal:4319/api/stats",
+        "status":  200,
+        "resourceType":  "Fetch"
+    },
+    {
+        "method":  "GET",
+        "url":  "http://host.docker.internal:4319/api/auth/me",
+        "status":  200,
+        "resourceType":  "Fetch"
+    },
+    {
+        "method":  "GET",
+        "url":  "http://host.docker.internal:4319/api/stats",
+        "status":  200,
+        "resourceType":  "Fetch"
+    },
+    {
+        "method":  "GET",
+        "url":  "http://host.docker.internal:4319/api/state",
+        "status":  200,
+        "resourceType":  "Fetch"
+    },
+    {
+        "method":  "POST",
+        "url":  "http://host.docker.internal:4319/api/browser/heartbeat",
+        "status":  200,
+        "resourceType":  "Fetch"
+    },
+    {
+        "method":  "GET",
+        "url":  "http://host.docker.internal:4319/api/events",
+        "status":  200,
+        "resourceType":  "EventSource"
+    },
+    {
+        "method":  "POST",
+        "url":  "http://host.docker.internal:4319/api/inventory/refresh",
+        "status":  200,
+        "resourceType":  "Fetch"
+    },
+    {
+        "method":  "POST",
+        "url":  "http://host.docker.internal:4319/api/browser/heartbeat",
+        "status":  200,
+        "resourceType":  "Fetch"
+    },
+    {
+        "method":  "POST",
+        "url":  "http://host.docker.internal:4319/api/browser/heartbeat",
+        "status":  200,
+        "resourceType":  "Fetch"
+    },
+    {
+        "method":  "POST",
+        "url":  "http://host.docker.internal:4319/api/browser/heartbeat",
+        "status":  200,
+        "resourceType":  "Fetch"
+    },
+    {
+        "method":  "GET",
+        "url":  "http://host.docker.internal:4319/api/state",
+        "status":  200,
+        "resourceType":  "Fetch"
+    },
+    {
+        "method":  "POST",
+        "url":  "http://host.docker.internal:4319/api/browser/heartbeat",
+        "status":  200,
+        "resourceType":  "Fetch"
+    },
+    {
+        "method":  "GET",
+        "url":  "http://host.docker.internal:4319/api/events",
+        "status":  200,
+        "resourceType":  "EventSource"
+    },
+    {
+        "method":  "POST",
+        "url":  "http://host.docker.internal:4319/api/inventory/refresh",
+        "status":  200,
+        "resourceType":  "Fetch"
+    },
+    {
+        "method":  "POST",
+        "url":  "http://host.docker.internal:4319/api/browser/heartbeat",
+        "status":  200,
+        "resourceType":  "Fetch"
+    },
+    {
+        "method":  "POST",
+        "url":  "http://host.docker.internal:4319/api/browser/heartbeat",
+        "status":  200,
+        "resourceType":  "Fetch"
+    },
+    {
+        "method":  "POST",
+        "url":  "http://host.docker.internal:4319/api/browser/heartbeat",
+        "status":  200,
+        "resourceType":  "Fetch"
+    },
+    {
+        "method":  "POST",
+        "url":  "http://host.docker.internal:4319/api/browser/heartbeat",
+        "status":  200,
+        "resourceType":  "Fetch"
+    },
+    {
+        "method":  "POST",
+        "url":  "http://host.docker.internal:4319/api/browser/heartbeat",
+        "status":  200,
+        "resourceType":  "Fetch"
+    },
+    {
+        "method":  "POST",
+        "url":  "http://host.docker.internal:4319/api/browser/heartbeat",
+        "status":  200,
+        "resourceType":  "Fetch"
+    },
+    {
+        "method":  "POST",
+        "url":  "http://host.docker.internal:4319/api/browser/heartbeat",
+        "status":  200,
+        "resourceType":  "Fetch"
+    },
+    {
+        "method":  "POST",
+        "url":  "http://host.docker.internal:4319/api/browser/heartbeat",
+        "status":  200,
+        "resourceType":  "Fetch"
+    },
+    {
+        "method":  "POST",
+        "url":  "http://host.docker.internal:4319/api/browser/heartbeat",
+        "status":  200,
+        "resourceType":  "Fetch"
+    },
+    {
+        "method":  "GET",
+        "url":  "http://host.docker.internal:4319/api/state",
+        "status":  200,
+        "resourceType":  "Fetch"
+    },
+    {
+        "method":  "POST",
+        "url":  "http://host.docker.internal:4319/api/browser/heartbeat",
+        "status":  200,
+        "resourceType":  "Fetch"
+    },
+    {
+        "method":  "GET",
+        "url":  "http://host.docker.internal:4319/api/events",
+        "status":  200,
+        "resourceType":  "EventSource"
+    },
+    {
+        "method":  "POST",
+        "url":  "http://host.docker.internal:4319/api/inventory/refresh",
+        "status":  200,
+        "resourceType":  "Fetch"
+    },
+    {
+        "method":  "GET",
+        "url":  "http://host.docker.internal:4319/api/auth/me",
+        "status":  200,
+        "resourceType":  "Fetch"
+    },
+    {
+        "method":  "GET",
+        "url":  "http://host.docker.internal:4319/api/branches",
+        "status":  200,
+        "resourceType":  "Fetch"
+    },
+    {
+        "method":  "GET",
+        "url":  "http://host.docker.internal:4319/api/alerts",
+        "status":  200,
+        "resourceType":  "Fetch"
+    },
+    {
+        "method":  "GET",
+        "url":  "http://host.docker.internal:4319/api/requests",
+        "status":  200,
+        "resourceType":  "Fetch"
+    },
+    {
+        "method":  "GET",
+        "url":  "http://host.docker.internal:4319/api/products",
+        "status":  200,
+        "resourceType":  "Fetch"
+    },
+    {
+        "method":  "GET",
+        "url":  "http://host.docker.internal:4319/api/stats",
+        "status":  200,
+        "resourceType":  "Fetch"
+    },
+    {
+        "method":  "GET",
+        "url":  "http://host.docker.internal:4319/api/events",
+        "status":  200,
+        "resourceType":  "EventSource"
+    },
+    {
+        "method":  "GET",
+        "url":  "http://host.docker.internal:4319/api/imports",
+        "status":  200,
+        "resourceType":  "Fetch"
+    },
+    {
+        "method":  "GET",
+        "url":  "http://host.docker.internal:4319/api/categories",
+        "status":  200,
+        "resourceType":  "Fetch"
+    },
+    {
+        "method":  "GET",
+        "url":  "http://host.docker.internal:4319/api/suppliers",
+        "status":  200,
+        "resourceType":  "Fetch"
+    },
+    {
+        "method":  "GET",
+        "url":  "http://host.docker.internal:4319/api/stats",
+        "status":  200,
+        "resourceType":  "Fetch"
+    },
+    {
+        "method":  "GET",
+        "url":  "http://host.docker.internal:4319/api/stats",
+        "status":  200,
+        "resourceType":  "Fetch"
+    },
+    {
+        "method":  "GET",
+        "url":  "http://host.docker.internal:4319/api/stats",
+        "status":  200,
+        "resourceType":  "Fetch"
+    },
+    {
+        "method":  "GET",
+        "url":  "http://host.docker.internal:4319/api/stats",
+        "status":  200,
+        "resourceType":  "Fetch"
+    },
+    {
+        "method":  "GET",
+        "url":  "http://host.docker.internal:4319/api/stats",
+        "status":  200,
+        "resourceType":  "Fetch"
+    },
+    {
+        "method":  "GET",
+        "url":  "http://host.docker.internal:4319/api/auth/me",
+        "status":  200,
+        "resourceType":  "Fetch"
+    },
+    {
+        "method":  "GET",
+        "url":  "http://host.docker.internal:4319/api/stats",
+        "status":  200,
+        "resourceType":  "Fetch"
+    }
+]

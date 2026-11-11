@@ -1,0 +1,210 @@
+{
+  "date": "2026-11-11",
+  "release": "phanphoi:block60-20261111-202643",
+  "rollbackTag": "phanphoi:before-block60-20261111-202643",
+  "deployed": true,
+  "uiBuildPassed": true,
+  "javaTests": {
+    "selected": 46,
+    "passed": 46,
+    "failed": 0,
+    "coreAssertions": 237,
+    "ranOnProductionJava17Image": true,
+    "clockControlled": true,
+    "noLiveBlockingAttempts": true
+  },
+  "timeoutsSeconds": {
+    "adminIdleSession": 60,
+    "adminWrongPassword": 60,
+    "branchWrongPassword": 60,
+    "automaticIpBan": 60,
+    "automaticShortIpBan": 60,
+    "scrapingBlock": 60
+  },
+  "manualBanUnchanged": true,
+  "expiredScrapingEvidenceReset": true,
+  "restoredLongBlocksCapped": true,
+  "uiLocal": [
+    {
+      "label": "wide",
+      "brokenImages": 0,
+      "cardOverflow": 0,
+      "documentWidth": 1920,
+      "header": {
+        "bottom": 100,
+        "top": 0
+      },
+      "posterCount": 0,
+      "posterImageRequests": 0,
+      "title": "Bán hàng & tồn kho",
+      "url": "http://host.docker.internal:4319/branch/",
+      "viewport": {
+        "height": 1080,
+        "width": 1920
+      },
+      "workspace": {
+        "left": 0,
+        "right": 1920,
+        "width": 1920
+      }
+    },
+    {
+      "label": "desktop",
+      "brokenImages": 0,
+      "cardOverflow": 0,
+      "documentWidth": 1440,
+      "header": {
+        "bottom": 100,
+        "top": 0
+      },
+      "posterCount": 0,
+      "posterImageRequests": 0,
+      "title": "Bán hàng & tồn kho",
+      "url": "http://host.docker.internal:4319/branch/",
+      "viewport": {
+        "height": 1000,
+        "width": 1440
+      },
+      "workspace": {
+        "left": 0,
+        "right": 1440,
+        "width": 1440
+      }
+    },
+    {
+      "label": "tablet",
+      "brokenImages": 0,
+      "cardOverflow": 0,
+      "documentWidth": 768,
+      "header": {
+        "bottom": 129,
+        "top": 0
+      },
+      "posterCount": 0,
+      "posterImageRequests": 0,
+      "title": "Bán hàng & tồn kho",
+      "url": "http://host.docker.internal:4319/branch/",
+      "viewport": {
+        "height": 1024,
+        "width": 768
+      },
+      "workspace": {
+        "left": 0,
+        "right": 768,
+        "width": 768
+      }
+    },
+    {
+      "label": "mobile",
+      "brokenImages": 0,
+      "cardOverflow": 0,
+      "documentWidth": 390,
+      "header": {
+        "bottom": 116,
+        "top": 0
+      },
+      "posterCount": 0,
+      "posterImageRequests": 0,
+      "title": "Bán hàng & tồn kho",
+      "url": "http://host.docker.internal:4319/branch/",
+      "viewport": {
+        "height": 844,
+        "width": 390
+      },
+      "workspace": {
+        "left": 0,
+        "right": 390,
+        "width": 390
+      }
+    }
+  ],
+  "uiPublic": [
+    {
+      "label": "wide",
+      "brokenImages": 0,
+      "cardOverflow": 0,
+      "documentWidth": 1920,
+      "header": {
+        "bottom": 100,
+        "top": 0
+      },
+      "posterCount": 0,
+      "posterImageRequests": 0,
+      "title": "Bán hàng & tồn kho",
+      "url": "https://desktop-flfkcet-1.tailab761f.ts.net:8443/branch/",
+      "viewport": {
+        "height": 1080,
+        "width": 1920
+      },
+      "workspace": {
+        "left": 0,
+        "right": 1920,
+        "width": 1920
+      }
+    },
+    {
+      "label": "desktop",
+      "brokenImages": 0,
+      "cardOverflow": 0,
+      "documentWidth": 1440,
+      "header": {
+        "bottom": 100,
+        "top": 0
+      },
+      "posterCount": 0,
+      "posterImageRequests": 0,
+      "title": "Bán hàng & tồn kho",
+      "url": "https://desktop-flfkcet-1.tailab761f.ts.net:8443/branch/",
+      "viewport": {
+        "height": 1000,
+        "width": 1440
+      },
+      "workspace": {
+        "left": 0,
+        "right": 1440,
+        "width": 1440
+      }
+    },
+    {
+      "label": "mobile",
+      "brokenImages": 0,
+      "cardOverflow": 0,
+      "documentWidth": 390,
+      "header": {
+        "bottom": 116,
+        "top": 0
+      },
+      "posterCount": 0,
+      "posterImageRequests": 0,
+      "title": "Bán hàng & tồn kho",
+      "url": "https://desktop-flfkcet-1.tailab761f.ts.net:8443/branch/",
+      "viewport": {
+        "height": 844,
+        "width": 390
+      },
+      "workspace": {
+        "left": 0,
+        "right": 390,
+        "width": 390
+      }
+    }
+  ],
+  "publicHtml": {
+    "admin": {
+      "authStatus": 200,
+      "sha256": "d0c8080704a561d69edf44abdbd57051597edf6d7eac93ceb06c33348dfb4d21",
+      "status": 200,
+      "title": "Chào mừng trở lại!"
+    },
+    "client": {
+      "sha256": "7bad9031815b038f6c8f130d648376d80f20edf62a8af4c753fb13abb7100e52",
+      "status": 200,
+      "url": "https://desktop-flfkcet-1.tailab761f.ts.net:8443/branch/"
+    }
+  },
+  "runtimeState": "/phanphoi-server-1 image=sha256:86e4f33fdd270db60290acca7a8f02c6f24053ecb247441c8445271dcf7d58dd started=2026-11-11T13:28:12.841098491Z\n/phanphoi-client-1 image=sha256:86e4f33fdd270db60290acca7a8f02c6f24053ecb247441c8445271dcf7d58dd started=2026-11-11T13:28:16.56664181Z\n/phanphoi-db-1 image=sha256:b8faeff7712663c2773a190181e1246e37e364b887611c04658c28b44e2408fe started=2026-11-11T10:43:52.133542583Z\n",
+  "publicConsoleErrors": [],
+  "publicJavaScriptErrors": [],
+  "testAccountLoggedOut": true,
+  "unexpectedBusinessWrites": 0
+}

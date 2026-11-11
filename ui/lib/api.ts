@@ -71,7 +71,7 @@ export const STATE_LABEL: Record<string, string> = {
   CHO: "Chờ xử lý",
   DA_DE_XUAT: "Chờ xác nhận",
   THIEU_HANG: "Không đủ hàng",
-  DA_GIAO: "Đã gửi",
+  DA_GIAO: "Đã xuất kho",
   HOAN_TAT: "Đã nhận",
   TU_CHOI: "Từ chối",
   HUY: "Đã huỷ",

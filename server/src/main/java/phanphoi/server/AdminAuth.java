@@ -20,7 +20,7 @@ import java.util.function.LongSupplier;
 public final class AdminAuth {
 
     static final String COOKIE = "pp_admin";
-    private static final int DEFAULT_IDLE_SECONDS = 300;
+    private static final int DEFAULT_IDLE_SECONDS = 60;
     private static final String DEFAULT_SALT = "pp-admin-2026";
     private static final String DEFAULT_PASSWORD = "admin123";
 
@@ -57,6 +57,10 @@ public final class AdminAuth {
 
     public String user() {
         return user;
+    }
+
+    long idleSeconds() {
+        return idleMs / 1000L;
     }
 
     public boolean usesDefaultPassword() {

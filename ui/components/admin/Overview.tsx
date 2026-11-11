@@ -116,7 +116,7 @@ export function Overview({ branches, products, alerts: allAlerts, requests, stat
         <div className="overview-network-summary"><span><strong>{online}<span> / {visible.length}</span></strong><small>chi nhánh đã kết nối</small></span><span className="network-percentage">{connectedPercent}%</span></div>
         <div className="overview-network-meter" role="meter" aria-label="Tỷ lệ chi nhánh đã kết nối" aria-valuenow={connectedPercent} aria-valuemin={0} aria-valuemax={100}><span style={{ width: `${connectedPercent}%` }} /></div>
         <div className="overview-network-legend"><span><Dot on />Đã kết nối</span><span><Dot on={false} />{visible.length - online} mất kết nối</span></div>
-        {visible.length === 0 ? <Empty>Không có chi nhánh nào khớp bộ lọc.</Empty> : <ul className="overview-branch-list">{visible.map((b) => <li key={b.maCn}><span className="branch-avatar">{b.maCn.slice(-2)}</span><span className="branch-information"><b>{b.ten}</b><small>{b.maCn}{b.ycMo ? ` · ${b.ycMo} yêu cầu mở` : ""}{b.tinCho ? ` · ${b.tinCho} tin chờ` : ""}</small></span><span className={`branch-connection${b.online ? " is-online" : ""}`} title={b.online ? "Đã kết nối" : "Mất kết nối"}><Dot on={b.online} /><span>{b.online ? "Online" : "Offline"}</span></span></li>)}</ul>}
+        {visible.length === 0 ? <Empty>Không có chi nhánh nào khớp bộ lọc.</Empty> : <ul className="overview-branch-list" tabIndex={0} aria-label="Danh sách kết nối chi nhánh">{visible.map((b) => <li key={b.maCn}><span className="branch-avatar">{b.maCn.slice(-2)}</span><span className="branch-information"><b>{b.ten}</b><small>{b.maCn}{b.ycMo ? ` · ${b.ycMo} yêu cầu mở` : ""}{b.tinCho ? ` · ${b.tinCho} tin chờ` : ""}</small></span><span className={`branch-connection${b.online ? " is-online" : ""}`} title={b.online ? "Đã kết nối" : "Mất kết nối"}><Dot on={b.online} /><span>{b.online ? "Online" : "Offline"}</span></span></li>)}</ul>}
       </Card>
     </aside><div className="admin-overview-main">
     <div ref={alertSection} className="overview-alert-section">
@@ -137,7 +137,7 @@ export function Overview({ branches, products, alerts: allAlerts, requests, stat
                 <button type="button" className="btn btn-primary admin-request-action" aria-label={`Xử lý yêu cầu YC${a.maYc}`} onClick={() => setSelectedId(a.maYc)}>Xử lý yêu cầu <OverviewIcon name="arrow" /></button>
               </div>
             </article>;
-          })}</div> : <div className="table-wrap"><table className="overview-alert-table">
+          })}</div> : <div className="table-wrap" tabIndex={0}><table className="overview-alert-table">
             <thead><tr><th scope="col">Yêu cầu</th><th scope="col">Chi nhánh</th><th scope="col">Mặt hàng</th><th scope="col" className="num">Tồn / ngưỡng</th><th scope="col" className="num">Còn thiếu</th><th scope="col" className="right">Thao tác</th></tr></thead>
             <tbody>{pageAlerts.map((a) => <tr key={a.maYc} className={freshIds.has(a.maYc) ? "row-new" : ""}>
               <td><button type="button" className="overview-request-link" onClick={() => setSelectedId(a.maYc)}>YC{a.maYc}</button><small className="overview-cell-secondary">{a.taoLuc.slice(11, 16)}</small></td>
@@ -156,7 +156,7 @@ export function Overview({ branches, products, alerts: allAlerts, requests, stat
     <div className="overview-lower-grid">
       <div className="col">
         <Card title="Đơn hàng gần đây" actions={<button type="button" className="btn-link overview-text-action" onClick={() => go("history")}>Xem tất cả <OverviewIcon name="arrow" /></button>}>
-          {recent.length === 0 ? <Empty>{filtering ? "Không có đơn nào khớp bộ lọc." : "Chưa có đơn hàng nào."}</Empty> : <div className="table-wrap"><table className="overview-recent-table"><thead><tr><th scope="col">Yêu cầu / mặt hàng</th><th scope="col">Chi nhánh</th><th scope="col" className="num">Số lượng</th><th scope="col">Trạng thái</th><th scope="col" className="right">Cập nhật</th></tr></thead><tbody>{recent.map((r) => <RecentRow key={r.maYc} r={r} fresh={freshIds.has(r.maYc)} push={push} />)}</tbody></table></div>}
+          {recent.length === 0 ? <Empty>{filtering ? "Không có đơn nào khớp bộ lọc." : "Chưa có đơn hàng nào."}</Empty> : <div className="table-wrap" tabIndex={0}><table className="overview-recent-table"><thead><tr><th scope="col">Yêu cầu / mặt hàng</th><th scope="col">Chi nhánh</th><th scope="col" className="num">Số lượng</th><th scope="col">Trạng thái</th><th scope="col" className="right">Cập nhật</th></tr></thead><tbody>{recent.map((r) => <RecentRow key={r.maYc} r={r} fresh={freshIds.has(r.maYc)} push={push} />)}</tbody></table></div>}
         </Card>
         <Card title="Hoạt động gần đây" actions={<button type="button" className="btn-link overview-text-action" onClick={() => go("monitor")}>Giám sát <OverviewIcon name="arrow" /></button>}>
           {activity.length === 0 ? <Empty>Chưa có hoạt động kể từ khi mở trang.</Empty> : <div className="overview-activity-list">{activity.map((m, i) => <div key={m.thoiGian + i} className="overview-activity"><span className={`activity-marker${m.lenh === "ERROR" ? " activity-error" : ""}`} /><span><b>{m.maCn}</b> {ACTIVITY[m.lenh]}</span><time>{m.thoiGian.slice(11, 19)}</time></div>)}</div>}

@@ -56,7 +56,7 @@ export function RequestHistory({ branches, products, version }: {
       <section className="card">
         {error && <div className="card-body"><p className="banner banner-danger" style={{ margin: 0 }}>{error}</p></div>}
         {rows.length === 0 ? <Empty>Không có yêu cầu nào khớp bộ lọc.</Empty> : (
-          <div className="table-wrap scroll" style={{ maxHeight: 640 }}>
+          <div className="table-wrap scroll" tabIndex={0} style={{ maxHeight: 640 }}>
             <table>
               <thead>
                 <tr>
@@ -101,7 +101,7 @@ export function Transfers({ version }: { version: number }) {
   return (
     <Card title="Phiếu điều chuyển giữa chi nhánh">
       {rows.length === 0 ? <Empty>Chưa có lần điều chuyển nào.</Empty> : (
-        <div className="table-wrap">
+        <div className="table-wrap" tabIndex={0}>
           <table>
             <thead>
               <tr><th>Mã phiếu</th><th>Yêu cầu</th><th>Chi nhánh chuyển</th><th>Chi nhánh nhận</th><th>Mặt hàng</th><th className="num">SL</th><th>Trạng thái</th><th>Cập nhật</th></tr>
@@ -146,7 +146,7 @@ export function Reconcile({ version }: { version: number }) {
       <p className="note">
         Số nhận dựa trên kiểm đếm thực tế; đơn cũ chưa kiểm đếm dùng số đã giao. Đơn thừa/thiếu luôn được đánh dấu lệch để đối chiếu, kể cả khi chênh lệch giữa các đơn bù nhau.
       </p>
-      <div className="table-wrap">
+      <div className="table-wrap" tabIndex={0}>
         <table>
           <thead>
             <tr>

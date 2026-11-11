@@ -12,11 +12,10 @@ import { Warehouses } from "@/components/admin/Warehouses";
 import { Notices } from "@/components/admin/Notices";
 import { Security } from "@/components/admin/Security";
 import { Debts } from "@/components/admin/Debts";
-import { AdminThresholds } from "@/components/admin/Thresholds";
 import { useWorkspaceNavigation } from "@/lib/navigation";
 
-type Tab = "overview" | "products" | "stock" | "thresholds" | "debts" | "history" | "transfers" | "broadcast" | "monitor" | "reconcile";
-const ADMIN_VIEWS: readonly Tab[] = ["overview", "products", "stock", "thresholds", "debts", "history", "transfers", "broadcast", "monitor", "reconcile"];
+type Tab = "overview" | "products" | "stock" | "debts" | "history" | "transfers" | "broadcast" | "monitor" | "reconcile";
+const ADMIN_VIEWS: readonly Tab[] = ["overview", "products", "stock", "debts", "history", "transfers", "broadcast", "monitor", "reconcile"];
 
 /** Cổng đăng nhập công ty: chưa có phiên (hoặc phiên hết hạn) thì hiện trang đăng nhập. */
 export default function AdminPage() {
@@ -153,7 +152,6 @@ function AdminApp({ user, onLogout }: { user: string; onLogout: () => void }) {
   const shownAlerts = alerts.filter((a) => showSim || !isSim(a.maCn));
   const TITLES: Record<Tab, string> = {
     overview: "Tổng quan vận hành", products: "Hàng hóa & kho tổng", stock: "Quản lý kho chi nhánh", debts: "Công nợ",
-    thresholds: "Đặt ngưỡng",
     history: "Yêu cầu cấp hàng",
     transfers: "Điều chuyển hàng", broadcast: "Thông báo tới chi nhánh", monitor: "Giám sát hệ thống", reconcile: "Đối soát kho",
   };
@@ -166,7 +164,6 @@ function AdminApp({ user, onLogout }: { user: string; onLogout: () => void }) {
           overview: "Ưu tiên yêu cầu thiếu hàng, theo dõi giao nhận và kết nối chi nhánh.",
           products: "Danh mục thiết bị, giá bán và nguồn hàng tại kho tổng.",
           stock: "Nắm tình hình tồn kho và chủ động bổ sung hàng cho từng chi nhánh.",
-          thresholds: "Thiết lập mức tồn tối thiểu để chi nhánh tự động báo thiếu hàng.",
           debts: "Theo dõi phải thu từ chi nhánh và phải trả cho nhà cung cấp.",
           history: "Tra cứu tiến độ cấp hàng, giao nhận và các yêu cầu cần đối chiếu.",
           transfers: "Theo dõi điều chuyển thiết bị giữa các chi nhánh.",
@@ -178,11 +175,10 @@ function AdminApp({ user, onLogout }: { user: string; onLogout: () => void }) {
         back={tab !== "overview" ? contextBack ?? { label: "Quay lại", onClick: goBack } : undefined}
         nav={[
           { id: "overview", label: "Tổng quan", count: shownAlerts.length, tone: "danger", group: "Vận hành" },
-          { id: "history", label: "Yêu cầu cấp hàng", count: requests.filter((r) => r.chenhLech != null && r.chenhLech !== 0 && (showSim || !isSim(r.maCn))).length, tone: "danger", group: "Vận hành" },
-          { id: "transfers", label: "Điều chuyển", count: shortage, tone: "warn", group: "Vận hành" },
+          { id: "history", label: "Yêu cầu cấp hàng", count: requests.filter((r) => r.chenhLech != null && r.chenhLech !== 0 && (showSim || !isSim(r.maCn))).length, tone: "danger", group: "Vận hành", dropdownOnly: true },
+          { id: "transfers", label: "Điều chuyển", count: shortage, tone: "warn", group: "Vận hành", dropdownOnly: true },
           { id: "products", label: "Hàng hóa", group: "Hàng hóa & kho" },
           { id: "stock", label: "Kho chi nhánh", group: "Hàng hóa & kho" },
-          { id: "thresholds", label: "Đặt ngưỡng", group: "Hàng hóa & kho" },
           { id: "debts", label: "Công nợ", group: "Quản lý" },
           { id: "reconcile", label: "Đối soát", group: "Quản lý" },
           { id: "monitor", label: "Giám sát", count: highCount, tone: "danger", group: "Quản lý" },
@@ -198,7 +194,7 @@ function AdminApp({ user, onLogout }: { user: string; onLogout: () => void }) {
           </>
         }
         status={<button className="btn btn-sm workspace-logout" onClick={onLogout}>Đăng xuất</button>}
-        actions={(tab === "overview" || tab === "debts" || tab === "thresholds") && (
+        actions={(tab === "overview" || tab === "debts") && (
           <label className="row muted">
             <input type="checkbox" checked={showSim} onChange={(e) => setShowSim(e.target.checked)} /> Hiện chi nhánh kiểm thử
           </label>
@@ -221,7 +217,6 @@ function AdminApp({ user, onLogout }: { user: string; onLogout: () => void }) {
         )}
         {tab === "products" && <Products products={products} version={v.products} push={push} onBackChange={setContextBack} />}
         {tab === "stock" && <Warehouses products={products} version={v.stock + v.requests + v.debts} push={push} onBackChange={setContextBack} />}
-        {tab === "thresholds" && <AdminThresholds products={products} branches={realBranches} version={v.stock + v.requests} />}
         {tab === "debts" && <Debts version={v.debts + v.requests} showSim={showSim} push={push} onBackChange={setContextBack} />}
         {tab === "history" && <RequestHistory branches={realBranches} products={products} version={v.requests} />}
         {tab === "transfers" && <Transfers version={v.transfers} />}

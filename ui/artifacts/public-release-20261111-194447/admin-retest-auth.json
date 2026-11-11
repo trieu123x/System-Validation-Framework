@@ -1,0 +1,18 @@
+﻿{
+    "date":  "2026-11-11",
+    "target":  "https://desktop-flfkcet-1.tailab761f.ts.net/admin/",
+    "stage":  "Resolved after waiting for documented idle expiry; login succeeded, UI verified and session logged out.",
+    "attempts":  [
+                     {
+                         "method":  "POST",
+                         "url":  "https://desktop-flfkcet-1.tailab761f.ts.net/api/auth/login",
+                         "status":  409
+                     },
+                     {
+                         "method":  "POST",
+                         "url":  "https://desktop-flfkcet-1.tailab761f.ts.net/api/auth/login",
+                         "status":  409
+                     }
+                 ],
+    "backendModified":  false
+}

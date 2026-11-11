@@ -1,0 +1,9 @@
+(() => {
+ const visible=e=>e.getClientRects().length>0&&getComputedStyle(e).visibility!=="hidden";
+ const rect=e=>{const r=e.getBoundingClientRect();return {x:Math.round(r.x),y:Math.round(r.y),width:Math.round(r.width),height:Math.round(r.height),right:Math.round(r.right)}};
+ const inScroll=e=>{for(let p=e.parentElement;p&&p!==document.body;p=p.parentElement){const s=getComputedStyle(p);if(/auto|scroll/.test(s.overflowX)&&p.scrollWidth>p.clientWidth)return true;}return false};
+ const overflow=[...document.querySelectorAll("main *, .industry-navigation *, .login-screen *")].filter(e=>visible(e)&&!inScroll(e)&&e.getBoundingClientRect().right>innerWidth+2).slice(0,12).map(e=>({tag:e.tagName,cls:typeof e.className==="string"?e.className:"",text:e.innerText?.slice(0,65),...rect(e)}));
+ const headings=[...document.querySelectorAll("h1,h2,h3")].filter(visible).filter(e=>e.scrollHeight>e.clientHeight+2||e.scrollWidth>e.clientWidth+2).map(e=>({text:e.innerText,title:e.getAttribute("title"),...rect(e)}));
+ const cards=[...document.querySelectorAll(".industry-product-card,.product-card,.admin-request-card")].map(e=>({cls:e.className,...rect(e),overflows:e.scrollWidth>e.clientWidth,actions:[...e.querySelectorAll(".catalog-product-actions button")].map(b=>({...rect(b),text:b.innerText}))}));
+ return {url:location.href,viewport:{width:innerWidth,height:innerHeight},documentWidth:document.documentElement.scrollWidth,pageHeight:document.documentElement.scrollHeight,kpis:[...document.querySelectorAll(".kpi-value")].map(e=>({text:e.innerText,width:e.clientWidth,scrollWidth:e.scrollWidth})),title:document.querySelector("h1")?.innerText,overflow,clippedHeadings:headings,cards:cards.slice(0,6),brokenImages:[...document.images].filter(e=>visible(e)&&e.complete&&e.naturalWidth===0).map(e=>({src:e.currentSrc,alt:e.alt}))};
+})()

@@ -15,6 +15,10 @@ public final class ScrapingStore implements AutoCloseable {
     private final AtomicLong failures = new AtomicLong();
     public ScrapingStore(Db db, ScrapingGuard guard) {
         this.db = db;
+        guard.onBlockChange((subject, block) -> submit(() -> db.read(c -> block == null
+                ? Db.update(c, "DELETE FROM security_scraping_blocks WHERE subject = ?", subject)
+                : Db.update(c, "INSERT INTO security_scraping_blocks(subject, expires_at, reason) VALUES(?,?,?) ON CONFLICT(subject) DO UPDATE SET expires_at=EXCLUDED.expires_at, reason=EXCLUDED.reason",
+                    subject, block.expiresAt(), block.reason()))));
         try {
             // Migration is explicit: deployment must apply db/migrate_anti_scraping.sql before starting this version.
             var saved = db.read(c -> Db.list(c, "SELECT subject, expires_at, reason FROM security_scraping_blocks WHERE expires_at > ?",
@@ -26,10 +30,6 @@ public final class ScrapingStore implements AutoCloseable {
             worker.shutdown();
             throw new IllegalStateException("Apply db/migrate_anti_scraping.sql before starting the server", e);
         }
-        guard.onBlockChange((subject, block) -> submit(() -> db.read(c -> block == null
-                ? Db.update(c, "DELETE FROM security_scraping_blocks WHERE subject = ?", subject)
-                : Db.update(c, "INSERT INTO security_scraping_blocks(subject, expires_at, reason) VALUES(?,?,?) ON CONFLICT(subject) DO UPDATE SET expires_at=EXCLUDED.expires_at, reason=EXCLUDED.reason",
-                    subject, block.expiresAt(), block.reason()))));
     }
     public void email(String eventKey, String recipient, String status, int attempts) {
         submit(() -> db.read(c -> Db.update(c, """

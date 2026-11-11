@@ -40,8 +40,8 @@ public final class SecurityRules {
 
     public SecurityRules(Config cfg) {
         scraping = phanphoi.common.security.ScrapingPolicy.from(cfg);
-        banMinutes = cfg.getInt("security.ban.minutes", 10);
-        shortBanMinutes = cfg.getInt("security.short.ban.minutes", 5);
+        banMinutes = cfg.getInt("security.ban.minutes", 1);
+        shortBanMinutes = cfg.getInt("security.short.ban.minutes", 1);
         loginFailMax = cfg.getInt("security.login.fail.max", 5);
         loginFailWindowSec = cfg.getInt("security.login.fail.window.seconds", 60);
         loginBlockSeconds = cfg.getInt("security.login.block.seconds", 60);
@@ -59,7 +59,7 @@ public final class SecurityRules {
         preloginMaxPerMinute = cfg.getInt("security.prelogin.max.per.minute", 20);
         discoveryPerSecond = cfg.getInt("security.discovery.per.second", 20);
         adminLockFails = cfg.getInt("admin.lock.fails", 5);
-        adminLockMinutes = cfg.getInt("admin.lock.minutes", 5);
+        adminLockMinutes = cfg.getInt("admin.lock.minutes", 1);
         adminLockWindowSec = cfg.getInt("admin.lock.window.seconds", 300);
         allowedOrigins = parseList(cfg.get("security.allowed.origins", "http://localhost:3000,http://localhost:3001"));
     }

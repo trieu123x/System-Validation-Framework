@@ -23,7 +23,7 @@ export function Debts({ version, showSim, push, onBackChange }: { version: numbe
   const owing = sum ? sum.conNoCn : null;
   return (
     <>
-      <div className="kpis">
+      <div className="kpis financial-kpis">
         <Stat label="Tổng tiền nhập" value={fmtMoney(sum?.tongNhap)} hint={`đã trả NCC ${fmtMoney(sum?.daTraNcc)}`} />
         <Stat label="Tổng tiền xuất cho chi nhánh" value={fmtMoney(sum?.tongXuat)} hint={`đã thu ${fmtMoney(sum?.daThuCn)}`} />
         <Stat label="Chi nhánh còn nợ" value={fmtMoney(owing)} tone={owing ? "warn" : undefined}
@@ -69,7 +69,7 @@ function BranchDebts({ version, showSim, push, changed, onBackChange }: { versio
           </select>
         )}>
         {shown.length === 0 ? <Empty>Không có chi nhánh nào.</Empty> : (
-          <div className="table-wrap">
+          <div className="table-wrap" tabIndex={0}>
             <table>
               <thead>
                 <tr>
@@ -139,7 +139,7 @@ function BranchLedger({ maCn, version, push, changed }: { maCn: string; version:
       )}>
       {!t ? <Empty>Đang tải...</Empty> : (
         <>
-          <div className="kpis">
+          <div className="kpis financial-kpis">
             <Stat label="Tổng nhận" value={fmtMoney(t.tongNhan)} />
             <Stat label="Đã trả" value={fmtMoney(t.daTra)} />
             <Stat label="Còn nợ" value={fmtMoney(t.conNo)} tone={DEBT_TONE[t.trangThai]}
@@ -186,7 +186,7 @@ function SupplierDebts({ version, push, changed, onBackChange }: { version: numb
     <div className="grid grid-2">
       <Card title={<>Công nợ nhà cung cấp <span className="muted">· {rows.length} nhà cung cấp</span></>}>
         {rows.length === 0 ? <Empty>Chưa có nhà cung cấp.</Empty> : (
-          <div className="table-wrap">
+          <div className="table-wrap" tabIndex={0}>
             <table>
               <thead>
                 <tr><th>Nhà cung cấp</th><th className="num">Tổng nhập</th><th className="num">Đã trả</th><th className="num">Còn nợ</th></tr>
@@ -245,7 +245,7 @@ function SupplierLedger({ maNcc, version, push, changed }: { maNcc: string; vers
       )}>
       {!t ? <Empty>Đang tải...</Empty> : (
         <>
-          <div className="kpis">
+          <div className="kpis financial-kpis">
             <Stat label="Tổng nhập" value={fmtMoney(t.tongNhap)} />
             <Stat label="Đã trả" value={fmtMoney(t.daTra)} />
             <Stat label="Còn nợ" value={fmtMoney(t.conNo)} tone={t.conNo > 0 ? "danger" : "success"} />
@@ -274,7 +274,7 @@ function SupplierLedger({ maNcc, version, push, changed }: { maNcc: string; vers
 export function EntryTable({ rows }: { rows: { id: number | string; loai: string; soTien: number; ghiChu: string | null; thoiGian: string }[] }) {
   if (rows.length === 0) return <Empty>Chưa có bút toán nào.</Empty>;
   return (
-    <div className="table-wrap scroll" style={{ maxHeight: 420 }}>
+    <div className="table-wrap scroll" tabIndex={0} style={{ maxHeight: 420 }}>
       <table>
         <thead><tr><th>Thời gian</th><th>Loại</th><th>Diễn giải</th><th className="num">Số tiền</th></tr></thead>
         <tbody>

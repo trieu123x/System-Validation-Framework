@@ -4,11 +4,18 @@ import { useEffect, useRef, useState } from "react";
 import QRCode from "qrcode";
 import { api, fmtMoney } from "@/lib/api";
 import type { BranchItem } from "@/lib/types";
-import { cartIssue, invoiceDate, paymentQr, type CartLine, type Invoice } from "@/lib/checkout";
+import { cartIssue, checkoutTotals, invoiceDate, paymentQr, type CartLine, type Invoice } from "@/lib/checkout";
 import { ProductImage } from "@/components/ui";
 import "./checkout.css";
 
 type Push = (level: string, text: string) => void;
+
+function AmountBreakdown({ amounts }: { amounts: Pick<Invoice, "total" | "subtotal" | "vatRate" | "vatAmount"> }) {
+  return <>
+    <div className="checkout-summary-row"><span>Tiền hàng</span><b>{fmtMoney(amounts.subtotal ?? amounts.total)}</b></div>
+    {amounts.vatRate != null && <div className="checkout-summary-row"><span>VAT {amounts.vatRate}%</span><b>{fmtMoney(amounts.vatAmount ?? 0)}</b></div>}
+  </>;
+}
 
 export function CartIcon({ kind = "cart" }: { kind?: "cart" | "receipt" | "check" }) {
   return <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -77,7 +84,7 @@ export function Checkout({ cart, setCart, items, online, push, branch, onShop, o
   }, [storageKey, retry]);
 
   const issue = cartIssue(cart, items);
-  const total = cart.reduce((sum, line) => sum + (items.find((i) => i.maHang === line.maHang)?.giaBanLe ?? 0) * line.soLuong, 0);
+  const amounts = checkoutTotals(cart.reduce((sum, line) => sum + (items.find((i) => i.maHang === line.maHang)?.giaBanLe ?? 0) * line.soLuong, 0));
   const quantity = cart.reduce((sum, line) => sum + line.soLuong, 0);
   const update = (code: string, qty: number) => {
     setError("");
@@ -134,13 +141,13 @@ export function Checkout({ cart, setCart, items, online, push, branch, onShop, o
         <div className="payment-qr">{qrFailed ? <p role="alert">Không tải được QR. Vui lòng kiểm tra lại ảnh mã thanh toán.</p> : qrSrc ? <img src={qrSrc} width={240} height={240} alt="Mã QR thanh toán đơn hàng" onError={() => setQrFailed(true)} /> : <span role="status">Đang tạo mã QR...</span>}</div>
         <div className="payment-amount">{fmtMoney(order.total)}</div><p className="muted">Nội dung: <strong className="payment-reference">{order.id}</strong></p>
       </section>
-      <aside className="checkout-panel checkout-summary"><span className="checkout-eyebrow">CHI TIẾT ĐƠN HÀNG</span><h3>{order.customer || "Khách lẻ"}</h3><p className="muted">{order.tenCn} · {invoiceDate(order.createdAt)}</p><div className="checkout-mini-lines">{order.items.map((line) => <div key={line.maHang}><span>{line.tenHang}<small>{line.soLuong} × {fmtMoney(line.giaBanLe)}</small></span><b>{fmtMoney(line.thanhTien)}</b></div>)}</div><div className="checkout-total"><span>Tổng thanh toán</span><strong>{fmtMoney(order.total)}</strong></div><button className="btn btn-primary checkout-main-btn" disabled={!online || busy} onClick={confirmPayment}><CartIcon kind="check" />{busy ? "Đang xác nhận..." : "Xác nhận thanh toán"}</button><button className="btn checkout-back" disabled={busy} onClick={reset}>← Quay lại sửa giỏ hàng</button></aside>
+      <aside className="checkout-panel checkout-summary"><span className="checkout-eyebrow">CHI TIẾT ĐƠN HÀNG</span><h3>{order.customer || "Khách lẻ"}</h3><p className="muted">{order.tenCn} · {invoiceDate(order.createdAt)}</p><div className="checkout-mini-lines">{order.items.map((line) => <div key={line.maHang}><span>{line.tenHang}<small>{line.soLuong} × {fmtMoney(line.giaBanLe)}</small></span><b>{fmtMoney(line.thanhTien)}</b></div>)}</div><AmountBreakdown amounts={order} /><div className="checkout-total"><span>Tổng thanh toán</span><strong>{fmtMoney(order.total)}</strong></div><button className="btn btn-primary checkout-main-btn" disabled={!online || busy} onClick={confirmPayment}><CartIcon kind="check" />{busy ? "Đang xác nhận..." : "Xác nhận thanh toán"}</button><button className="btn checkout-back" disabled={busy} onClick={reset}>← Quay lại sửa giỏ hàng</button></aside>
     </div> : !cart.length ? <div className="checkout-empty"><span className="checkout-empty-icon"><CartIcon /></span><h3>Giỏ hàng đang trống</h3><button className="btn btn-primary" onClick={onShop}>Chọn sản phẩm</button></div> : <div className="checkout-grid">
       <section className="checkout-panel"><div className="checkout-panel-head"><h3>Sản phẩm <span>{cart.length}</span></h3></div><div className="cart-lines">{cart.map((line) => {
         const item = items.find((i) => i.maHang === line.maHang);
         return <article className="cart-line" key={line.maHang}><ProductImage src={item?.anh} alt={item?.tenHang ?? line.maHang} size={58} /><div className="cart-product"><strong>{item?.tenHang ?? line.maHang}</strong><small>{line.maHang}{item?.model ? ` · ${item.model}` : ""}</small><span>{fmtMoney(item?.giaBanLe)}</span>{(!item || line.soLuong > item.soLuong) && <small className="error">{item ? `Chỉ còn ${item.soLuong} sản phẩm` : "Sản phẩm không còn khả dụng"}</small>}</div><div className="cart-quantity"><button aria-label={`Giảm ${line.maHang}`} disabled={line.soLuong <= 1} onClick={() => update(line.maHang, line.soLuong - 1)}>−</button><input type="number" min={1} max={item?.soLuong} aria-label={`Số lượng ${line.maHang}`} value={line.soLuong} onChange={(e) => update(line.maHang, Number(e.target.value))} /><button aria-label={`Tăng ${line.maHang}`} disabled={!item || line.soLuong >= item.soLuong} onClick={() => update(line.maHang, line.soLuong + 1)}>+</button></div><strong className="cart-subtotal">{fmtMoney((item?.giaBanLe ?? 0) * line.soLuong)}</strong><button className="cart-remove" aria-label={`Xóa ${line.maHang} khỏi giỏ`} onClick={() => setCart(cart.filter((i) => i.maHang !== line.maHang))}>×</button></article>;
       })}</div><div className="cart-bottom"><span>{quantity} sản phẩm trong giỏ</span><button className="btn btn-sm" onClick={() => setCart([])}>Xóa giỏ hàng</button></div></section>
-      <aside className="checkout-panel checkout-summary"><span className="checkout-eyebrow">ĐƠN HÀNG CỦA BẠN</span><h3>Sẵn sàng thanh toán</h3><label className="field">Tên khách hàng <span className="muted">(không bắt buộc)</span><input value={customer} maxLength={120} placeholder="Khách lẻ" onChange={(e) => setCustomer(e.target.value)} /></label><div className="checkout-summary-row"><span>Số mặt hàng</span><b>{cart.length}</b></div><div className="checkout-summary-row"><span>Số lượng sản phẩm</span><b>{quantity}</b></div><div className="checkout-total"><span>Tổng thanh toán</span><strong>{fmtMoney(total)}</strong></div>{issue && <p className="error" role="alert">{issue}</p>}<button className="btn btn-primary checkout-main-btn" disabled={!!issue || busy || !online} onClick={create}>{busy ? "Đang tạo đơn..." : "Tiến hành thanh toán"}<span aria-hidden="true">→</span></button></aside>
+      <aside className="checkout-panel checkout-summary"><span className="checkout-eyebrow">ĐƠN HÀNG CỦA BẠN</span><h3>Sẵn sàng thanh toán</h3><label className="field">Tên khách hàng <span className="muted">(không bắt buộc)</span><input value={customer} maxLength={120} placeholder="Khách lẻ" onChange={(e) => setCustomer(e.target.value)} /></label><div className="checkout-summary-row"><span>Số mặt hàng</span><b>{cart.length}</b></div><div className="checkout-summary-row"><span>Số lượng sản phẩm</span><b>{quantity}</b></div><AmountBreakdown amounts={amounts} /><div className="checkout-total"><span>Tổng thanh toán</span><strong>{fmtMoney(amounts.total)}</strong></div>{issue && <p className="error" role="alert">{issue}</p>}<button className="btn btn-primary checkout-main-btn" disabled={!!issue || busy || !online} onClick={create}>{busy ? "Đang tạo đơn..." : "Tiến hành thanh toán"}<span aria-hidden="true">→</span></button></aside>
     </div>}
   </div></fieldset>;
 }
@@ -150,7 +157,7 @@ export function InvoiceView({ invoice }: { invoice: Invoice }) {
     <header className="invoice-header"><div><div className="invoice-brand">TOBOKI<span>PROFESSIONAL EQUIPMENT</span></div><p>{invoice.tenCn}<br />Chi nhánh {invoice.maCn}</p></div><div className="invoice-heading"><h2>HÓA ĐƠN<br />BÁN HÀNG</h2><span className="invoice-paid"><CartIcon kind="check" /> ĐÃ THANH TOÁN</span></div></header>
     <div className="invoice-meta"><div><span>KHÁCH HÀNG</span><strong>{invoice.customer || "Khách lẻ"}</strong></div><div><span>MÃ HÓA ĐƠN</span><strong className="invoice-id">{invoice.id}</strong><small>Ngày thanh toán: {invoiceDate(invoice.paidAt ?? invoice.createdAt)}</small></div></div>
     <table className="invoice-table"><thead><tr><th>STT</th><th>SẢN PHẨM</th><th className="num">SL</th><th className="num">ĐƠN GIÁ</th><th className="num">THÀNH TIỀN</th></tr></thead><tbody>{invoice.items.map((line, index) => <tr key={line.maHang}><td>{String(index + 1).padStart(2, "0")}</td><td><strong>{line.tenHang}</strong><small>{line.maHang}{line.model ? ` / ${line.model}` : ""} · {line.donVi}</small></td><td className="num" data-label="Số lượng">{line.soLuong}</td><td className="num" data-label="Đơn giá">{fmtMoney(line.giaBanLe)}</td><td className="num" data-label="Thành tiền"><strong>{fmtMoney(line.thanhTien)}</strong></td></tr>)}</tbody></table>
-    <div className="invoice-totals"><div className="invoice-payment"><span className="invoice-payment-icon"><CartIcon kind="check" /></span><div><strong>Thanh toán</strong><small>Đã xác nhận</small></div></div><div><div><span>Tổng số lượng</span><b>{invoice.quantity} sản phẩm</b></div><div><span>Tiền hàng</span><b>{fmtMoney(invoice.total)}</b></div><div className="invoice-grand-total"><span>TỔNG THANH TOÁN</span><strong>{fmtMoney(invoice.total)}</strong></div></div></div>
+    <div className="invoice-totals"><div className="invoice-payment"><span className="invoice-payment-icon"><CartIcon kind="check" /></span><div><strong>Thanh toán</strong><small>Đã xác nhận</small></div></div><div><div><span>Tổng số lượng</span><b>{invoice.quantity} sản phẩm</b></div><div><span>Tiền hàng</span><b>{fmtMoney(invoice.subtotal ?? invoice.total)}</b></div>{invoice.vatRate != null && <div><span>VAT {invoice.vatRate}%</span><b>{fmtMoney(invoice.vatAmount ?? 0)}</b></div>}<div className="invoice-grand-total"><span>TỔNG THANH TOÁN</span><strong>{fmtMoney(invoice.total)}</strong></div></div></div>
     <footer className="invoice-footer"><div><h3>Cảm ơn & hẹn gặp lại!</h3></div><div><b>TOBOKI</b><small>Hóa đơn bán hàng nội bộ</small></div></footer>
   </article></div>;
 }

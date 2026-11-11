@@ -45,6 +45,15 @@ class SecurityRulesTest {
     private final AtomicReference<Mode> mode = new AtomicReference<>(Mode.BLOCK);
     private SecurityMonitor m;
 
+    @Test void automaticBlockDefaultsAreSixtySeconds() throws Exception {
+        SecurityRules rules = new SecurityRules(Config.load("khong-co-file.properties", new String[0]));
+        assertEquals(1, rules.banMinutes);
+        assertEquals(1, rules.shortBanMinutes);
+        assertEquals(1, rules.adminLockMinutes);
+        assertEquals(60, rules.loginBlockSeconds);
+        assertEquals(60, rules.scraping.blockSeconds());
+    }
+
     @BeforeEach
     void setUp() throws Exception {
         Config cfg = Config.load("khong-co-file.properties", new String[0]);
@@ -277,6 +286,8 @@ class SecurityRulesTest {
         }
         assertTrue(m.onMalformed(EVIL, null, "XYZ|9", T0 + 9));
         assertTrue(m.bans().isBanned(EVIL, T0 + 10));
+        assertTrue(m.bans().isBanned(EVIL, T0 + 9 + 59_999));
+        assertFalse(m.bans().isBanned(EVIL, T0 + 9 + 60_000));
         assertEquals(SecurityEvent.MEDIUM, of("FUZZING").get(0).muc());
     }
 
@@ -354,8 +365,12 @@ class SecurityRulesTest {
         }
         assertEquals(0, m.adminLockedUntil("browser-A", T0 + 4000));
         m.onAdminLoginFail("127.0.0.1", "browser-A", T0 + 5000);
-        assertEquals(T0 + 5000 + 300_000, m.adminLockedUntil("browser-A", T0 + 6000));
-        assertEquals(0, m.adminLockedUntil("browser-A", T0 + 5000 + 300_000));
+        assertEquals(T0 + 5000 + 60_000, m.adminLockedUntil("browser-A", T0 + 6000));
+        m.onAdminLoginFail("127.0.0.1", "browser-A", T0 + 5000 + 59_999);
+        assertEquals(T0 + 5000 + 60_000, m.adminLockedUntil("browser-A", T0 + 5000 + 59_999));
+        assertEquals(0, m.adminLockedUntil("browser-A", T0 + 5000 + 60_000));
+        for (int i = 0; i < 4; i++) m.onAdminLoginFail("127.0.0.1", "browser-A", T0 + 66_000 + i);
+        assertEquals(0, m.adminLockedUntil("browser-A", T0 + 66_004));
         assertEquals(SecurityEvent.KHOA_TK, of("ADMIN_BRUTE_FORCE").get(0).hanhDong());
     }
 

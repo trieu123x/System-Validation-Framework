@@ -161,7 +161,7 @@ public final class AdminApi implements AutoCloseable {
                 ctx.security().record("ADMIN", "DUPLICATE_LOGIN", "HIGH", clientIp(ex), null,
                         "Da tu choi phien Admin thu hai; phien dang hoat dong duoc giu nguyen", "NGAT", System.currentTimeMillis());
                 ctx.audit().record("ADMIN", auth.user(), "LOGIN", "duplicate session", "REJECTED", clientIp(ex));
-                throw new Http.ApiException(409, "Admin dang dang nhap tren thiet bi khac. Vui long dang xuat thiet bi do hoac thu lai sau 5 phut khong hoat dong.");
+                throw new Http.ApiException(409, "Admin dang dang nhap tren thiet bi khac. Vui long dang xuat thiet bi do hoac thu lai sau " + auth.idleSeconds() + " giay khong hoat dong.");
             }
             ctx.security().onSuccessfulLogin(null, clientIp(ex), System.currentTimeMillis());
             ctx.audit().record("ADMIN", auth.user(), "LOGIN", "", "SUCCESS", clientIp(ex));

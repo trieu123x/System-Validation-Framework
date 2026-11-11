@@ -29,7 +29,7 @@ export function ProductImage({ src, alt, category, size = 40, fit = "cover" }: {
 }
 
 export function Dot({ on }: { on: boolean }) {
-  return <span className={`dot ${on ? "dot-on" : "dot-off"}`} aria-label={on ? "online" : "offline"} />;
+  return <span className={`dot ${on ? "dot-on" : "dot-off"}`} role="img" aria-label={on ? "online" : "offline"} />;
 }
 
 export function Card({ title, actions, children, className }: {

@@ -1,0 +1,39 @@
+﻿[
+    {
+        "Module":  "server",
+        "VerifiedEntries":  2015,
+        "ChangedEntries":  [
+                               "phanphoi/server/AdminAuth$LoginStatus.class",
+                               "phanphoi/server/AdminAuth$LoginResult.class",
+                               "phanphoi/server/security/SecurityRules$Mode.class",
+                               "phanphoi/server/security/SecurityRules.class",
+                               "phanphoi/server/security/ScrapingStore.class",
+                               "phanphoi/server/AdminApi.class",
+                               "phanphoi/server/AdminAuth.class",
+                               "phanphoi/common/security/ScrapingGuard.class",
+                               "phanphoi/common/security/ScrapingGuard$State.class",
+                               "phanphoi/common/security/ScrapingGuard$Decision.class",
+                               "phanphoi/common/security/ScrapingGuard$Window.class",
+                               "phanphoi/common/security/ScrapingGuard$Block.class",
+                               "phanphoi/common/security/ScrapingPolicy.class"
+                           ],
+        "UnexpectedChanges":  [
+
+                              ]
+    },
+    {
+        "Module":  "client",
+        "VerifiedEntries":  339,
+        "ChangedEntries":  [
+                               "phanphoi/common/security/ScrapingGuard.class",
+                               "phanphoi/common/security/ScrapingGuard$State.class",
+                               "phanphoi/common/security/ScrapingGuard$Decision.class",
+                               "phanphoi/common/security/ScrapingGuard$Window.class",
+                               "phanphoi/common/security/ScrapingGuard$Block.class",
+                               "phanphoi/common/security/ScrapingPolicy.class"
+                           ],
+        "UnexpectedChanges":  [
+
+                              ]
+    }
+]

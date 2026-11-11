@@ -1,0 +1,61 @@
+{
+  "ok": true,
+  "fixtureApis": true,
+  "checks": [
+    {
+      "width": 1920,
+      "cardWidth": 298,
+      "buttonsOnSameRow": true
+    },
+    {
+      "width": 1440,
+      "cardWidth": 186,
+      "buttonsOnSameRow": true
+    },
+    {
+      "width": 1366,
+      "cardWidth": 255,
+      "buttonsOnSameRow": true
+    },
+    {
+      "width": 1250,
+      "cardWidth": 306,
+      "buttonsOnSameRow": true
+    },
+    {
+      "width": 1024,
+      "cardWidth": 231,
+      "buttonsOnSameRow": true
+    },
+    {
+      "width": 900,
+      "cardWidth": 189,
+      "buttonsOnSameRow": true
+    },
+    {
+      "width": 768,
+      "cardWidth": 225,
+      "buttonsOnSameRow": true
+    },
+    {
+      "width": 600,
+      "cardWidth": 280,
+      "buttonsOnSameRow": true
+    },
+    {
+      "width": 390,
+      "cardWidth": 175,
+      "buttonsOnSameRow": true
+    },
+    {
+      "width": 360,
+      "cardWidth": 160,
+      "buttonsOnSameRow": true
+    },
+    {
+      "width": 320,
+      "cardWidth": 140,
+      "buttonsOnSameRow": true
+    }
+  ]
+}

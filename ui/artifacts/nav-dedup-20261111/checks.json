@@ -1,0 +1,119 @@
+{
+  "local": {
+    "row": [
+      {
+        "documentWidth": 1440,
+        "dropdown": [],
+        "row": [
+          "Tổng quan"
+        ],
+        "title": "Tổng quan vận hành",
+        "url": "http://host.docker.internal:4319/admin/",
+        "width": 1440
+      }
+    ],
+    "menu": {
+      "documentWidth": 1440,
+      "dropdown": [
+        "Tổng quan",
+        "Yêu cầu cấp hàng",
+        "Điều chuyển"
+      ],
+      "row": [
+        "Tổng quan"
+      ],
+      "title": "Tổng quan vận hành",
+      "url": "http://host.docker.internal:4319/admin/",
+      "width": 1440
+    },
+    "history": {
+      "documentWidth": 1440,
+      "dropdown": [],
+      "row": [
+        "Tổng quan"
+      ],
+      "title": "Yêu cầu cấp hàng",
+      "url": "http://host.docker.internal:4319/admin/#view=history",
+      "width": 1440
+    },
+    "transfer": {
+      "documentWidth": 1440,
+      "dropdown": [],
+      "row": [
+        "Tổng quan"
+      ],
+      "title": "Điều chuyển hàng",
+      "url": "http://host.docker.internal:4319/admin/#view=transfers",
+      "width": 1440
+    },
+    "mobile": {
+      "documentWidth": 390,
+      "dropdown": [],
+      "row": [
+        "Tổng quan"
+      ],
+      "title": "Điều chuyển hàng",
+      "url": "http://host.docker.internal:4319/admin/#view=transfers",
+      "width": 390
+    },
+    "client": {
+      "documentWidth": 390,
+      "dropdown": [],
+      "row": [
+        "Sản phẩm",
+        "Hóa đơn"
+      ],
+      "title": "Bán hàng & tồn kho",
+      "url": "http://host.docker.internal:4319/branch/",
+      "width": 390
+    }
+  },
+  "public": {
+    "row": {
+      "documentWidth": 1440,
+      "dropdown": [],
+      "row": [
+        "Tổng quan"
+      ],
+      "title": "Tổng quan vận hành",
+      "url": "https://desktop-flfkcet-1.tailab761f.ts.net/admin/",
+      "width": 1440
+    },
+    "menu": {
+      "documentWidth": 1440,
+      "dropdown": [
+        "Tổng quan",
+        "Yêu cầu cấp hàng",
+        "Điều chuyển"
+      ],
+      "row": [
+        "Tổng quan"
+      ],
+      "title": "Tổng quan vận hành",
+      "url": "https://desktop-flfkcet-1.tailab761f.ts.net/admin/",
+      "width": 1440
+    },
+    "mobile": {
+      "documentWidth": 390,
+      "dropdown": [],
+      "row": [
+        "Tổng quan"
+      ],
+      "title": "Tổng quan vận hành",
+      "url": "https://desktop-flfkcet-1.tailab761f.ts.net/admin/",
+      "width": 390
+    }
+  },
+  "buildPassed": true,
+  "backendJarsUnchanged": true,
+  "release": {
+    "Stamp": "20261111-204136",
+    "Folder": "D:\\System-Validation-Framework\\tools\\nav-dedup-release-20261111-204136",
+    "BaseImage": "sha256:9cc1fd8a8218e43885c99c519c3f7adc2e6cd58e7c4487cf4a8c4ded0002766a",
+    "BackupTag": "phanphoi:before-nav-20261111-204136",
+    "ReleaseTag": "phanphoi:nav-20261111-204136"
+  },
+  "consoleErrors": [],
+  "javaScriptErrors": [],
+  "adminLoggedOut": true
+}

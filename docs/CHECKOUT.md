@@ -1,5 +1,9 @@
 # Giỏ hàng, thanh toán QR và hóa đơn
 
+Đơn mới cộng VAT 10% vào tiền hàng. VAT tính trên tổng tiền hàng của cả giỏ, làm tròn đến đồng (từ 0,5 đồng làm tròn lên). Ví dụ tiền hàng 1.090.000 đ, VAT 109.000 đ, tổng thanh toán 1.199.000 đ. Giỏ hàng, màn QR và bản in hóa đơn hiển thị riêng tiền hàng, VAT và tổng thanh toán.
+
+Server tính và lưu `subtotal`, `vatRate`, `vatAmount`, `total` khi tạo đơn; số tiền QR và lịch sử hóa đơn dùng `total` đã gồm VAT. Tải lại hoặc xác nhận lại đơn giữ nguyên số tiền đã chốt. Đơn cũ chưa có thông tin VAT giữ nguyên tổng đã lưu, không bị cộng thêm thuế khi mở lại. Không cần đổi cấu trúc bảng vì các giá trị nằm trong nội dung JSON của hóa đơn.
+
 Trong trang chi nhánh, chọn số lượng rồi bấm **Thêm vào giỏ** ở từng sản phẩm. Bấm **Giỏ hàng** ở bên phải bảng, cạnh nút **Tải lại**, để sửa số lượng, xóa hàng, nhập tên khách (tùy chọn), và bấm **Tiến hành thanh toán**. Trang thanh toán hiển thị QR, chi tiết đơn và nút **Xác nhận thanh toán** để client bấm thủ công. Giỏ hàng không lặp lại trong menu.
 
 **Ngưỡng tối thiểu** là mục riêng trong menu. Trang này hỗ trợ tìm kiếm, lọc theo danh mục/trạng thái, sắp xếp và lưu ngưỡng từng mặt hàng. Ngưỡng phải là số nguyên không âm; 0 tắt cảnh báo. Các màn có nút quay lại theo ngữ cảnh: giỏ về chọn hàng, thanh toán về sửa giỏ, chi tiết hóa đơn về danh sách; các mục khác quay lại màn trước. Menu đóng khi chọn chức năng, bấm bên ngoài hoặc nhấn Escape.
@@ -23,6 +27,9 @@ npm run typecheck
 npm run build
 cd ..
 mvn -pl server,client -am test
+node scripts/check-checkout-totals.cjs
+$env:UI_VAT_CHECK = '1'
+node scripts/ui-redesign-smoke.cjs
 ```
 
 Để chạy thêm kiểm thử PostgreSQL, đặt `SVF_TEST_DB_URL`, `SVF_TEST_DB_USER`, `SVF_TEST_DB_PASSWORD` trỏ tới database thử nghiệm. Bộ `ReceiptIntegrationTest` tạo schema ngẫu nhiên riêng cho từng test và xóa schema đó khi xong. Các ca mới kiểm tra giữ nguyên giá hóa đơn, phân quyền chi nhánh, xác nhận đồng thời và rollback nhiều sản phẩm.

@@ -329,7 +329,7 @@ function Debt({ debt }: { debt: BranchDebtInfo | null }) {
           Còn nợ {fmtMoney(debt.conNo)}, vượt hạn mức {fmtMoney(debt.hanMuc)}. Liên hệ công ty để thanh toán.
         </div>
       )}
-      <div className="kpis">
+      <div className="kpis financial-kpis">
         <Stat label="Tổng tiền hàng đã nhận" value={fmtMoney(debt.tongNhan)} />
         <Stat label="Đã trả" value={fmtMoney(debt.daTra)} tone="success" />
         <Stat label="Còn nợ" value={fmtMoney(debt.conNo)} tone={over ? "danger" : debt.conNo > 0 ? "warn" : "success"}

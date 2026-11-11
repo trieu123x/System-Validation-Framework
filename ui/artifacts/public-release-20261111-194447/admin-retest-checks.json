@@ -1,0 +1,309 @@
+{
+  "date": "2026-11-11",
+  "afterLoginVerified": true,
+  "authWaitingResolved": true,
+  "menu": {
+    "items": [
+      "Hàng hóa",
+      "Kho chi nhánh"
+    ],
+    "open": true,
+    "thresholdButtons": 0
+  },
+  "responsive": [
+    {
+      "brokenImages": 0,
+      "cards": [
+        {
+          "height": 412,
+          "overflow": false,
+          "width": 275
+        },
+        {
+          "height": 412,
+          "overflow": false,
+          "width": 275
+        },
+        {
+          "height": 412,
+          "overflow": false,
+          "width": 275
+        },
+        {
+          "height": 412,
+          "overflow": false,
+          "width": 275
+        },
+        {
+          "height": 412,
+          "overflow": false,
+          "width": 275
+        },
+        {
+          "height": 412,
+          "overflow": false,
+          "width": 275
+        }
+      ],
+      "documentWidth": 1440,
+      "header": {
+        "bottom": 100,
+        "position": "sticky",
+        "top": 0
+      },
+      "oldShippedLabels": 0,
+      "postersVisible": 0,
+      "scrollY": 213,
+      "shippedLabels": 3,
+      "thresholdButtons": 0,
+      "title": "Tổng quan vận hành",
+      "url": "https://desktop-flfkcet-1.tailab761f.ts.net/admin/",
+      "viewport": {
+        "height": 1000,
+        "width": 1440
+      }
+    },
+    {
+      "label": "tablet",
+      "brokenImages": 0,
+      "cards": [
+        {
+          "height": 412,
+          "overflow": false,
+          "width": 225
+        },
+        {
+          "height": 412,
+          "overflow": false,
+          "width": 225
+        },
+        {
+          "height": 412,
+          "overflow": false,
+          "width": 225
+        },
+        {
+          "height": 412,
+          "overflow": false,
+          "width": 225
+        },
+        {
+          "height": 412,
+          "overflow": false,
+          "width": 225
+        },
+        {
+          "height": 412,
+          "overflow": false,
+          "width": 225
+        }
+      ],
+      "documentWidth": 768,
+      "header": {
+        "bottom": 129,
+        "position": "sticky",
+        "top": 0
+      },
+      "oldShippedLabels": 0,
+      "postersVisible": 0,
+      "scrollY": 370,
+      "shippedLabels": 3,
+      "thresholdButtons": 0,
+      "title": "Tổng quan vận hành",
+      "url": "https://desktop-flfkcet-1.tailab761f.ts.net/admin/",
+      "viewport": {
+        "height": 1024,
+        "width": 768
+      }
+    },
+    {
+      "label": "mobile",
+      "brokenImages": 0,
+      "cards": [
+        {
+          "height": 368,
+          "overflow": false,
+          "width": 176
+        },
+        {
+          "height": 368,
+          "overflow": false,
+          "width": 176
+        },
+        {
+          "height": 368,
+          "overflow": false,
+          "width": 176
+        },
+        {
+          "height": 368,
+          "overflow": false,
+          "width": 176
+        },
+        {
+          "height": 368,
+          "overflow": false,
+          "width": 176
+        },
+        {
+          "height": 368,
+          "overflow": false,
+          "width": 176
+        }
+      ],
+      "documentWidth": 390,
+      "header": {
+        "bottom": 116,
+        "position": "sticky",
+        "top": 0
+      },
+      "oldShippedLabels": 0,
+      "postersVisible": 0,
+      "scrollY": 446,
+      "shippedLabels": 3,
+      "thresholdButtons": 0,
+      "title": "Tổng quan vận hành",
+      "url": "https://desktop-flfkcet-1.tailab761f.ts.net/admin/",
+      "viewport": {
+        "height": 844,
+        "width": 390
+      }
+    },
+    {
+      "label": "narrow",
+      "brokenImages": 0,
+      "cards": [
+        {
+          "height": 382,
+          "overflow": false,
+          "width": 141
+        },
+        {
+          "height": 382,
+          "overflow": false,
+          "width": 141
+        },
+        {
+          "height": 397,
+          "overflow": false,
+          "width": 141
+        },
+        {
+          "height": 397,
+          "overflow": false,
+          "width": 141
+        },
+        {
+          "height": 395,
+          "overflow": false,
+          "width": 141
+        },
+        {
+          "height": 395,
+          "overflow": false,
+          "width": 141
+        }
+      ],
+      "documentWidth": 320,
+      "header": {
+        "bottom": 116,
+        "position": "sticky",
+        "top": 0
+      },
+      "oldShippedLabels": 0,
+      "postersVisible": 0,
+      "scrollY": 520,
+      "shippedLabels": 3,
+      "thresholdButtons": 0,
+      "title": "Tổng quan vận hành",
+      "url": "https://desktop-flfkcet-1.tailab761f.ts.net/admin/",
+      "viewport": {
+        "height": 800,
+        "width": 320
+      }
+    }
+  ],
+  "stickyDesktop": {
+    "brokenImages": 0,
+    "cards": [
+      {
+        "height": 412,
+        "overflow": false,
+        "width": 275
+      },
+      {
+        "height": 412,
+        "overflow": false,
+        "width": 275
+      },
+      {
+        "height": 412,
+        "overflow": false,
+        "width": 275
+      },
+      {
+        "height": 412,
+        "overflow": false,
+        "width": 275
+      },
+      {
+        "height": 412,
+        "overflow": false,
+        "width": 275
+      },
+      {
+        "height": 412,
+        "overflow": false,
+        "width": 275
+      }
+    ],
+    "documentWidth": 1440,
+    "header": {
+      "bottom": 100,
+      "position": "sticky",
+      "top": 0
+    },
+    "oldShippedLabels": 0,
+    "postersVisible": 0,
+    "scrollY": 1200,
+    "shippedLabels": 3,
+    "thresholdButtons": 0,
+    "title": "Tổng quan vận hành",
+    "url": "https://desktop-flfkcet-1.tailab761f.ts.net/admin/",
+    "viewport": {
+      "height": 1000,
+      "width": 1440
+    }
+  },
+  "products": {
+    "brokenImages": 0,
+    "cards": [],
+    "documentWidth": 320,
+    "header": {
+      "bottom": 116,
+      "position": "sticky",
+      "top": 0
+    },
+    "oldShippedLabels": 0,
+    "postersVisible": 0,
+    "scrollY": 532,
+    "shippedLabels": 0,
+    "thresholdButtons": 0,
+    "title": "Hàng hóa & kho tổng",
+    "url": "https://desktop-flfkcet-1.tailab761f.ts.net/admin/#view=products",
+    "viewport": {
+      "height": 800,
+      "width": 320
+    }
+  },
+  "legacyThresholdRoute": {
+    "title": "Tổng quan vận hành",
+    "url": "https://desktop-flfkcet-1.tailab761f.ts.net/admin/"
+  },
+  "errors": [],
+  "console": [],
+  "loggedOut": true,
+  "businessWriteRequests": 0,
+  "sourceChanged": false,
+  "redeploymentRequired": false
+}

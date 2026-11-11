@@ -1,0 +1,193 @@
+﻿{
+    "release":  "20261111-194447",
+    "authorization":  "User explicitly requested deployment to admin and client public.",
+    "deployed":  true,
+    "releaseTag":  "phanphoi:ui-20261111-194447",
+    "imageId":  "sha256:694eaf2c6d7c1b10ca07bb80ce9249ca05fc927f463f400ee32d5213c315e4f3",
+    "rollbackTag":  "phanphoi:before-ui-20261111-194447",
+    "backendJarsUnchanged":  true,
+    "runtimeConfigUnchanged":  true,
+    "composeConfigHashesUnchanged":  true,
+    "databaseRestarted":  false,
+    "tailscaleConfigurationChanged":  false,
+    "admin":  {
+                  "html":  {
+                               "htmlSha256":  "4149894023F90DF25AACBE53BE525C6978990F11FB13AED1179C1B44FB6D924D",
+                               "iconStatus":  200,
+                               "status":  200,
+                               "url":  "https://desktop-flfkcet-1.tailab761f.ts.net/admin/"
+                           },
+                  "assets":  {
+                                 "allMatch":  true,
+                                 "checked":  37,
+                                 "failures":  [
+
+                                              ],
+                                 "origin":  "https://desktop-flfkcet-1.tailab761f.ts.net"
+                             },
+                  "afterLoginVerified":  true,
+                  "limitation":  null,
+                  "retestEvidence":  "admin-retest-checks.json"
+              },
+    "client":  {
+                   "html":  {
+                                "htmlSha256":  "0C56AA73701AB072A03D0055885C84F33A2801F88AF644130AD82F11E6DC54EC",
+                                "iconStatus":  200,
+                                "status":  200,
+                                "url":  "https://desktop-flfkcet-1.tailab761f.ts.net:8443/branch/"
+                            },
+                   "assets":  {
+                                  "allMatch":  true,
+                                  "checked":  37,
+                                  "failures":  [
+
+                                               ],
+                                  "origin":  "https://desktop-flfkcet-1.tailab761f.ts.net:8443"
+                              },
+                   "responsive":  [
+                                      {
+                                          "screen":  "client-stock",
+                                          "label":  "desktop",
+                                          "addLabels":  [
+                                                            "+ Thêm hàng"
+                                                        ],
+                                          "adminThresholdButtons":  1,
+                                          "brokenImages":  0,
+                                          "cardOverflow":  0,
+                                          "cart":  {
+                                                       "bottom":  71,
+                                                       "clickable":  true,
+                                                       "label":  "Giỏ hàng (0 sản phẩm)",
+                                                       "top":  29
+                                                   },
+                                          "documentWidth":  1440,
+                                          "header":  {
+                                                         "bottom":  100,
+                                                         "position":  "sticky",
+                                                         "top":  0
+                                                     },
+                                          "postersVisible":  2,
+                                          "requestCardHeights":  [
+
+                                                                 ],
+                                          "scrollY":  1800,
+                                          "title":  "Bán hàng \u0026 tồn kho",
+                                          "url":  "https://desktop-flfkcet-1.tailab761f.ts.net:8443/branch/",
+                                          "viewport":  {
+                                                           "height":  1000,
+                                                           "width":  1440
+                                                       }
+                                      },
+                                      {
+                                          "screen":  "client-stock",
+                                          "label":  "tablet",
+                                          "addLabels":  [
+                                                            "+ Thêm hàng"
+                                                        ],
+                                          "adminThresholdButtons":  1,
+                                          "brokenImages":  0,
+                                          "cardOverflow":  0,
+                                          "cart":  {
+                                                       "bottom":  112,
+                                                       "clickable":  true,
+                                                       "label":  "Giỏ hàng (0 sản phẩm)",
+                                                       "top":  70
+                                                   },
+                                          "documentWidth":  768,
+                                          "header":  {
+                                                         "bottom":  129,
+                                                         "position":  "sticky",
+                                                         "top":  0
+                                                     },
+                                          "postersVisible":  0,
+                                          "requestCardHeights":  [
+
+                                                                 ],
+                                          "scrollY":  3600,
+                                          "title":  "Bán hàng \u0026 tồn kho",
+                                          "url":  "https://desktop-flfkcet-1.tailab761f.ts.net:8443/branch/",
+                                          "viewport":  {
+                                                           "height":  1024,
+                                                           "width":  768
+                                                       }
+                                      },
+                                      {
+                                          "screen":  "client-stock",
+                                          "label":  "mobile",
+                                          "addLabels":  [
+                                                            "+ Thêm hàng"
+                                                        ],
+                                          "adminThresholdButtons":  1,
+                                          "brokenImages":  0,
+                                          "cardOverflow":  0,
+                                          "cart":  {
+                                                       "bottom":  101.75,
+                                                       "clickable":  true,
+                                                       "label":  "Giỏ hàng (0 sản phẩm)",
+                                                       "top":  61.75
+                                                   },
+                                          "documentWidth":  390,
+                                          "header":  {
+                                                         "bottom":  116,
+                                                         "position":  "sticky",
+                                                         "top":  0
+                                                     },
+                                          "postersVisible":  0,
+                                          "requestCardHeights":  [
+
+                                                                 ],
+                                          "scrollY":  5400,
+                                          "title":  "Bán hàng \u0026 tồn kho",
+                                          "url":  "https://desktop-flfkcet-1.tailab761f.ts.net:8443/branch/",
+                                          "viewport":  {
+                                                           "height":  844,
+                                                           "width":  390
+                                                       }
+                                      },
+                                      {
+                                          "screen":  "client-stock",
+                                          "label":  "narrow",
+                                          "addLabels":  [
+                                                            "+ Thêm hàng"
+                                                        ],
+                                          "adminThresholdButtons":  1,
+                                          "brokenImages":  0,
+                                          "cardOverflow":  0,
+                                          "cart":  {
+                                                       "bottom":  101.75,
+                                                       "clickable":  true,
+                                                       "label":  "Giỏ hàng (0 sản phẩm)",
+                                                       "top":  61.75
+                                                   },
+                                          "documentWidth":  320,
+                                          "header":  {
+                                                         "bottom":  116,
+                                                         "position":  "sticky",
+                                                         "top":  0
+                                                     },
+                                          "postersVisible":  0,
+                                          "requestCardHeights":  [
+
+                                                                 ],
+                                          "scrollY":  5803,
+                                          "title":  "Bán hàng \u0026 tồn kho",
+                                          "url":  "https://desktop-flfkcet-1.tailab761f.ts.net:8443/branch/",
+                                          "viewport":  {
+                                                           "height":  800,
+                                                           "width":  320
+                                                       }
+                                      }
+                                  ],
+                   "thresholdsAvailable":  true,
+                   "emptyCartNativeClickVerified":  true,
+                   "consoleErrors":  [
+
+                                     ],
+                   "pageErrors":  [
+
+                                  ],
+                   "loggedOut":  true
+               },
+    "businessWriteRequests":  0,
+    "temporaryAuthProfilesDeleted":  true
+}

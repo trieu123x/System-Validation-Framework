@@ -39,16 +39,20 @@ class AdminAuthSingleSessionTest {
         AtomicLong time = new AtomicLong(1000);
         AdminAuth auth = instance(time);
         String token = auth.login("admin", "admin123", null).token();
-        time.addAndGet(290_000);
+        assertEquals(60, auth.idleSeconds());
+        time.addAndGet(59_999);
         assertTrue(auth.validToken(token, false)); // SSE does not refresh
-        time.addAndGet(11_000);
+        assertEquals(AdminAuth.LoginStatus.ALREADY_ACTIVE, auth.login("admin", "admin123", null).status());
+        time.incrementAndGet(); // Rejected login must not renew the original session.
         assertFalse(auth.validToken(token, false));
         String second = auth.login("admin", "admin123", null).token();
         assertNotEquals(token, second);
-        time.addAndGet(290_000);
+        time.addAndGet(59_000);
         assertTrue(auth.validToken(second, true)); // /api/auth/me heartbeat
-        time.addAndGet(290_000);
+        time.addAndGet(59_999);
         assertTrue(auth.validToken(second, false));
+        time.incrementAndGet();
+        assertFalse(auth.validToken(second, false));
     }
 
     @Test void passwordResetClearsSession() throws Exception {

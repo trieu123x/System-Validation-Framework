@@ -42,7 +42,11 @@ public final class ScrapingGuard {
     public ScrapingPolicy policy() { return policy; }
     public synchronized void onBlockChange(BiConsumer<String, Block> listener) { blockListener = listener; }
     public synchronized void restore(Block b, long now) {
-        if (b.expiresAt > now && blocks.size() < policy.maxSubjects()) blocks.put(b.subject, b);
+        if (b.expiresAt > now && blocks.size() < policy.maxSubjects()) {
+            Block restored = new Block(b.subject, Math.min(b.expiresAt, now + policy.blockSeconds()*1000L), b.reason);
+            blocks.put(b.subject, restored);
+            if (restored.expiresAt != b.expiresAt) blockListener.accept(b.subject, restored);
+        }
     }
     public synchronized Decision evaluate(String subject, String ip, String channel, String resource, long historyDays, long now) {
         return evaluate(subject, ip, channel, resource, historyDays, now, false);
@@ -50,6 +54,12 @@ public final class ScrapingGuard {
     public synchronized Decision evaluate(String subject, String ip, String channel, String resource, long historyDays, long now, boolean legacyReject) {
         boolean active = policy.enabled() && !policy.mode().equals("off") && (channel.equals("TCP") ? policy.tcpEnabled() : policy.httpEnabled());
         if (!active && !legacyReject) return result(subject, channel, resource, 0, 0, "ALLOW", 0, List.of(), false);
+        Block expired = blocks.get(subject);
+        if (expired != null && expired.expiresAt <= now) {
+            blocks.remove(subject);
+            subjects.remove(subject);
+            blockListener.accept(subject, null);
+        }
         cleanup(now);
         requests++;
         State s = subjects.get(subject);
@@ -112,7 +122,12 @@ public final class ScrapingGuard {
         if (now-lastCleanup < 60000) return;
         lastCleanup = now;
         subjects.values().removeIf(s -> now-s.lastSeen > Math.max(600000L, policy.windowSeconds()*2000L));
-        blocks.values().removeIf(b -> b.expiresAt <= now);
+        blocks.entrySet().removeIf(entry -> {
+            if (entry.getValue().expiresAt > now) return false;
+            subjects.remove(entry.getKey());
+            blockListener.accept(entry.getKey(), null);
+            return true;
+        });
     }
     public synchronized boolean revoke(String subject) {
         boolean had = blocks.remove(subject) != null;

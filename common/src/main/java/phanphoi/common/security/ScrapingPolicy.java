@@ -22,7 +22,7 @@ public record ScrapingPolicy(boolean enabled, boolean httpEnabled, boolean tcpEn
                 number(c, "scraping.tcp.max.per.window", 60, 1, 100000),
                 number(c, "scraping.http.max.per.window", 120, 1, 100000), warning,
                 number(c, "scraping.risk.block", 70, warning + 1, 100),
-                number(c, "scraping.block.duration.seconds", 900, 1, 86400),
+                number(c, "scraping.block.duration.seconds", 60, 1, 86400),
                 number(c, "security.scrape.history.max.days", 366, 1, 3650),
                 number(c, "scraping.max.subjects", 10000, 10, 50000), quotas(c.get("scraping.resource.quotas", "")));
     }

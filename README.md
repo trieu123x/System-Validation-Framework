@@ -205,7 +205,7 @@ Cấu hình đọc từ file `.properties`, rồi file `*.local.properties` cùn
 | `admin.http.port`, `experiment.api` | 8080, true | API admin và API thực nghiệm (chỉ localhost) |
 | `admin.user`, `admin.salt`, `admin.password.hash` | `admin`, `pp-admin-2026`, rỗng | Tài khoản trang công ty; hash = hex SHA-256(salt + mật khẩu), để rỗng = mật khẩu mặc định `admin123` |
 | `security.mode` | `block` | Giám sát an ninh (E8): `off` (baseline, không làm gì), `detect` (chỉ ghi sự kiện), `block` (ghi sự kiện và tự chặn IP / ngắt phiên / giới hạn) |
-| `security.ban.minutes` | 10 | Thời gian chặn IP vì `BRUTE_FORCE`, `CONN_FLOOD` (các quy tắc khác chặn 5 phút) |
+| `security.ban.minutes`, `security.short.ban.minutes` | 1, 1 | Các khóa IP tự động kéo dài 60 giây; khóa thủ công theo thời gian quản trị viên chọn |
 | `security.login.fail.max`, `security.login.fail.window.seconds` | 5, 60 | `BRUTE_FORCE`: số `LOGIN_FAIL` từ một IP trong cửa sổ |
 | `security.flood.msgs.per.second` | 50 | `CMD_FLOOD`: vượt mức này liên tục 3 s thì ngắt phiên, chặn IP |
 | `security.scrape.max.per.minute` | 30 | `SCRAPING`: `INVENTORY_GET` + `HISTORY_GET` của một phiên trong 60 s (và `HISTORY_GET` khoảng > 366 ngày) |
@@ -213,7 +213,8 @@ Cấu hình đọc từ file `.properties`, rồi file `*.local.properties` cùn
 | `security.conn.max.per.ip` | 20 | `CONN_FLOOD`: kết nối đồng thời từ một IP (hoặc > 30 kết nối mới trong 10 s) |
 | `security.prelogin.timeout.seconds` | 10 | Kết nối không `LOGIN` sau thời gian này thì đóng (`PRELOGIN_IDLE`) |
 | `security.allowed.origins` | `http://localhost:3000,http://localhost:3001` | Origin được gọi API admin ngoài chính trang (cho `next dev`) |
-| `admin.lock.fails`, `admin.lock.minutes` | 5, 5 | Sai mật khẩu trang công ty 5 lần trong 5 phút thì khoá đăng nhập 5 phút (`ADMIN_BRUTE_FORCE`, cả ở `detect`) |
+| `admin.lock.fails`, `admin.lock.minutes` | 5, 1 | Sai mật khẩu trang công ty 5 lần trong 5 phút thì khóa trình duyệt đó 60 giây (`ADMIN_BRUTE_FORCE`, cả ở `detect`) |
+| `admin.session.idle.seconds` | 60 | Giải phóng phiên admin sau 60 giây không có hoạt động; heartbeat vẫn giữ phiên đang dùng |
 
 | Khóa (`config/client.properties`) | Mặc định | Ý nghĩa |
 |---|---|---|

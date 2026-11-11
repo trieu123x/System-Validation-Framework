@@ -1,0 +1,164 @@
+﻿[
+    {
+        "method":  "GET",
+        "url":  "https://desktop-flfkcet-1.tailab761f.ts.net:8443/api/state",
+        "status":  200,
+        "resourceType":  "Fetch"
+    },
+    {
+        "method":  "GET",
+        "url":  "https://desktop-flfkcet-1.tailab761f.ts.net:8443/api/config",
+        "status":  200,
+        "resourceType":  "Fetch"
+    },
+    {
+        "method":  "POST",
+        "url":  "https://desktop-flfkcet-1.tailab761f.ts.net:8443/api/login",
+        "status":  200,
+        "resourceType":  "Fetch"
+    },
+    {
+        "method":  "GET",
+        "url":  "https://desktop-flfkcet-1.tailab761f.ts.net:8443/api/state",
+        "status":  200,
+        "resourceType":  "Fetch"
+    },
+    {
+        "method":  "POST",
+        "url":  "https://desktop-flfkcet-1.tailab761f.ts.net:8443/api/browser/heartbeat",
+        "status":  200,
+        "resourceType":  "Fetch"
+    },
+    {
+        "method":  "GET",
+        "url":  "https://desktop-flfkcet-1.tailab761f.ts.net:8443/api/events",
+        "status":  200,
+        "resourceType":  "EventSource"
+    },
+    {
+        "method":  "POST",
+        "url":  "https://desktop-flfkcet-1.tailab761f.ts.net:8443/api/inventory/refresh",
+        "status":  200,
+        "resourceType":  "Fetch"
+    },
+    {
+        "method":  "POST",
+        "url":  "https://desktop-flfkcet-1.tailab761f.ts.net:8443/api/browser/heartbeat",
+        "status":  200,
+        "resourceType":  "Fetch"
+    },
+    {
+        "method":  "POST",
+        "url":  "https://desktop-flfkcet-1.tailab761f.ts.net:8443/api/browser/heartbeat",
+        "status":  200,
+        "resourceType":  "Fetch"
+    },
+    {
+        "method":  "POST",
+        "url":  "https://desktop-flfkcet-1.tailab761f.ts.net:8443/api/browser/heartbeat",
+        "status":  200,
+        "resourceType":  "Fetch"
+    },
+    {
+        "method":  "POST",
+        "url":  "https://desktop-flfkcet-1.tailab761f.ts.net:8443/api/browser/heartbeat",
+        "status":  200,
+        "resourceType":  "Fetch"
+    },
+    {
+        "method":  "POST",
+        "url":  "https://desktop-flfkcet-1.tailab761f.ts.net:8443/api/browser/heartbeat",
+        "status":  200,
+        "resourceType":  "Fetch"
+    },
+    {
+        "method":  "POST",
+        "url":  "https://desktop-flfkcet-1.tailab761f.ts.net:8443/api/browser/heartbeat",
+        "status":  200,
+        "resourceType":  "Fetch"
+    },
+    {
+        "method":  "POST",
+        "url":  "https://desktop-flfkcet-1.tailab761f.ts.net:8443/api/browser/heartbeat",
+        "status":  200,
+        "resourceType":  "Fetch"
+    },
+    {
+        "method":  "POST",
+        "url":  "https://desktop-flfkcet-1.tailab761f.ts.net:8443/api/browser/heartbeat",
+        "status":  200,
+        "resourceType":  "Fetch"
+    },
+    {
+        "method":  "POST",
+        "url":  "https://desktop-flfkcet-1.tailab761f.ts.net:8443/api/browser/heartbeat",
+        "status":  200,
+        "resourceType":  "Fetch"
+    },
+    {
+        "method":  "POST",
+        "url":  "https://desktop-flfkcet-1.tailab761f.ts.net:8443/api/browser/heartbeat",
+        "status":  200,
+        "resourceType":  "Fetch"
+    },
+    {
+        "method":  "GET",
+        "url":  "https://desktop-flfkcet-1.tailab761f.ts.net/api/auth/me",
+        "status":  200,
+        "resourceType":  "Fetch"
+    },
+    {
+        "method":  "GET",
+        "url":  "https://desktop-flfkcet-1.tailab761f.ts.net/api/auth/me",
+        "status":  200,
+        "resourceType":  "Fetch"
+    },
+    {
+        "method":  "GET",
+        "url":  "https://desktop-flfkcet-1.tailab761f.ts.net/api/auth/me",
+        "status":  200,
+        "resourceType":  "Fetch"
+    },
+    {
+        "method":  "GET",
+        "url":  "https://desktop-flfkcet-1.tailab761f.ts.net:8443/api/state",
+        "status":  200,
+        "resourceType":  "Fetch"
+    },
+    {
+        "method":  "POST",
+        "url":  "https://desktop-flfkcet-1.tailab761f.ts.net:8443/api/browser/heartbeat",
+        "status":  200,
+        "resourceType":  "Fetch"
+    },
+    {
+        "method":  "GET",
+        "url":  "https://desktop-flfkcet-1.tailab761f.ts.net:8443/api/events",
+        "status":  200,
+        "resourceType":  "EventSource"
+    },
+    {
+        "method":  "POST",
+        "url":  "https://desktop-flfkcet-1.tailab761f.ts.net:8443/api/inventory/refresh",
+        "status":  200,
+        "resourceType":  "Fetch"
+    },
+    {
+        "method":  "POST",
+        "url":  "https://desktop-flfkcet-1.tailab761f.ts.net:8443/api/logout",
+        "status":  200,
+        "resourceType":  "Fetch"
+    },
+    {
+        "method":  "GET",
+        "url":  "https://desktop-flfkcet-1.tailab761f.ts.net:8443/api/state",
+        "status":  200,
+        "resourceType":  "Fetch"
+    },
+    {
+        "method":  "GET",
+        "url":  "https://desktop-flfkcet-1.tailab761f.ts.net:8443/api/config",
+        "status":  200,
+        "resourceType":  "Fetch"
+    }
+]

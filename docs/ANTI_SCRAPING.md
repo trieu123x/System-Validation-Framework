@@ -86,7 +86,7 @@ Mở client bằng script hiện hữu. Dùng `config/server.local.properties`, 
 | `scraping.http.max.per.window` | 120 | Quota HTTP/tài khoản/gateway |
 | `scraping.risk.warning` | 40 | Mốc MEDIUM; phải nhỏ hơn block |
 | `scraping.risk.block` | 70 | Điểm để tạm khóa khi mode=block |
-| `scraping.block.duration.seconds` | 900 | Thời gian khóa, không gia hạn theo mỗi request bị từ chối |
+| `scraping.block.duration.seconds` | 60 | Thời gian khóa, không gia hạn theo request bị từ chối; hết hạn xóa bằng chứng cũ để không khóa lại ngay |
 | `security.scrape.history.max.days` | 366 | Khoảng lịch sử tối đa theo luật scraping |
 | `scraping.max.subjects` | 10000 | Giới hạn danh tính trong bộ nhớ; TTL ít nhất 10 phút |
 | `scraping.email.enabled` | true | Cho phép mail scraping; vẫn cần MAIL_ENABLED |

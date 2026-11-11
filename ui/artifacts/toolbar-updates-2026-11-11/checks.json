@@ -1,0 +1,362 @@
+{
+  "date": "2026-11-11",
+  "environment": "Local Next.js production export + read-only fixtures; no production API",
+  "build": "passed",
+  "diffCheck": "passed",
+  "responsive": [
+    {
+      "screen": "client-stock",
+      "label": "desktop",
+      "addLabels": 31,
+      "cart": {
+        "bottom": 71,
+        "label": "Giỏ hàng (0 sản phẩm)",
+        "reachable": true,
+        "top": 29
+      },
+      "clippedCards": 0,
+      "documentWidth": 1440,
+      "header": {
+        "bottom": 100,
+        "height": 100,
+        "position": "sticky",
+        "top": 0
+      },
+      "oldAddLabels": 0,
+      "posters": [
+        {
+          "display": "block",
+          "top": 100
+        },
+        {
+          "display": "block",
+          "top": 100
+        }
+      ],
+      "scrollPadding": "112px",
+      "scrollY": 2500,
+      "summary": null,
+      "url": "http://host.docker.internal:4319/branch/",
+      "viewport": {
+        "height": 1000,
+        "width": 1440
+      }
+    },
+    {
+      "screen": "client-stock",
+      "label": "tablet",
+      "addLabels": 31,
+      "cart": {
+        "bottom": 112,
+        "label": "Giỏ hàng (0 sản phẩm)",
+        "reachable": true,
+        "top": 70
+      },
+      "clippedCards": 0,
+      "documentWidth": 768,
+      "header": {
+        "bottom": 129,
+        "height": 129,
+        "position": "sticky",
+        "top": 0
+      },
+      "oldAddLabels": 0,
+      "posters": [
+        {
+          "display": "none",
+          "top": 0
+        },
+        {
+          "display": "none",
+          "top": 0
+        }
+      ],
+      "scrollPadding": "141px",
+      "scrollY": 4918,
+      "summary": null,
+      "url": "http://host.docker.internal:4319/branch/",
+      "viewport": {
+        "height": 1024,
+        "width": 768
+      }
+    },
+    {
+      "screen": "client-stock",
+      "label": "mobile",
+      "addLabels": 31,
+      "cart": {
+        "bottom": 101.75,
+        "label": "Giỏ hàng (0 sản phẩm)",
+        "reachable": true,
+        "top": 61.75
+      },
+      "clippedCards": 0,
+      "documentWidth": 390,
+      "header": {
+        "bottom": 116,
+        "height": 116,
+        "position": "sticky",
+        "top": 0
+      },
+      "oldAddLabels": 0,
+      "posters": [
+        {
+          "display": "none",
+          "top": 0
+        },
+        {
+          "display": "none",
+          "top": 0
+        }
+      ],
+      "scrollPadding": "128px",
+      "scrollY": 5438,
+      "summary": null,
+      "url": "http://host.docker.internal:4319/branch/",
+      "viewport": {
+        "height": 844,
+        "width": 390
+      }
+    },
+    {
+      "screen": "client-stock",
+      "label": "narrow",
+      "addLabels": 31,
+      "cart": {
+        "bottom": 101.75,
+        "label": "Giỏ hàng (0 sản phẩm)",
+        "reachable": true,
+        "top": 61.75
+      },
+      "clippedCards": 0,
+      "documentWidth": 320,
+      "header": {
+        "bottom": 116,
+        "height": 116,
+        "position": "sticky",
+        "top": 0
+      },
+      "oldAddLabels": 0,
+      "posters": [
+        {
+          "display": "none",
+          "top": 0
+        },
+        {
+          "display": "none",
+          "top": 0
+        }
+      ],
+      "scrollPadding": "128px",
+      "scrollY": 5722,
+      "summary": null,
+      "url": "http://host.docker.internal:4319/branch/",
+      "viewport": {
+        "height": 800,
+        "width": 320
+      }
+    },
+    {
+      "screen": "admin-overview",
+      "label": "desktop",
+      "addLabels": 0,
+      "cart": null,
+      "clippedCards": 0,
+      "documentWidth": 1440,
+      "header": {
+        "bottom": 100,
+        "height": 100,
+        "position": "sticky",
+        "top": 0
+      },
+      "oldAddLabels": 0,
+      "posters": [
+        {
+          "display": "none",
+          "top": 0
+        },
+        {
+          "display": "none",
+          "top": 0
+        }
+      ],
+      "scrollPadding": "112px",
+      "scrollY": 1365,
+      "summary": null,
+      "url": "http://host.docker.internal:4319/admin/",
+      "viewport": {
+        "height": 1000,
+        "width": 1440
+      }
+    },
+    {
+      "screen": "admin-overview",
+      "label": "tablet",
+      "addLabels": 0,
+      "cart": null,
+      "clippedCards": 0,
+      "documentWidth": 768,
+      "header": {
+        "bottom": 129,
+        "height": 129,
+        "position": "sticky",
+        "top": 0
+      },
+      "oldAddLabels": 0,
+      "posters": [
+        {
+          "display": "none",
+          "top": 0
+        },
+        {
+          "display": "none",
+          "top": 0
+        }
+      ],
+      "scrollPadding": "141px",
+      "scrollY": 2263,
+      "summary": null,
+      "url": "http://host.docker.internal:4319/admin/",
+      "viewport": {
+        "height": 1024,
+        "width": 768
+      }
+    },
+    {
+      "screen": "admin-overview",
+      "label": "mobile",
+      "addLabels": 0,
+      "cart": null,
+      "clippedCards": 0,
+      "documentWidth": 390,
+      "header": {
+        "bottom": 116,
+        "height": 116,
+        "position": "sticky",
+        "top": 0
+      },
+      "oldAddLabels": 0,
+      "posters": [
+        {
+          "display": "none",
+          "top": 0
+        },
+        {
+          "display": "none",
+          "top": 0
+        }
+      ],
+      "scrollPadding": "128px",
+      "scrollY": 2646,
+      "summary": null,
+      "url": "http://host.docker.internal:4319/admin/",
+      "viewport": {
+        "height": 844,
+        "width": 390
+      }
+    }
+  ],
+  "cart": {
+    "addLabels": 0,
+    "cart": {
+      "bottom": 71,
+      "label": "Giỏ hàng (7 sản phẩm)",
+      "reachable": true,
+      "top": 29
+    },
+    "clippedCards": 0,
+    "documentWidth": 1440,
+    "header": {
+      "bottom": 100,
+      "height": 100,
+      "position": "sticky",
+      "top": 0
+    },
+    "oldAddLabels": 0,
+    "posters": [
+      {
+        "display": "block",
+        "top": 100
+      },
+      {
+        "display": "block",
+        "top": 100
+      }
+    ],
+    "scrollPadding": "112px",
+    "scrollY": 357,
+    "summary": {
+      "position": "sticky",
+      "top": 120
+    },
+    "url": "http://host.docker.internal:4319/branch/#view=cart",
+    "viewport": {
+      "height": 1000,
+      "width": 1440
+    }
+  },
+  "focus": [
+    {
+      "bottom": 501.984375,
+      "element": "INPUT",
+      "headerBottom": 116,
+      "label": "Số lượng bán TB01",
+      "top": 469.984375,
+      "visible": true
+    },
+    {
+      "bottom": 501.984375,
+      "element": "BUTTON",
+      "headerBottom": 116,
+      "label": "+ Thêm hàng",
+      "top": 469.984375,
+      "visible": true
+    }
+  ],
+  "adminMenu": {
+    "hasThresholds": false,
+    "height": 80,
+    "labels": [
+      "Hàng hóa",
+      "Kho chi nhánh"
+    ],
+    "menuVisible": true
+  },
+  "oldAdminThresholdRouteFallsBackToOverview": true,
+  "clientThresholdsStillAvailable": true,
+  "requestStatusLabelVerified": true,
+  "openCartFromScrolledMobile": true,
+  "headerA11y": [
+    {
+      "viewport": "desktop",
+      "counts": {
+        "inapplicable": 45,
+        "incomplete": 0,
+        "passes": 14,
+        "violations": 0
+      },
+      "violations": [],
+      "incomplete": []
+    },
+    {
+      "viewport": "mobile",
+      "counts": {
+        "inapplicable": 45,
+        "incomplete": 0,
+        "passes": 14,
+        "violations": 0
+      },
+      "violations": [],
+      "incomplete": []
+    }
+  ],
+  "diagnostics": [
+    {
+      "errors": []
+    },
+    {
+      "messages": []
+    }
+  ],
+  "deployed": false
+}

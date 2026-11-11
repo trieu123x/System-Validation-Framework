@@ -98,13 +98,18 @@ class ReceiptIntegrationTest {
         db.read(c -> Db.update(c, "UPDATE san_pham SET gia_ban_le=250 WHERE ma_sp='SP01'"));
         var quote = (com.google.gson.JsonObject) checkout.execute("CN01", "CREATE", basket(id, 2));
         assertEquals("PENDING", quote.get("status").getAsString());
-        assertEquals(500, quote.get("total").getAsLong());
+        assertEquals(500, quote.get("subtotal").getAsLong());
+        assertEquals(10, quote.get("vatRate").getAsInt());
+        assertEquals(50, quote.get("vatAmount").getAsLong());
+        assertEquals(550, quote.get("total").getAsLong());
         assertEquals(3, quantity());
         assertEquals(quote, checkout.execute("CN01", "CREATE", basket(id, 2)));
         db.read(c -> Db.update(c, "UPDATE san_pham SET gia_ban_le=999,ten='Changed' WHERE ma_sp='SP01'"));
         var paid = (com.google.gson.JsonObject) checkout.execute("CN01", "CONFIRM", basket(id, 2));
         assertEquals("PAID", paid.get("status").getAsString());
-        assertEquals(500, paid.get("total").getAsLong());
+        assertEquals(500, paid.get("subtotal").getAsLong());
+        assertEquals(50, paid.get("vatAmount").getAsLong());
+        assertEquals(550, paid.get("total").getAsLong());
         assertEquals("Product", paid.getAsJsonArray("items").get(0).getAsJsonObject().get("tenHang").getAsString());
         assertEquals(1, quantity());
         assertEquals(paid, checkout.execute("CN01", "CONFIRM", basket(id, 2)));
@@ -136,6 +141,50 @@ class ReceiptIntegrationTest {
         var pending = (com.google.gson.JsonObject) checkout.execute("CN01", "GET", body);
         assertEquals("PENDING", pending.get("status").getAsString());
         assertEquals(1, (int) db.read(c -> Db.one(c, "SELECT count(*) FROM ban_hang", r -> r.getInt(1))));
+    }
+
+    @Test void checkoutRoundsVatOncePerBasketAndIgnoresClientProvidedTotals() throws Exception {
+        db.tx(c -> {
+            Db.update(c, "UPDATE san_pham SET gia_ban_le=5 WHERE ma_sp='SP01'");
+            Db.update(c, "INSERT INTO san_pham (ma_sp,ten,don_vi,ma_dm,gia_ban_le) VALUES ('SP02','Second','cai','DM',5)");
+            Db.update(c, "INSERT INTO kho_chi_nhanh (ma_cn,ma_sp,so_luong) VALUES ('CN01','SP02',2)");
+            return null;
+        });
+        var checkout = new CheckoutService(db, new Events());
+        var body = basket("HD" + UUID.randomUUID().toString().replace("-", ""), 1);
+        var second = new com.google.gson.JsonObject();
+        second.addProperty("maHang", "SP02"); second.addProperty("soLuong", 1);
+        body.getAsJsonArray("items").add(second);
+        body.addProperty("subtotal", 1); body.addProperty("vatRate", 0);
+        body.addProperty("vatAmount", 0); body.addProperty("total", 1);
+        var quote = (com.google.gson.JsonObject) checkout.execute("CN01", "CREATE", body);
+        assertEquals(10, quote.get("subtotal").getAsLong());
+        assertEquals(10, quote.get("vatRate").getAsInt());
+        assertEquals(1, quote.get("vatAmount").getAsLong());
+        assertEquals(11, quote.get("total").getAsLong());
+        var paid = (com.google.gson.JsonObject) checkout.execute("CN01", "CONFIRM", body);
+        assertEquals(11, paid.get("total").getAsLong());
+        assertEquals(paid, checkout.execute("CN01", "GET", body));
+    }
+
+    @Test void legacyPendingAndPaidInvoicesKeepTheirOriginalAmounts() throws Exception {
+        var checkout = new CheckoutService(db, new Events());
+        String id = "HD" + UUID.randomUUID().toString().replace("-", "");
+        db.read(c -> Db.update(c, "UPDATE san_pham SET gia_ban_le=250 WHERE ma_sp='SP01'"));
+        var body = basket(id, 2);
+        var legacy = ((com.google.gson.JsonObject) checkout.execute("CN01", "CREATE", body)).deepCopy();
+        legacy.remove("subtotal"); legacy.remove("vatRate"); legacy.remove("vatAmount");
+        legacy.addProperty("total", 500);
+        db.tx(c -> Db.update(c, "UPDATE hoa_don_ban SET noi_dung=?::jsonb WHERE id=?", legacy.toString(), id));
+        assertEquals(legacy, checkout.execute("CN01", "CREATE", body));
+        var paid = (com.google.gson.JsonObject) checkout.execute("CN01", "CONFIRM", body);
+        assertEquals(500, paid.get("total").getAsLong());
+        assertFalse(paid.has("vatRate"));
+        assertEquals(paid, checkout.execute("CN01", "CONFIRM", body));
+        assertEquals(paid, checkout.execute("CN01", "GET", body));
+        var listed = (com.google.gson.JsonObject) ((java.util.List<?>) checkout.execute("CN01", "LIST", new com.google.gson.JsonObject())).get(0);
+        assertEquals(500, listed.get("total").getAsLong());
+        assertFalse(listed.has("vatRate"));
     }
 
     @Test void concurrentPaymentClicksDeductOnlyOnce() throws Exception {
