@@ -56,6 +56,8 @@
 .overview-lower-grid { display: grid; grid-template-columns: minmax(0, 1fr) 330px; gap: 22px; align-items: start; }
 .overview-text-action { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; }
 .overview-text-action svg { width: 15px; height: 15px; }
+.overview-statistics { display: grid; gap: 12px; min-width: 0; }
+.overview-statistics > .muted { font-size: 12px; }
 .overview-recent-table { min-width: 610px; }
 .overview-recent-product { display: block; min-width: 135px; max-width: 220px; font-weight: 500; line-height: 1.5; }
 .admin-shell .overview-recent-table th, .admin-shell .overview-recent-table td { padding-left: 16px; padding-right: 16px; }

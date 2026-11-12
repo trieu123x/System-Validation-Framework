@@ -4,12 +4,17 @@ import { useEffect, useRef, useState } from "react";
 import { api, confirmCredit, fmtMoney, fmtNumber, STATE_LABEL } from "@/lib/api";
 import type { Branch, LogRow, Product, RequestRow, Stats } from "@/lib/types";
 import { Card, Dot, Empty, FilterBar, ProductImage, StateBadge, useAction } from "@/components/ui";
+import dynamic from "next/dynamic";
 import "./overview.css";
+
+const OverviewStatistics = dynamic(() => import("./OverviewStatistics").then((module) => module.OverviewStatistics), {
+  ssr: false, loading: () => <p className="empty" role="status">Đang tải thống kê...</p>,
+});
 
 const RECENT = new Set(["DA_DE_XUAT", "THIEU_HANG", "DA_GIAO", "HOAN_TAT", "TU_CHOI"]);
 export type OverviewFilter = { q: string; maCn: string; maSp: string; trangThai: string; ketNoi: "" | "online" | "offline" };
 export const NO_FILTER: OverviewFilter = { q: "", maCn: "", maSp: "", trangThai: "", ketNoi: "" };
-type Go = (tab: "history" | "stock" | "monitor" | "transfers") => void;
+type Go = (tab: "history" | "stock" | "monitor" | "transfers" | "business") => void;
 type Push = (level: string, text: string) => void;
 
 const ACTIVITY: Record<string, string> = {
@@ -43,8 +48,10 @@ function Metric({ label, value, hint, tone, icon, onClick }: {
   </button>;
 }
 
-export function Overview({ branches, products, alerts: allAlerts, requests, stats, freshIds, showSim, push, live, go, filter: f, setFilter }: {
+export function Overview({ branches, products, alerts: allAlerts, requests, stats, businessVersion, onOpenBusiness, freshIds, showSim, push, live, go, filter: f, setFilter }: {
   branches: Branch[]; products: Product[]; alerts: RequestRow[]; requests: RequestRow[]; stats: Stats | null;
+  businessVersion: number;
+  onOpenBusiness: (part: "products" | "branches") => void;
   freshIds: Set<number>; showSim: boolean; push: Push; live: LogRow[]; go: Go;
   filter: OverviewFilter; setFilter: (f: OverviewFilter) => void;
 }) {
@@ -84,6 +91,7 @@ export function Overview({ branches, products, alerts: allAlerts, requests, stat
   const connectedPercent = visible.length ? Math.round(online / visible.length * 100) : 0;
 
   return <div className="operations-overview">
+    <OverviewStatistics version={businessVersion} onSeeAll={onOpenBusiness} />
     <div className="overview-scope"><span><span className="scope-mark" />{filtering ? "Dữ liệu theo bộ lọc hiện tại" : "Toàn bộ hệ thống phân phối"}</span><span>{fmtNumber(pool.length)} chi nhánh{showSim ? " · gồm chi nhánh kiểm thử" : " vận hành"}</span></div>
     <div className="overview-metrics">
       <Metric label="Cảnh báo cần xử lý" value={alerts.length} hint={alerts.length ? "Xem yêu cầu thiếu hàng" : "Không có cảnh báo thiếu hàng"} tone={alerts.length ? "danger" : "neutral"} icon="alert" onClick={() => alertSection.current?.scrollIntoView({ behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" })} />

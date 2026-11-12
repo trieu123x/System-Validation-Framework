@@ -15,7 +15,7 @@ import { Debts } from "@/components/admin/Debts";
 import { useWorkspaceNavigation } from "@/lib/navigation";
 import dynamic from "next/dynamic";
 
-// Recharts chỉ cần cho tab Kinh doanh: tải riêng để các tab khác không phải tải thư viện biểu đồ
+// Tải riêng màn Kinh doanh; biểu đồ Tổng quan cũng được tải riêng trong Overview.
 const Business = dynamic(() => import("@/components/admin/Business").then((m) => m.Business), {
   ssr: false, loading: () => <p className="empty" role="status">Đang tải thống kê...</p>,
 });
@@ -68,6 +68,7 @@ function AdminApp({ user, onLogout }: { user: string; onLogout: () => void }) {
   const [requests, setRequests] = useState<RequestRow[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [stats, setStats] = useState<Stats | null>(null);
+  const [businessPart, setBusinessPart] = useState<"overview" | "products" | "branches">("overview");
   const [fresh, setFresh] = useState<Set<number>>(new Set());
   const [live, setLive] = useState<LogRow[]>([]);
   const [showSim, setShowSim] = useState(false);
@@ -107,6 +108,7 @@ function AdminApp({ user, onLogout }: { user: string; onLogout: () => void }) {
   useEffect(() => { if (tab === "monitor") setHighCount(0); }, [tab]);
   const navigate = (next: Tab) => {
     if (next === tab) return;
+    if (next === "business") setBusinessPart("overview");
     setContextBack(null);
     openView(next);
   };
@@ -224,13 +226,14 @@ function AdminApp({ user, onLogout }: { user: string; onLogout: () => void }) {
           </div>
         )}
         {tab === "overview" && (
-          <Overview branches={branches} products={products} alerts={shownAlerts} requests={requests} stats={stats}
+          <Overview branches={branches} products={products} alerts={shownAlerts} requests={requests} stats={stats} businessVersion={v.business}
+            onOpenBusiness={(part) => { navigate("business"); setBusinessPart(part); }}
             freshIds={fresh} showSim={showSim} push={push} live={live} go={navigate}
             filter={overviewFilter} setFilter={setOverviewFilter} />
         )}
         {tab === "products" && <Products products={products} version={v.products} push={push} onBackChange={setContextBack} />}
         {tab === "stock" && <Warehouses products={products} version={v.stock + v.requests + v.debts} push={push} onBackChange={setContextBack} />}
-        {tab === "business" && <Business version={v.business} push={push} onBackChange={setContextBack} />}
+        {tab === "business" && <Business version={v.business} push={push} onBackChange={setContextBack} initialPart={businessPart} />}
         {tab === "debts" && <Debts version={v.debts + v.requests} showSim={showSim} push={push} onBackChange={setContextBack} />}
         {tab === "history" && <RequestHistory branches={realBranches} products={products} version={v.requests} />}
         {tab === "transfers" && <Transfers version={v.transfers} />}

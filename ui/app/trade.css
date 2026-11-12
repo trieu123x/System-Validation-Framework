@@ -143,6 +143,8 @@ body:has(.trade-shell) .toasts { top: calc(var(--workspace-toolbar-height, 116px
 .workspace-shell.industry-shell.trade-shell .industry-product-image, .workspace-shell.industry-shell.trade-shell .product-card-image { height: 190px; aspect-ratio: auto; padding: 12px 12px 28px; border: 0; border-bottom: 1px solid #f3f3f3; border-radius: 0; background: white; }
 .workspace-shell.industry-shell.trade-shell .industry-product-image .thumb, .workspace-shell.industry-shell.trade-shell .product-card-image .thumb { width: 100% !important; height: 148px !important; max-height: 148px; min-height: 0; object-fit: contain; mix-blend-mode: normal; }
 .workspace-shell.industry-shell.trade-shell .industry-product-image .thumb-empty, .workspace-shell.industry-shell.trade-shell .product-card-image .thumb-empty { min-height: 0; }
+.workspace-shell.industry-shell.trade-shell .product-card-image { height: 240px; padding: 8px; }
+.workspace-shell.industry-shell.trade-shell .product-card-image .thumb { height: 100% !important; max-height: none; }
 .workspace-shell.industry-shell.trade-shell .industry-product-info, .workspace-shell.industry-shell.trade-shell .product-card-body { display: flex; flex: 1; flex-direction: column; gap: 6px; padding: 12px; }
 .trade-shell .catalog-category { font-size: 10px; color: #626d76; margin: 0; }
 .workspace-shell.industry-shell.trade-shell .catalog-product-heading { flex-direction: column; align-items: flex-start; gap: 6px; }
@@ -160,6 +162,7 @@ body:has(.trade-shell) .toasts { top: calc(var(--workspace-toolbar-height, 116px
 .trade-shell .catalog-product-actions .btn-link { font-size: 11px; }
 .trade-shell .catalog-image-action { width: 29px; height: 29px; top: 10px; right: 10px; border-radius: 2px; }
 .trade-shell .catalog-stock-label, .workspace-shell.industry-shell.trade-shell .product-stock-label { top: auto; right: auto; border-radius: 3px; font-size: 10px; bottom: 10px; left: 10px; }
+.workspace-shell.industry-shell.trade-shell .product-card-status .product-stock-label { position: static; align-self: center; padding: 2px 6px; line-height: 16px; }
 .workspace-shell.industry-shell.trade-shell .stock-quantity-controls { gap: 6px; flex-wrap: wrap; }
 .workspace-shell.industry-shell.trade-shell .stock-quantity-controls input { width: 46px; min-height: 32px; border-radius: 2px; font-size: 12px; }
 .workspace-shell.industry-shell.trade-shell .stock-quantity-controls .btn { flex: 1; min-width: 0; min-height: 35px; padding: 8px 6px; border-radius: 3px; border-color: var(--accent); background: var(--accent); color: white; font-size: 12px; font-weight: 600; }
@@ -246,6 +249,8 @@ body:has(.trade-shell) .toasts { top: calc(var(--workspace-toolbar-height, 116px
   .workspace-shell.industry-shell.trade-shell .industry-product-grid, .workspace-shell.industry-shell.trade-shell .product-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
   .workspace-shell.industry-shell.trade-shell .industry-product-image, .workspace-shell.industry-shell.trade-shell .product-card-image { height: 132px; padding: 10px 10px 24px; }
   .workspace-shell.industry-shell.trade-shell .industry-product-image .thumb, .workspace-shell.industry-shell.trade-shell .product-card-image .thumb { height: 96px !important; max-height: 96px; }
+  .workspace-shell.industry-shell.trade-shell .product-card-image { height: 180px; padding: 8px; }
+  .workspace-shell.industry-shell.trade-shell .product-card-image .thumb { height: 100% !important; max-height: none; }
   .workspace-shell.industry-shell.trade-shell .industry-product-info, .workspace-shell.industry-shell.trade-shell .product-card-body { padding: 10px; }
   .workspace-shell.industry-shell.trade-shell .catalog-product-heading h3, .workspace-shell.industry-shell.trade-shell .product-card h3 { height: 36px; min-height: 36px; font-size: 12px; line-height: 18px; }
   .workspace-shell.industry-shell.trade-shell .catalog-product-heading > strong, .workspace-shell.industry-shell.trade-shell .product-card-price { font-size: 15px; }
