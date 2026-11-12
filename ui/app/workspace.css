@@ -42,8 +42,8 @@ button:focus-visible, a:focus-visible, [tabindex]:focus-visible { outline: 3px s
 .workspace-shell tr.low td { background: #fff7f6; }
 .workspace-shell tr.warn td { background: #fffbf2; }
 .workspace-shell .table-foot { font-size: 12px; padding: 12px 18px; }
-.receiving-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; min-width: 180px; }
-.receiving-table th:last-child, .receiving-table td:last-child { position: sticky; right: 0; z-index: 1; background: var(--surface); box-shadow: -5px 0 10px #18223008; }
+.receiving-actions { display: flex; flex-wrap: wrap; justify-content: flex-start; gap: 8px; min-width: 180px; }
+.receiving-table th:last-child, .receiving-table td:last-child { position: sticky; right: 0; z-index: 1; background: var(--surface); box-shadow: -5px 0 10px #18223008; text-align: left; }
 .receiving-table th:last-child { background: var(--th-bg); }
 .workspace-shell .btn, .login-page .btn { min-height: 36px; height: auto; padding: 7px 13px; border-radius: var(--radius-sm); font-size: 13px; font-weight: 550; line-height: 1.4; }
 .workspace-shell .btn-sm { min-height: 32px; padding: 6px 10px; font-size: 12px; }

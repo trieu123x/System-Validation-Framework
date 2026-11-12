@@ -36,6 +36,7 @@ final class BranchState {
         int maYc;
         String maHang;
         Integer soLuongDeXuat;
+        Integer soLuongChot;
         Integer soLuongCoThe;
         Integer soLuongGiao;
         Integer soLuongNhan;

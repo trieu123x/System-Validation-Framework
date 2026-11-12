@@ -13,7 +13,7 @@ import java.util.Map;
  */
 public final class ServerSettings {
 
-    /** Chiến lược trừ kho tổng khi ACCEPT (thực nghiệm E1). */
+    /** Chiến lược trừ kho tổng khi admin xuất hàng sau ACCEPT (thực nghiệm E1). */
     public enum AcceptStrategy {
         /** Đề xuất: UPDATE ... WHERE so_luong >= ? (nguyên tử trong CSDL). */
         CONDITIONAL,

@@ -1,0 +1,20 @@
+.workflow-confirm-dialog { position: fixed; inset: 0; width: min(480px, calc(100vw - 32px)); max-width: calc(100vw - 32px); max-height: calc(100dvh - 32px); margin: auto; padding: 0; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); color: var(--text); font: inherit; box-shadow: 0 16px 60px #18223030; overflow: auto; }
+.workflow-confirm-dialog::backdrop { background: #18223066; }
+body:has(.workflow-confirm-dialog[open]) { overflow: hidden; }
+.workflow-confirm-heading { padding: 18px 20px; border-bottom: 1px solid var(--border); }
+.workflow-confirm-heading h2 { margin: 0; font-size: 17px; font-weight: 600; line-height: 1.5; }
+.workflow-confirm-description { padding: 18px 20px; font-size: 13px; line-height: 1.65; overflow-wrap: anywhere; }
+.workflow-confirm-description > p + p { margin-top: 12px; }
+.workflow-confirm-quantities { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; padding: 14px 0; margin: 12px 0; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+.workflow-confirm-quantities dt { color: var(--text-2); font-size: 12px; }
+.workflow-confirm-quantities dd { margin: 4px 0 0; font-size: 20px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.workflow-confirm-actions { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 10px; padding: 14px 20px; border-top: 1px solid var(--border); }
+.workflow-confirm-dialog .btn { min-height: 40px; padding: 9px 14px; font-size: 13px; }
+.workflow-confirm-dialog .btn-success { background: var(--success); border-color: var(--success); color: white; }
+.workflow-confirm-dialog .btn-danger { background: var(--danger); border-color: var(--danger); color: white; }
+.workflow-confirm-dialog .btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+@media (max-width: 480px) {
+  .workflow-confirm-heading, .workflow-confirm-description { padding: 16px; }
+  .workflow-confirm-actions { padding: 14px 16px; }
+  .workflow-confirm-actions .btn { flex: 1 1 140px; }
+}

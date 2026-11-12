@@ -198,7 +198,16 @@ public final class Experiments {
                     go.await();
                     long t = System.nanoTime();
                     c.send(Message.of(Command.ACCEPT, maYc, qty));
-                    Message r = c.await(15_000, Command.DELIVERED, Command.OUT_OF_STOCK, Command.ERROR);
+                    Message r = c.await(15_000, Command.ACCEPTED, Command.ERROR);
+                    if (r != null && r.command() == Command.ACCEPTED) {
+                        try {
+                            admin.post("/api/requests/" + maYc + "/ship", Map.of("soLuong", qty));
+                        } catch (AdminClient.HttpError shortage) {
+                            if (shortage.status != 400) throw shortage;
+                            admin.post("/api/requests/" + maYc + "/shortage", Map.of("soLuong", qty));
+                        }
+                        r = c.await(15_000, Command.DELIVERED, Command.OUT_OF_STOCK, Command.ERROR);
+                    }
                     lat.add((System.nanoTime() - t) / 1e6);
                     lastReply.accumulateAndGet(System.nanoTime(), Math::max);
                     if (r != null && r.command() == Command.DELIVERED) {
@@ -854,8 +863,13 @@ public final class Experiments {
                 st.alertLat.add((now - t) / 1e6);
             }
             pool.execute(() -> {
+                try { admin.post("/api/requests/" + yc + "/offer", Map.of("soLuong", st.ship)); }
+                catch (Exception failure) { st.adminErrors.incrementAndGet(); }
+            });
+        } else if ("DA_CHAP_NHAN".equals(d.get("trangThai").getAsString())) {
+            pool.execute(() -> {
                 long t0 = System.nanoTime();
-                st.shipAt.put(yc, t0);
+                if (st.shipAt.putIfAbsent(yc, t0) != null) return;
                 try {
                     admin.post("/api/requests/" + yc + "/ship", Map.of("soLuong", st.ship));
                     st.shipHttp.add((System.nanoTime() - t0) / 1e6);
@@ -898,7 +912,12 @@ public final class Experiments {
             Map<String, LinkedBlockingQueue<Message>> pushes = new ConcurrentHashMap<>();
             for (int i = 1; i <= n; i++) {
                 LinkedBlockingQueue<Message> q = new LinkedBlockingQueue<>();
-                SimClient c = new SimClient(sim(i), HOST, PORT, PASSWORD).onPush(m -> {
+                SimClient c = new SimClient(sim(i), HOST, PORT, PASSWORD);
+                c.onPush(m -> {
+                    if (m.command() == Command.OFFER) {
+                        try { c.send(Message.of(Command.ACCEPT, m.param(0), m.param(2))); }
+                        catch (Exception failure) { st.errors.incrementAndGet(); }
+                    }
                     if (m.command() == Command.DELIVERED || m.command() == Command.OUT_OF_STOCK) {
                         q.add(m);
                     }

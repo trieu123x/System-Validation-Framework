@@ -33,7 +33,7 @@ final class BranchAgent implements ServerLink.Handler {
 
     private static final long IDLE_MS = 30_000;
     private static final long PONG_TIMEOUT_MS = 10_000;
-    private static final Set<String> OPEN_STATES = Set.of("DA_DE_XUAT", "THIEU_HANG", "DA_GIAO");
+    private static final Set<String> OPEN_STATES = Set.of("DA_DE_XUAT", "DA_CHAP_NHAN", "THIEU_HANG", "DA_GIAO");
 
     private final Object lock = new Object();
     private final BranchState state = new BranchState();
@@ -535,6 +535,18 @@ final class BranchAgent implements ServerLink.Handler {
                 }
                 r.capNhat = BranchState.now();
                 alerted.add(r.maHang);
+            }
+            case ACCEPTED -> {
+                BranchState.Request r = state.request(m.intParam(0));
+                if ("DA_GIAO".equals(r.trangThai) || "HOAN_TAT".equals(r.trangThai) || "TU_CHOI".equals(r.trangThai)) break;
+                r.maHang = m.param(1);
+                r.soLuongChot = m.intParam(2);
+                boolean fresh = !"DA_CHAP_NHAN".equals(r.trangThai);
+                r.trangThai = "DA_CHAP_NHAN";
+                r.capNhat = BranchState.now();
+                alerted.add(r.maHang);
+                if (fresh) toast("success", "Đã chấp nhận bổ sung " + r.soLuongChot + " " + tenHang(r.maHang)
+                        + " (YC #" + r.maYc + "). Đang chờ công ty xuất hàng.");
             }
             case OUT_OF_STOCK -> {
                 BranchState.Request r = state.request(m.intParam(0));

@@ -60,7 +60,7 @@ export type Warehouse = {
 export type WarehouseItem = {
   maSp: string; ten: string; model: string | null; donVi: string; maDm: string; tenDm: string; giaXuat: number;
   anhUrl: string | null; soLuong: number; nguong: number; muc: "critical" | "warning" | "ok" | "unset"; giaTri: number;
-  ycMo: number | null; ycTrangThai: string | null; ban7Ngay: number; deXuat: number; tonTong: number;
+  ycMo: number | null; ycTrangThai: string | null; ycSoLuongChot: number | null; ban7Ngay: number; deXuat: number; tonTong: number;
 };
 
 export type WarehouseDetail = {
@@ -182,6 +182,7 @@ export type BranchRequest = {
   maYc: number;
   maHang: string;
   soLuongDeXuat: number | null;
+  soLuongChot: number | null;
   soLuongCoThe: number | null;
   soLuongGiao: number | null;
   soLuongNhan: number | null;

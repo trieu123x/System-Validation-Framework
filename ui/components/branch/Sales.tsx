@@ -18,7 +18,7 @@ type Props = {
   onAdd: (item: BranchItem, quantity: number) => void;
 };
 const SUPPLY: Record<string, [string, string]> = {
-  DA_GIAO: ["info", "hàng đang về"], DA_DE_XUAT: ["warn", "chờ bạn xác nhận"], THIEU_HANG: ["danger", "công ty hết hàng"],
+  DA_GIAO: ["info", "hàng đang về"], DA_DE_XUAT: ["warn", "chờ bạn xác nhận"], DA_CHAP_NHAN: ["info", "chờ công ty xuất hàng"], THIEU_HANG: ["danger", "công ty hết hàng"],
 };
 const value = (item: BranchItem, key: Key) => key === "muc" ? item.nguong > 0 ? item.soLuong / item.nguong : null : item[key];
 

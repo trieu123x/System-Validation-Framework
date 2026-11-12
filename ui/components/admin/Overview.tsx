@@ -1,17 +1,18 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { api, confirmCredit, fmtMoney, fmtNumber, STATE_LABEL } from "@/lib/api";
+import { api, fmtMoney, fmtNumber, STATE_LABEL } from "@/lib/api";
 import type { Branch, LogRow, Product, RequestRow, Stats } from "@/lib/types";
 import { Card, Dot, Empty, FilterBar, ProductImage, StateBadge, useAction } from "@/components/ui";
 import dynamic from "next/dynamic";
+import { RequestShipment } from "./RequestShipment";
 import "./overview.css";
 
 const OverviewStatistics = dynamic(() => import("./OverviewStatistics").then((module) => module.OverviewStatistics), {
   ssr: false, loading: () => <p className="empty" role="status">Đang tải thống kê...</p>,
 });
 
-const RECENT = new Set(["DA_DE_XUAT", "THIEU_HANG", "DA_GIAO", "HOAN_TAT", "TU_CHOI"]);
+const RECENT = new Set(["DA_DE_XUAT", "DA_CHAP_NHAN", "THIEU_HANG", "DA_GIAO", "HOAN_TAT", "TU_CHOI"]);
 export type OverviewFilter = { q: string; maCn: string; maSp: string; trangThai: string; ketNoi: "" | "online" | "offline" };
 export const NO_FILTER: OverviewFilter = { q: "", maCn: "", maSp: "", trangThai: "", ketNoi: "" };
 type Go = (tab: "history" | "stock" | "monitor" | "transfers" | "business") => void;
@@ -73,6 +74,8 @@ export function Overview({ branches, products, alerts: allAlerts, requests, stat
     && (!needle || `yc${r.maYc} ${r.maCn} ${r.tenCn} ${r.maSp} ${r.tenSp}`.toLowerCase().includes(needle));
   const alerts = allAlerts.filter(matches).sort((a, b) => b.mucThieu - a.mucThieu || a.maYc - b.maYc);
   const mine = requests.filter(matches);
+  const readyToShip = mine.filter((r) => r.trangThai === "DA_CHAP_NHAN")
+    .sort((a, b) => b.capNhatLuc.localeCompare(a.capNhatLuc));
   const shortage = mine.filter((r) => r.trangThai === "THIEU_HANG").length;
   const shipped = mine.filter((r) => r.trangThai === "DA_GIAO").length;
   const recent = mine.filter((r) => RECENT.has(r.trangThai) && (!f.trangThai || r.trangThai === f.trangThai))
@@ -127,6 +130,19 @@ export function Overview({ branches, products, alerts: allAlerts, requests, stat
         {visible.length === 0 ? <Empty>Không có chi nhánh nào khớp bộ lọc.</Empty> : <ul className="overview-branch-list" tabIndex={0} aria-label="Danh sách kết nối chi nhánh">{visible.map((b) => <li key={b.maCn}><span className="branch-avatar">{b.maCn.slice(-2)}</span><span className="branch-information"><b>{b.ten}</b><small>{b.maCn}{b.ycMo ? ` · ${b.ycMo} yêu cầu mở` : ""}{b.tinCho ? ` · ${b.tinCho} tin chờ` : ""}</small></span><span className={`branch-connection${b.online ? " is-online" : ""}`} title={b.online ? "Đã kết nối" : "Mất kết nối"}><Dot on={b.online} /><span>{b.online ? "Online" : "Offline"}</span></span></li>)}</ul>}
       </Card>
     </aside><div className="admin-overview-main">
+    {readyToShip.length > 0 && <Card title={<span className="overview-section-title">Chờ xuất hàng <span className="section-count">{readyToShip.length}</span></span>}
+      actions={<button type="button" className="btn-link overview-text-action" onClick={() => go("history")}>Yêu cầu cấp hàng <OverviewIcon name="arrow" /></button>}>
+      <p className="muted">Chi nhánh đã đồng ý bổ sung. Công ty kiểm tra và bấm Xuất hàng để tiếp tục.</p>
+      <div className="table-wrap" tabIndex={0}><table className="overview-recent-table">
+        <thead><tr><th scope="col">Yêu cầu / mặt hàng</th><th scope="col">Chi nhánh</th><th scope="col" className="num">Đã chấp nhận</th><th scope="col">Thao tác</th></tr></thead>
+        <tbody>{readyToShip.map((r) => <tr key={r.maYc} className={freshIds.has(r.maYc) ? "row-new" : ""}>
+          <td><span className="overview-recent-product">{r.tenSp}</span><small className="overview-cell-secondary">YC{r.maYc} · {r.maSp}</small></td>
+          <td><span className="overview-cell-name">{r.tenCn}</span><small className="overview-cell-secondary">{r.maCn}</small></td>
+          <td className="num">{fmtNumber(r.soLuongChot)}</td>
+          <td><RequestShipment request={r} push={push} /></td>
+        </tr>)}</tbody>
+      </table></div>
+    </Card>}
     <div ref={alertSection} className="overview-alert-section">
       <Card className="overview-alert-card" title={<span className="overview-section-title">Cần xử lý <span className="section-count">{alerts.length}</span></span>}
         actions={<div className="admin-request-controls"><span className="overview-sort-note">Thiếu nhiều nhất trước</span><div className="catalog-view-switch" role="group" aria-label="Cách xem yêu cầu"><button type="button" aria-label="Xem thẻ yêu cầu" aria-pressed={view === "cards"} onClick={() => setView("cards")}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true"><path d="M3 3h7v7H3ZM14 3h7v7h-7ZM3 14h7v7H3ZM14 14h7v7h-7Z" /></svg></button><button type="button" aria-label="Xem bảng yêu cầu" aria-pressed={view === "table"} onClick={() => setView("table")}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true"><path d="M3 4h18v16H3ZM3 9h18M3 14h18M9 4v16" /></svg></button></div></div>}>
@@ -192,38 +208,36 @@ function RequestDrawer({ request: a, product, push, onClose }: { request: Reques
     if (element && !element.open) element.showModal();
     return () => { if (opener instanceof HTMLElement && opener.isConnected) opener.focus({ preventScroll: true }); };
   }, []);
-  const act = async (action: "ship" | "shortage" | "offer") => {
-    if (busy || !valid || (action === "ship" && a.tonTong < n)) return;
+  const act = async (action: "shortage" | "offer") => {
+    if (busy || !valid) return;
     setConfirming(true);
     try {
-      if (action === "ship" && !(await confirmCredit(a.maCn, n * a.giaXuat))) return;
-      const messages = { ship: `Đã gửi ${n} ${a.tenSp} tới ${a.tenCn}`, shortage: `Đã báo ${a.tenCn}: kho tổng không đủ ${a.tenSp}`, offer: `Đã gửi đề xuất YC${a.maYc} để ${a.maCn} xác nhận` };
+      const messages = { shortage: `Đã báo ${a.tenCn}: kho tổng không đủ ${a.tenSp}`, offer: `Đã yêu cầu ${a.maCn} chấp nhận bổ sung YC${a.maYc}` };
       if (await run(() => api(`/api/requests/${a.maYc}/${action}`, { soLuong: n }), messages[action])) onClose();
     } finally { setConfirming(false); }
   };
   return <dialog className="overview-request-drawer" ref={dialog} aria-labelledby="request-drawer-title" onClose={onClose} onClick={(e) => { if (e.target === e.currentTarget) dialog.current?.close(); }}>
     <div className="request-drawer-content">
       <header className="request-drawer-header"><div><span className="request-eyebrow">YÊU CẦU CẤP HÀNG</span><h2 id="request-drawer-title">Xử lý YC{a.maYc}</h2></div><button type="button" className="btn drawer-dismiss" onClick={() => dialog.current?.close()} aria-label="Đóng chi tiết yêu cầu">×</button></header>
-      <form className="request-drawer-form" onSubmit={(e) => { e.preventDefault(); void act("ship"); }}>
+      <form className="request-drawer-form" onSubmit={(e) => { e.preventDefault(); void act("offer"); }}>
         <div className="request-product"><ProductImage src={product?.anhUrl} alt={a.tenSp} category={product?.tenDm} size={64} fit="contain" /><div><b>{a.tenSp}</b><small>{a.maSp}{product?.donVi ? ` · Đơn vị: ${product.donVi}` : ""}</small></div></div>
         <dl className="request-facts"><div><dt>Chi nhánh yêu cầu</dt><dd>{a.tenCn}<small>{a.maCn}</small></dd></div><div><dt>Thời điểm tạo</dt><dd>{a.taoLuc.replace("T", " ").slice(0, 19)}</dd></div>{a.soLuongXin != null && <div><dt>Số lượng xin từ thông báo</dt><dd>{fmtNumber(a.soLuongXin)}</dd></div>}</dl>
         <div className="request-stock-grid"><div><span>Tồn chi nhánh</span><strong>{fmtNumber(a.soLuongCon)}</strong></div><div><span>Ngưỡng tối thiểu</span><strong>{fmtNumber(a.nguong)}</strong></div><div><span>Còn thiếu</span><strong className="request-shortage">{fmtNumber(a.mucThieu)}</strong></div></div>
         <div className="request-warehouse"><OverviewIcon name="box" /><span>Kho tổng hiện có</span><b>{fmtNumber(a.tonTong)}{product?.donVi ? ` ${product.donVi}` : ""}</b></div>
-        <label className="field request-quantity">Số lượng gửi<input type="number" min={1} step={1} required value={qty} disabled={busy} onChange={(e) => setQty(e.target.value)} aria-describedby="request-quantity-hint" /><small id="request-quantity-hint">Số lượng gợi ý: {fmtNumber(a.goiY)}{valid ? ` · Giá trị xuất: ${fmtMoney(n * a.giaXuat)}` : " · Nhập số nguyên lớn hơn 0"}</small></label>
+        <label className="field request-quantity">Số lượng yêu cầu bổ sung<input type="number" min={1} step={1} required value={qty} disabled={busy} onChange={(e) => setQty(e.target.value)} aria-describedby="request-quantity-hint" /><small id="request-quantity-hint">Số lượng gợi ý: {fmtNumber(a.goiY)}{valid ? ` · Giá trị dự kiến: ${fmtMoney(n * a.giaXuat)}` : " · Nhập số nguyên lớn hơn 0"}</small></label>
         {valid && n > a.tonTong && <div className="request-stock-warning" role="status">Kho tổng không đủ số lượng này. Bạn có thể gửi đề xuất hoặc báo không đủ hàng cho chi nhánh.</div>}
-        <div className="request-action-area"><button type="submit" className="btn btn-primary" disabled={busy || !valid || n > a.tonTong}><OverviewIcon name="truck" />{busy ? "Đang xử lý…" : "Xuất kho & gửi hàng"}</button><button type="button" className="btn" disabled={busy || !valid} onClick={() => void act("offer")}>Gửi đề xuất để chi nhánh xác nhận</button><button type="button" className="btn request-shortage-action" disabled={busy || !valid} onClick={() => void act("shortage")}>Báo kho tổng không đủ hàng</button><p>Gửi hàng sẽ xuất kho tổng. Gửi đề xuất sẽ chờ chi nhánh xác nhận trước khi xuất kho.</p></div>
+        <div className="request-action-area"><button type="submit" className="btn btn-primary" disabled={busy || !valid}>{busy ? "Đang xử lý…" : "Yêu cầu bổ sung"}</button><button type="button" className="btn request-shortage-action" disabled={busy || !valid} onClick={() => void act("shortage")}>Báo kho tổng không đủ hàng</button><p>Chưa xuất kho tại bước này. Sau khi chi nhánh chấp nhận, mở Yêu cầu cấp hàng để xuất hàng.</p></div>
       </form>
     </div>
   </dialog>;
 }
 
 function RecentRow({ r, fresh, push }: { r: RequestRow; fresh: boolean; push: Push }) {
-  const { run, busy } = useAction(push);
   const qty = r.soLuongGiao ?? r.soLuongChot ?? r.soLuongDeXuat;
   return <tr className={fresh ? "row-new" : ""}>
     <td><span className="overview-recent-product">{r.tenSp}</span><small className="overview-cell-secondary">YC{r.maYc}</small></td>
     <td><span className="overview-cell-name">{r.tenCn}</span><small className="overview-cell-secondary">{r.maCn}</small></td>
-    <td className="num">{fmtNumber(qty)}</td><td><StateBadge state={r.trangThai} />{r.trangThai === "THIEU_HANG" && qty != null && <button type="button" className="btn-link overview-reship" disabled={busy || r.tonTong < qty} title={r.tonTong < qty ? `Kho tổng còn ${r.tonTong}` : "Xuất kho tổng và gửi ngay"} onClick={async () => { if (!busy && await confirmCredit(r.maCn, qty * r.giaXuat)) void run(() => api(`/api/requests/${r.maYc}/ship`, { soLuong: qty }), `Đã gửi YC${r.maYc}`); }}>Gửi hàng</button>}</td>
+    <td className="num">{fmtNumber(qty)}</td><td><StateBadge state={r.trangThai} /> <RequestShipment request={r} push={push} /></td>
     <td className="right overview-time">{r.capNhatLuc.slice(11, 16)}<small className="overview-cell-secondary">{r.capNhatLuc.slice(8, 10)}/{r.capNhatLuc.slice(5, 7)}</small></td>
   </tr>;
 }

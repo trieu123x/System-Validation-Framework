@@ -25,6 +25,7 @@ public enum Command {
     LOW_STOCK(3),
     OFFER(3),
     ACCEPT(2),
+    ACCEPTED(3), // maYC, maHang, soLuongChot: chi nhanh da chap nhan, cho admin xuat hang
     REJECT(1),
     REJECT_RESULT(3), // maYC, OK | ERROR, maHang | error message (after commit)
     DELIVERED(3),

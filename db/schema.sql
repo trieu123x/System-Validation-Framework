@@ -72,7 +72,7 @@ CREATE TABLE yeu_cau (
     -- số chi nhánh xin khi trả lời thông báo (Cần hàng / Muốn nhập); NULL = YC từ LOW_STOCK
     so_luong_xin      INTEGER      CHECK (so_luong_xin > 0),
     trang_thai        VARCHAR(12)  NOT NULL DEFAULT 'CHO'
-        CHECK (trang_thai IN ('CHO', 'DA_DE_XUAT', 'DA_GIAO', 'HOAN_TAT', 'TU_CHOI', 'THIEU_HANG')),
+        CHECK (trang_thai IN ('CHO', 'DA_DE_XUAT', 'DA_CHAP_NHAN', 'DA_GIAO', 'HOAN_TAT', 'TU_CHOI', 'THIEU_HANG')),
     tao_luc           TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     cap_nhat_luc      TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
 );

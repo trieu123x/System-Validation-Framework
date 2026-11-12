@@ -1,9 +1,10 @@
 "use client";
 
 import { Fragment, useEffect, useState } from "react";
-import { api, confirmCredit, fmtMoney, fmtNumber, STATE_LABEL } from "@/lib/api";
+import { api, fmtMoney, fmtNumber, STATE_LABEL } from "@/lib/api";
 import type { Product, Warehouse, WarehouseDetail, WarehouseItem } from "@/lib/types";
 import { Badge, Card, Dot, Empty, LEVEL_LABEL, ProductImage, StockBar, stockLevel, useAction, type StockLevel, type BackAction } from "@/components/ui";
+import { RequestShipment } from "./RequestShipment";
 
 type Push = (l: string, t: string) => void;
 type Sort = "thieu" | "giaTriTon" | "conNo" | "maCn";
@@ -153,23 +154,15 @@ function ItemRow({ maCn, m, push, changed }: { maCn: string; m: WarehouseItem; p
   useEffect(() => setQty(String(Math.max(m.deXuat, 1))), [m.deXuat]);
   const n = Number(qty);
   const needs = m.muc === "critical" || m.muc === "warning";
-  // YC CHO/DA_DE_XUAT vẫn bổ sung được (server gửi hàng cho chính YC đó); đang giao hoặc báo thiếu thì không
+  // Chỉ tạo/đổi yêu cầu khi chi nhánh chưa chấp nhận; chưa xuất kho tại bước này.
   const blocked = m.ycTrangThai != null && !["CHO", "DA_DE_XUAT"].includes(m.ycTrangThai);
 
   const replenish = async () => {
-    if (!(await confirmCredit(maCn, n * m.giaXuat))) return;
     if (await run(() => api(`/api/warehouses/${encodeURIComponent(maCn)}/replenish`, { maSp: m.maSp, soLuong: n }),
-      `Đã gửi ${n} ${m.ten} tới ${maCn}`)) {
+      `Đã yêu cầu ${maCn} chấp nhận bổ sung ${n} ${m.ten}`)) {
       changed();
     }
   };
-
-  // sắp thiếu (chưa dưới ngưỡng): hỏi chi nhánh trước, CN bấm "Cần hàng" thì server tạo YC
-  const ask = () => run(() => api("/api/notices", {
-    loai: "HOI_NHU_CAU", tieuDe: `Chi nhánh có cần thêm ${m.ten}?`,
-    noiDung: `Tồn hiện tại ${m.soLuong}, ngưỡng ${m.nguong}. Công ty đề xuất bổ sung ${n} ${m.donVi}.`,
-    maSp: m.maSp, soLuongDeXuat: n, chiNhanh: [{ maCn, deXuat: n }],
-  }), `Đã hỏi ${maCn} có cần thêm ${m.ten} không`);
 
   return (
     <tr className={m.muc === "critical" ? "low" : m.muc === "warning" ? "warn" : ""}>
@@ -189,17 +182,16 @@ function ItemRow({ maCn, m, push, changed }: { maCn: string; m: WarehouseItem; p
       <td className="num nowrap">{fmtMoney(m.giaTri)}</td>
       <td className="nowrap">{m.ycMo != null && <>YC{m.ycMo} <Badge tone="info">{STATE_LABEL[m.ycTrangThai ?? ""] ?? m.ycTrangThai}</Badge></>}</td>
       <td className="nowrap">
+        {m.ycMo != null && m.ycTrangThai === "DA_CHAP_NHAN" && <RequestShipment
+          request={{ maYc: m.ycMo, maCn, trangThai: m.ycTrangThai, soLuongChot: m.ycSoLuongChot, tonTong: m.tonTong, giaXuat: m.giaXuat }}
+          push={push} label="Xuất kho" onShipped={changed} />}
         {needs && !blocked && (
           <span className="qty-group">
             <input type="number" min={1} value={qty} style={{ height: 26, width: 60 }} onChange={(e) => setQty(e.target.value)}
               aria-label={`Số lượng bổ sung ${m.maSp}`} />
-            <button className="btn btn-sm btn-success" disabled={busy || !(n > 0) || m.tonTong < n}
-              title={m.tonTong < n ? `Kho tổng chỉ còn ${m.tonTong}` : "Tạo yêu cầu và gửi hàng ngay"}
-              onClick={replenish}>Bổ sung</button>
-            {m.muc === "warning" && m.ycMo == null && (
-              <button className="btn btn-sm" disabled={busy || !(n > 0)} onClick={ask}
-                title="Gửi thông báo hỏi chi nhánh có cần hàng không">Hỏi cần hàng</button>
-            )}
+            <button className="btn btn-sm btn-success" disabled={busy || !Number.isSafeInteger(n) || n <= 0}
+              title="Gửi yêu cầu để chi nhánh chấp nhận trước khi xuất hàng"
+              onClick={replenish}>Yêu cầu bổ sung</button>
           </span>
         )}
       </td>

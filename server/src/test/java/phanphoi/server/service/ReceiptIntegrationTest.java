@@ -344,4 +344,171 @@ class ReceiptIntegrationTest {
         assertNull(requests.search("CN01", "", "", "", "", false).get(0).get("soLuongNhan"));
         assertEquals(Command.RECEIVED_OK, requests.received("CN01", 1, 8).command());
     }
+
+    private RequestService replenishmentService() throws Exception {
+        db.tx(c -> {
+            Db.update(c, "DELETE FROM phieu_xuat");
+            Db.update(c, "DELETE FROM yeu_cau");
+            return null;
+        });
+        var settings = new phanphoi.server.ServerSettings(phanphoi.common.Config.load("test-no-config.properties", new String[0]));
+        var events = new Events();
+        var registry = new SessionRegistry(events);
+        var outbox = new Outbox(db, registry, settings);
+        var debts = new DebtService(db, registry, events);
+        return new RequestService(db, outbox, events, new TransferService(db, registry, outbox, events, debts), debts, settings);
+    }
+
+    private int centralQuantity() throws SQLException {
+        return db.read(c -> Db.one(c, "SELECT so_luong FROM kho_tong WHERE ma_sp='SP01'", r -> r.getInt(1)));
+    }
+
+    private int voucherCount() throws SQLException {
+        return db.read(c -> Db.one(c, "SELECT count(*) FROM phieu_xuat", r -> r.getInt(1)));
+    }
+
+    @Test void replenishmentRequiresAllFourStepsAndRetriesDoNotDuplicateStockOrDebt() throws Exception {
+        var service = replenishmentService();
+        int id = service.replenish("CN01", "SP01", 10);
+        assertEquals("DA_DE_XUAT", service.search("CN01", "", "", "", "", false).get(0).get("trangThai"));
+        assertEquals(100, centralQuantity());
+        assertEquals(3, quantity());
+        assertEquals(0, voucherCount());
+        assertThrows(ServiceException.class, () -> service.ship(id, 10));
+        assertThrows(ServiceException.class, () -> service.received("CN01", id, 10));
+        assertThrows(ServiceException.class, () -> service.accept("CN02", id, 10));
+
+        assertEquals(Command.ACCEPTED, service.accept("CN01", id, 8).get(0).command());
+        assertEquals(Command.ACCEPTED, service.accept("CN01", id, 8).get(0).command());
+        assertThrows(ServiceException.class, () -> service.accept("CN01", id, 9));
+        assertEquals("DA_CHAP_NHAN", service.search("CN01", "", "", "", "", false).get(0).get("trangThai"));
+        var warehouse = stock.warehouse("CN01", java.util.Set.of("CN01"));
+        var warehouseItem = (java.util.Map<?, ?>) ((java.util.List<?>) warehouse.get("matHang")).get(0);
+        assertEquals(id, warehouseItem.get("ycMo"));
+        assertEquals("DA_CHAP_NHAN", warehouseItem.get("ycTrangThai"));
+        assertEquals(8, warehouseItem.get("ycSoLuongChot"));
+        assertEquals(100, centralQuantity());
+        assertEquals(3, quantity());
+        assertEquals(0, voucherCount());
+        var resync = service.resync("CN01");
+        assertTrue(resync.stream().anyMatch(m -> m.command() == Command.ACCEPTED && "8".equals(m.param(2))));
+        assertFalse(resync.stream().anyMatch(m -> m.command() == Command.OFFER || m.command() == Command.DELIVERED));
+        assertThrows(ServiceException.class, () -> service.ship(id, 10));
+        assertThrows(ServiceException.class, () -> service.replenish("CN01", "SP01", 9));
+
+        service.ship(id, 8);
+        service.ship(id, 8);
+        var shippedWarehouse = stock.warehouse("CN01", java.util.Set.of("CN01"));
+        var shippedItem = (java.util.Map<?, ?>) ((java.util.List<?>) shippedWarehouse.get("matHang")).get(0);
+        assertEquals("DA_GIAO", shippedItem.get("ycTrangThai"));
+        assertEquals(92, centralQuantity());
+        assertEquals(3, quantity());
+        assertEquals(1, voucherCount());
+        assertEquals(0, (int) db.read(c -> Db.one(c, "SELECT count(*) FROM cong_no_cn", r -> r.getInt(1))));
+        service.received("CN01", id, 7);
+        service.received("CN01", id, 7);
+        service.ship(id, 8);
+        assertEquals(92, centralQuantity());
+        assertEquals(10, quantity());
+        assertEquals(1, voucherCount());
+        assertEquals(1, (int) db.read(c -> Db.one(c, "SELECT count(*) FROM cong_no_cn", r -> r.getInt(1))));
+        var row = service.search("CN01", "", "", "", "", false).get(0);
+        assertEquals("HOAN_TAT", row.get("trangThai"));
+        assertEquals(-1, row.get("chenhLech"));
+    }
+
+    @Test void replenishmentReusesOpenRequestWithoutDispatchingAndRefusalDoesNotChangeStock() throws Exception {
+        var service = replenishmentService();
+        int id = service.replenish("CN01", "SP01", 10);
+        assertEquals(id, service.replenish("CN01", "SP01", 12));
+        service.accept("CN01", id, 12);
+        service.reject("CN01", id);
+        service.reject("CN01", id);
+        assertThrows(ServiceException.class, () -> service.ship(id, 12));
+        assertEquals(100, centralQuantity());
+        assertEquals(3, quantity());
+        assertEquals(0, voucherCount());
+    }
+
+    @Test void insufficientStockAtDispatchRollsBackAndCanBeRetriedAfterRestock() throws Exception {
+        var service = replenishmentService();
+        int id = service.replenish("CN01", "SP01", 110);
+        service.accept("CN01", id, 110);
+        assertThrows(ServiceException.class, () -> service.ship(id, 110));
+        assertEquals(100, centralQuantity());
+        assertEquals(0, voucherCount());
+        assertEquals("DA_CHAP_NHAN", service.search("CN01", "", "", "", "", false).get(0).get("trangThai"));
+        db.read(c -> Db.update(c, "UPDATE kho_tong SET so_luong=150 WHERE ma_sp='SP01'"));
+        service.ship(id, 110);
+        assertEquals(40, centralQuantity());
+        assertEquals(1, voucherCount());
+    }
+
+    @Test void simultaneousDispatchRetriesDeductOnlyOnce() throws Exception {
+        var service = replenishmentService();
+        int id = service.replenish("CN01", "SP01", 10);
+        service.accept("CN01", id, 10);
+        var executor = Executors.newFixedThreadPool(4);
+        try {
+            var tasks = new java.util.ArrayList<java.util.concurrent.Future<?>>();
+            for (int i = 0; i < 8; i++) tasks.add(executor.submit(() -> { service.ship(id, 10); return null; }));
+            for (var task : tasks) task.get(10, TimeUnit.SECONDS);
+        } finally { executor.shutdownNow(); }
+        assertEquals(90, centralQuantity());
+        assertEquals(1, voucherCount());
+    }
+
+    @Test void shortageCannotBypassBranchAgreementOrChangeAgreedQuantity() throws Exception {
+        var service = replenishmentService();
+        int id = service.replenish("CN01", "SP01", 10);
+        service.reportShortage(id, 10);
+        assertThrows(ServiceException.class, () -> service.ship(id, 10));
+        service.accept("CN01", id, 6);
+        assertThrows(ServiceException.class, () -> service.reportShortage(id, 7));
+        service.reportShortage(id, 6);
+        service.ship(id, 6);
+        assertEquals(94, centralQuantity());
+        assertEquals(1, voucherCount());
+        assertEquals(3, quantity());
+    }
+
+    @Test void simultaneousDifferentRequestsCannotOversellCentralStock() throws Exception {
+        var service = replenishmentService();
+        db.read(c -> Db.update(c, "UPDATE kho_tong SET so_luong=10 WHERE ma_sp='SP01'"));
+        int a = service.replenish("CN01", "SP01", 8);
+        int b = service.replenish("CN02", "SP01", 8);
+        service.accept("CN01", a, 8);
+        service.accept("CN02", b, 8);
+        assertEquals(10, centralQuantity());
+        var executor = Executors.newFixedThreadPool(2);
+        var start = new java.util.concurrent.CountDownLatch(1);
+        try {
+            var tasks = new java.util.ArrayList<java.util.concurrent.Future<Boolean>>();
+            for (int id : new int[]{a, b}) tasks.add(executor.submit(() -> {
+                start.await();
+                try { service.ship(id, 8); return true; }
+                catch (ServiceException shortage) { return false; }
+            }));
+            start.countDown();
+            int shipped = 0;
+            for (var task : tasks) if (task.get(10, TimeUnit.SECONDS)) shipped++;
+            assertEquals(1, shipped);
+        } finally { executor.shutdownNow(); }
+        assertEquals(2, centralQuantity());
+        assertEquals(1, voucherCount());
+    }
+
+    @Test void replenishmentMigrationPreservesHistoricalDeliveriesAndIsRepeatable() throws Exception {
+        db.read(c -> {
+            Db.update(c, "ALTER TABLE yeu_cau DROP CONSTRAINT yeu_cau_trang_thai_check");
+            return Db.update(c, "ALTER TABLE yeu_cau ADD CONSTRAINT yeu_cau_trang_thai_check CHECK (trang_thai IN ('CHO','DA_DE_XUAT','DA_GIAO','HOAN_TAT','TU_CHOI','THIEU_HANG'))");
+        });
+        phanphoi.server.db.ReplenishmentSchema.ensure(db);
+        phanphoi.server.db.ReplenishmentSchema.ensure(db);
+        assertEquals("DA_GIAO", requests.search("CN01", "", "", "", "", false).get(0).get("trangThai"));
+        assertEquals(100, centralQuantity());
+        assertEquals(3, quantity());
+        assertEquals(1, voucherCount());
+        db.read(c -> Db.update(c, "UPDATE yeu_cau SET trang_thai='DA_CHAP_NHAN',so_luong_chot=10 WHERE ma_yc=1"));
+    }
 }

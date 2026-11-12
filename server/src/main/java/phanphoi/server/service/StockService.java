@@ -399,7 +399,7 @@ public final class StockService {
                            """ + LEVEL_SQL + """
                      AS muc,
                            COALESCE(k.so_luong, 0) * sp.gia_xuat AS gia_tri,
-                           y.ma_yc AS yc_mo, y.trang_thai AS yc_trang_thai,
+                           y.ma_yc AS yc_mo, y.trang_thai AS yc_trang_thai, y.so_luong_chot AS yc_so_luong_chot,
                            COALESCE((SELECT sum(b.so_luong) FROM ban_hang b WHERE b.ma_cn = ? AND b.ma_sp = sp.ma_sp
                                        AND b.thoi_gian > CURRENT_TIMESTAMP - INTERVAL '7 days'), 0) AS ban_7_ngay,
                            GREATEST(2 * COALESCE(k.nguong_toi_thieu, 0) - COALESCE(k.so_luong, 0), 0) AS de_xuat,

@@ -3,13 +3,14 @@
 import { useEffect, useState } from "react";
 import { api, fmtNumber, STATE_LABEL } from "@/lib/api";
 import type { Branch, Product, RequestRow, TransferRow } from "@/lib/types";
+import { RequestShipment } from "./RequestShipment";
 import {
   Badge, Card, Empty, Facet, FilterGroup, StateBadge,
 } from "@/components/ui";
 
 /** FR-23: log yêu cầu và cấp phát, lọc theo CN, SP, trạng thái, khoảng thời gian. */
-export function RequestHistory({ branches, products, version }: {
-  branches: Branch[]; products: Product[]; version: number;
+export function RequestHistory({ branches, products, version, push }: {
+  branches: Branch[]; products: Product[]; version: number; push: (level: string, text: string) => void;
 }) {
   const [f, setF] = useState({ maCn: "", maSp: "", trangThai: "", tu: "", den: "", chenhLech: "" });
   const [rows, setRows] = useState<RequestRow[]>([]);
@@ -39,7 +40,7 @@ export function RequestHistory({ branches, products, version }: {
         <FilterGroup title="Trạng thái">
           <Facet name="trangThai" value={f.trangThai} onChange={(v) => setF({ ...f, trangThai: v })} options={[
             { id: "", label: "Tất cả" },
-            ...["CHO", "DA_DE_XUAT", "THIEU_HANG", "DA_GIAO", "HOAN_TAT", "TU_CHOI"].map((s) => ({ id: s, label: STATE_LABEL[s] })),
+            ...["CHO", "DA_DE_XUAT", "DA_CHAP_NHAN", "THIEU_HANG", "DA_GIAO", "HOAN_TAT", "TU_CHOI"].map((s) => ({ id: s, label: STATE_LABEL[s] })),
           ]} />
         </FilterGroup>
         <FilterGroup title="Kiểm đếm">
@@ -77,7 +78,7 @@ export function RequestHistory({ branches, products, version }: {
                     <td className="num">{fmtNumber(r.soLuongNhan)}</td>
                     <td>{r.soLuongNhan == null ? <span className="muted">Chưa ghi nhận</span> :
                       <Badge tone={r.chenhLech === 0 ? "success" : "danger"}>{r.chenhLech === 0 ? "Đủ hàng" : `${(r.chenhLech ?? 0) > 0 ? "Thừa" : "Thiếu"} ${Math.abs(r.chenhLech ?? 0)}`}</Badge>}</td>
-                    <td><StateBadge state={r.trangThai} /></td>
+                    <td><StateBadge state={r.trangThai} /> <RequestShipment request={r} push={push} /></td>
                     <td className="muted nowrap">{r.capNhatLuc.slice(0, 19)}</td>
                   </tr>
                 ))}

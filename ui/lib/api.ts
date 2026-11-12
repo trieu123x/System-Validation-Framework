@@ -70,6 +70,7 @@ export function useDebounced(fn: () => void, ms: number): () => void {
 export const STATE_LABEL: Record<string, string> = {
   CHO: "Chờ xử lý",
   DA_DE_XUAT: "Chờ xác nhận",
+  DA_CHAP_NHAN: "Đã chấp nhận, chờ xuất hàng",
   THIEU_HANG: "Không đủ hàng",
   DA_GIAO: "Đã xuất kho",
   HOAN_TAT: "Đã nhận",
@@ -90,6 +91,7 @@ export const TRANSFER_LABEL: Record<string, string> = {
 export const STATE_TONE: Record<string, string> = {
   CHO: "warn",
   DA_DE_XUAT: "info",
+  DA_CHAP_NHAN: "success",
   THIEU_HANG: "danger",
   DA_GIAO: "accent",
   HOAN_TAT: "success",

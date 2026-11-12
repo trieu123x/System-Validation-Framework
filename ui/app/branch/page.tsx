@@ -17,6 +17,7 @@ import { EntryTable } from "@/components/admin/Debts";
 import { Checkout, InvoiceHistory } from "@/components/branch/Checkout";
 import { Thresholds } from "@/components/branch/Thresholds";
 import { Sales as Stock } from "@/components/branch/Sales";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 import type { CartLine } from "@/lib/checkout";
 import { useWorkspaceNavigation } from "@/lib/navigation";
 
@@ -365,7 +366,7 @@ function Offers({ requests, items, online, canRejectDelivered, push }: {
         <label className="field">Trạng thái
           <select value={state} onChange={(e) => setState(e.target.value)}>
             <option value="">Tất cả</option>
-            {["DA_DE_XUAT", "THIEU_HANG", "DA_GIAO", "HOAN_TAT", "TU_CHOI"].map((st) => (
+            {["DA_DE_XUAT", "DA_CHAP_NHAN", "THIEU_HANG", "DA_GIAO", "HOAN_TAT", "TU_CHOI"].map((st) => (
               <option key={st} value={st}>{STATE_LABEL[st]}</option>
             ))}
           </select>
@@ -416,6 +417,7 @@ function Offers({ requests, items, online, canRejectDelivered, push }: {
 function OfferRow({ r, name, online, canRejectDelivered, push }: { r: BranchRequest; name: string; online: boolean; canRejectDelivered: boolean; push: Push }) {
   const initial = r.trangThai === "DA_GIAO" ? "" : r.trangThai === "THIEU_HANG" ? r.soLuongCoThe : r.soLuongDeXuat;
   const [qty, setQty] = useState(String(initial ?? ""));
+  const [confirmation, setConfirmation] = useState<{ kind: "receive" | "reject"; quantity: number; shipped: number } | null>(null);
   const { run, busy } = useAction(push);
   const n = Number(qty);
   const validReceipt = qty.trim() !== "" && Number.isInteger(n) && n >= 0 && n <= 2147483647;
@@ -423,28 +425,42 @@ function OfferRow({ r, name, online, canRejectDelivered, push }: { r: BranchRequ
   const off = !online || busy;
 
   useEffect(() => setQty(String(initial ?? "")), [initial]);
+  useEffect(() => { if (r.trangThai !== "DA_GIAO") setConfirmation(null); }, [r.trangThai]);
 
   const accept = () => run(() => api(`/api/requests/${r.maYc}/accept`, { soLuong: n }));
   const reject = () => run(() => api(`/api/requests/${r.maYc}/reject`, {}), `Đã từ chối YC #${r.maYc}`);
   const received = () => {
-    if (!validReceipt) return;
-    if (delta !== 0 && !window.confirm(`YC #${r.maYc}: đã gửi ${r.soLuongGiao}, thực nhận ${n} (${delta > 0 ? "thừa" : "thiếu"} ${Math.abs(delta)}). Xác nhận nhập kho và báo công ty?`)) return;
+    if (!validReceipt || off) return;
+    if (delta !== 0) {
+      setConfirmation({ kind: "receive", quantity: n, shipped: r.soLuongGiao ?? 0 });
+      return;
+    }
     run(() => api(`/api/requests/${r.maYc}/received`, { soLuongNhan: n }), "Đã gửi số lượng thực nhận.");
+  };
+  const confirmAction = async () => {
+    if (!confirmation || off || r.trangThai !== "DA_GIAO") return false;
+    if (r.soLuongGiao !== confirmation.shipped) {
+      push("error", "Yêu cầu đã thay đổi. Vui lòng kiểm tra lại số lượng.");
+      return false;
+    }
+    if (confirmation.kind === "reject") return canRejectDelivered ? reject() : false;
+    return run(() => api(`/api/requests/${r.maYc}/received`, { soLuongNhan: confirmation.quantity }), "Đã gửi số lượng thực nhận.");
   };
 
   return (
-    <tr className={r.trangThai === "THIEU_HANG" ? "warn" : ""}>
+    <><tr className={r.trangThai === "THIEU_HANG" ? "warn" : ""}>
       <td className="code">YC{r.maYc}</td>
       <td>{name}</td>
       <td><StateBadge state={r.trangThai} /></td>
       <td>
-        {r.trangThai === "DA_DE_XUAT" && <>Công ty đề xuất cấp <b>{fmtNumber(r.soLuongDeXuat)}</b>. Đồng ý, sửa số lượng hoặc từ chối.</>}
+        {r.trangThai === "DA_DE_XUAT" && <>Công ty yêu cầu bổ sung <b>{fmtNumber(r.soLuongDeXuat)}</b>. Chấp nhận, sửa số lượng hoặc từ chối.</>}
+        {r.trangThai === "DA_CHAP_NHAN" && <>Đã chấp nhận bổ sung <b>{fmtNumber(r.soLuongChot)}</b>. Đang chờ công ty xuất hàng.</>}
         {r.trangThai === "THIEU_HANG" && <>Công ty báo không đủ hàng, kho tổng chỉ còn <b>{fmtNumber(r.soLuongCoThe)}</b>.
           Nhận số đó, chờ điều chuyển từ chi nhánh khác, hoặc từ chối.</>}
         {r.trangThai === "DA_GIAO" && <>Đã gửi <b>{fmtNumber(r.soLuongGiao)}</b> sản phẩm.</>}
         <div className="muted" style={{ fontSize: 12 }}>{r.capNhat}</div>
       </td>
-      {r.trangThai === "DA_GIAO" ? (
+      {r.trangThai === "DA_CHAP_NHAN" ? <><td className="num">{fmtNumber(r.soLuongChot)}</td><td className="right"><span className="muted">Chờ công ty xuất hàng</span></td></> : r.trangThai === "DA_GIAO" ? (
         <>
           <td className="num">
             <input type="number" min={0} max={2147483647} step={1} value={qty} placeholder="Thực nhận"
@@ -454,7 +470,7 @@ function OfferRow({ r, name, online, canRejectDelivered, push }: { r: BranchRequ
             </div>}
           </td>
           <td className="right"><div className="receiving-actions"><button className="btn btn-sm btn-success" disabled={off || !validReceipt} onClick={received}>Đồng ý nhận hàng</button><button className="btn btn-sm btn-danger" disabled={off || !canRejectDelivered} title={!canRejectDelivered ? "Mở lại ứng dụng chi nhánh bằng bản mới để từ chối hàng đã gửi" : undefined} onClick={() => {
-            if (window.confirm(`Từ chối toàn bộ hàng của YC #${r.maYc}? Hàng sẽ được hoàn về nơi gửi.`)) void reject();
+            setConfirmation({ kind: "reject", quantity: 0, shipped: r.soLuongGiao ?? 0 });
           }}>Từ chối</button></div></td>
         </>
       ) : (
@@ -463,14 +479,23 @@ function OfferRow({ r, name, online, canRejectDelivered, push }: { r: BranchRequ
             <input type="number" min={1} value={qty} style={{ height: 26 }} onChange={(e) => setQty(e.target.value)} aria-label="Số lượng nhận" />
           </td>
           <td className="right"><div className="receiving-actions">
-            <button className="btn btn-sm btn-primary" disabled={off || !(n > 0)} onClick={accept}>
-              {n === r.soLuongDeXuat ? "Đồng ý" : "Đồng ý số này"}
+            <button className="btn btn-sm btn-primary" disabled={off || !Number.isSafeInteger(n) || n <= 0 || n > 2147483647} onClick={accept}>
+              {n === r.soLuongDeXuat ? "Chấp nhận bổ sung" : "Chấp nhận số lượng này"}
             </button>{" "}
             <button className="btn btn-sm btn-danger" disabled={off} onClick={reject}>Từ chối</button>
           </div></td>
         </>
       )}
     </tr>
+    {confirmation && <ConfirmDialog title={confirmation.kind === "reject" ? "Từ chối hàng đã gửi?" : `Xác nhận nhận ${confirmation.quantity > confirmation.shipped ? "thừa" : "thiếu"} hàng`}
+      confirmLabel={confirmation.kind === "reject" ? "Xác nhận từ chối" : "Xác nhận nhập kho"} tone={confirmation.kind === "reject" ? "danger" : "success"}
+      disabled={off || (confirmation.kind === "reject" && !canRejectDelivered)} onConfirm={confirmAction} onClose={() => setConfirmation(null)}>
+      <p><strong>YC{r.maYc} · {name}</strong></p>
+      {confirmation.kind === "reject" ? <p>Toàn bộ {fmtNumber(confirmation.shipped)} sản phẩm sẽ được hoàn về nơi gửi. Bạn có muốn từ chối nhận hàng?</p> : <>
+        <dl className="workflow-confirm-quantities"><div><dt>Đã gửi</dt><dd>{fmtNumber(confirmation.shipped)}</dd></div><div><dt>Thực nhận</dt><dd>{fmtNumber(confirmation.quantity)}</dd></div><div><dt>{confirmation.quantity > confirmation.shipped ? "Thừa" : "Thiếu"}</dt><dd>{fmtNumber(Math.abs(confirmation.quantity - confirmation.shipped))}</dd></div></dl>
+        <p>Xác nhận nhập kho theo số thực nhận và gửi thông báo chênh lệch về công ty?</p>
+      </>}
+    </ConfirmDialog>}</>
   );
 }
 

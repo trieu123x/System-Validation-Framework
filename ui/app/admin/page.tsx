@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { api, UNAUTHORIZED, useDebounced, useEvents } from "@/lib/api";
 import type { Branch, LogRow, Product, RequestRow, SecurityEventRow, Stats } from "@/lib/types";
 import { Dot, LoadingWorkspace, Shell, Toasts, useToasts, type BackAction } from "@/components/ui";
@@ -75,6 +75,7 @@ function AdminApp({ user, onLogout }: { user: string; onLogout: () => void }) {
   const [overviewFilter, setOverviewFilter] = useState<OverviewFilter>(NO_FILTER);
   const [v, setV] = useState({ stock: 0, requests: 0, transfers: 0, products: 0, debts: 0, security: 0, notices: 0, business: 0 });
   const [loadError, setLoadError] = useState("");
+  const acceptanceNotices = useRef(new Set<string>());
 
   const bump = (k: keyof typeof v) => setV((x) => ({ ...x, [k]: x[k] + 1 }));
   const flash = (maYc: number) => {
@@ -131,6 +132,17 @@ function AdminApp({ user, onLogout }: { user: string; onLogout: () => void }) {
     },
     request: (r: RequestRow) => {
       if (showSim || !isSim(r.maCn)) {
+        if (r.trangThai === "DA_CHAP_NHAN") {
+          const key = `${r.maYc}:${r.soLuongChot}`;
+          if (!acceptanceNotices.current.has(key)) {
+            acceptanceNotices.current.add(key);
+            if (acceptanceNotices.current.size > 500) {
+              const oldest = acceptanceNotices.current.values().next().value;
+              if (oldest !== undefined) acceptanceNotices.current.delete(oldest);
+            }
+            push("success", `${r.tenCn} đã đồng ý bổ sung ${r.soLuongChot} ${r.tenSp} (YC${r.maYc}). Mở Tổng quan → Chờ xuất hàng để xuất kho.`);
+          }
+        }
         if (r.trangThai === "HOAN_TAT") {
           const delta = r.chenhLech ?? 0;
           push(delta === 0 ? "success" : "error", `${r.tenCn} nhận ${r.soLuongNhan ?? r.soLuongGiao}/${r.soLuongGiao} ${r.tenSp} (YC${r.maYc})${delta === 0 ? " — đủ hàng" : ` — ${delta > 0 ? "THỪA" : "THIẾU"} ${Math.abs(delta)}`}`);
@@ -235,7 +247,7 @@ function AdminApp({ user, onLogout }: { user: string; onLogout: () => void }) {
         {tab === "stock" && <Warehouses products={products} version={v.stock + v.requests + v.debts} push={push} onBackChange={setContextBack} />}
         {tab === "business" && <Business version={v.business} push={push} onBackChange={setContextBack} initialPart={businessPart} />}
         {tab === "debts" && <Debts version={v.debts + v.requests} showSim={showSim} push={push} onBackChange={setContextBack} />}
-        {tab === "history" && <RequestHistory branches={realBranches} products={products} version={v.requests} />}
+        {tab === "history" && <RequestHistory branches={realBranches} products={products} version={v.requests} push={push} />}
         {tab === "transfers" && <Transfers version={v.transfers} />}
         {tab === "broadcast" && (
           <Notices products={products} branches={branches} version={v.notices + v.stock + v.requests} push={push} />

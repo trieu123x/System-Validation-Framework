@@ -20,12 +20,13 @@ import java.util.Set;
 
 /**
  * Vòng đời yêu cầu cấp hàng (SRS 6.2):
- * CHO → DA_DE_XUAT → DA_GIAO → HOAN_TAT, rẽ nhánh TU_CHOI và THIEU_HANG.
+ * CHO → DA_DE_XUAT → DA_CHAP_NHAN → DA_GIAO → HOAN_TAT, rẽ nhánh TU_CHOI và THIEU_HANG.
  */
 public final class RequestService {
 
     public static final String CHO = "CHO";
     public static final String DA_DE_XUAT = "DA_DE_XUAT";
+    public static final String DA_CHAP_NHAN = "DA_CHAP_NHAN";
     public static final String DA_GIAO = "DA_GIAO";
     public static final String HOAN_TAT = "HOAN_TAT";
     public static final String TU_CHOI = "TU_CHOI";
@@ -142,7 +143,7 @@ public final class RequestService {
     /** Khóa Java dùng cho baseline SYNCHRONIZED: giữ suốt transaction để đúng, nhưng tuần tự hóa mọi ACCEPT. */
     private static final Object CENTRAL_LOCK = new Object();
 
-    /** ACCEPT theo transaction SRS 6.3; ACCEPT lặp lại không trừ kho lần hai (FR-18). */
+    /** ACCEPT only records the branch's agreement; dispatch is a separate admin operation. */
     public List<Message> accept(String maCn, int maYc, int soLuong) throws SQLException {
         if (settings.acceptStrategy == AcceptStrategy.SYNCHRONIZED) {
             synchronized (CENTRAL_LOCK) {
@@ -173,44 +174,36 @@ public final class RequestService {
 
     private List<Message> acceptTx(String maCn, int maYc, int soLuong) throws SQLException {
         List<Message> replies = new ArrayList<>();
-        boolean[] shortage = {false};
         db.tx(c -> {
             Yc yc = lockYc(c, maYc, maCn);
+            if (soLuong <= 0) {
+                throw new ServiceException(ErrorCode.E05, "So luong chap nhan phai > 0");
+            }
             switch (yc.trangThai) {
                 case DA_GIAO, HOAN_TAT -> {
                     // idempotent: trả lại kết quả cũ, không trừ kho
                     replies.add(Message.of(Command.DELIVERED, yc.maYc, yc.maSp, yc.giao));
                     return null;
                 }
+                case DA_CHAP_NHAN -> {
+                    if (!Integer.valueOf(soLuong).equals(yc.chot)) {
+                        throw new ServiceException(ErrorCode.E03, "Yeu cau da chap nhan " + yc.chot + ", khong the doi so luong");
+                    }
+                    replies.add(Message.of(Command.ACCEPTED, maYc, yc.maSp, yc.chot));
+                    return null;
+                }
                 case DA_DE_XUAT, THIEU_HANG -> { }
                 default -> throw new ServiceException(ErrorCode.E03,
                         "Yeu cau " + maYc + " dang o trang thai " + yc.trangThai + ", khong the ACCEPT");
             }
-            if (soLuong <= 0) {
-                throw new ServiceException(ErrorCode.E05, "So luong chap nhan phai > 0");
-            }
-            Db.update(c, "UPDATE yeu_cau SET so_luong_chot = ? WHERE ma_yc = ?", soLuong, maYc);
-            // Mặc định là UPDATE có điều kiện, chống tranh chấp giữa nhiều ClientHandler (NFR-03)
-            if (!takeFromCentral(c, yc.maSp, soLuong)) {
-                Integer coThe = Db.one(c, "SELECT so_luong FROM kho_tong WHERE ma_sp = ?", rs -> rs.getInt(1), yc.maSp);
-                setState(c, maYc, THIEU_HANG);
-                replies.add(Message.of(Command.OUT_OF_STOCK, maYc, coThe == null ? 0 : coThe, yc.maSp));
-                shortage[0] = true;
-                return null;
-            }
-            insertPhieuXuat(c, maYc, maCn, yc.maSp, soLuong);
             Db.update(c, """
-                    UPDATE yeu_cau SET so_luong_giao = ?, trang_thai = 'DA_GIAO', cap_nhat_luc = CURRENT_TIMESTAMP
+                    UPDATE yeu_cau SET so_luong_chot = ?, trang_thai = 'DA_CHAP_NHAN', cap_nhat_luc = CURRENT_TIMESTAMP
                     WHERE ma_yc = ?""", soLuong, maYc);
             TransferService.cancelPending(c, maYc);
-            replies.add(Message.of(Command.DELIVERED, maYc, yc.maSp, soLuong));
+            replies.add(Message.of(Command.ACCEPTED, maYc, yc.maSp, soLuong));
             return null;
         });
         publishRequest(maYc);
-        events.publish(Events.PRODUCTS, null);
-        if (shortage[0]) {
-            transfers.tryStart(maYc);
-        }
         return replies;
     }
 
@@ -225,7 +218,7 @@ public final class RequestService {
                 case TU_CHOI -> {
                     return false;
                 }
-                case DA_DE_XUAT, THIEU_HANG -> {
+                case DA_DE_XUAT, DA_CHAP_NHAN, THIEU_HANG -> {
                     setState(c, maYc, TU_CHOI);
                     TransferService.cancelPending(c, maYc);
                     return true;
@@ -341,7 +334,7 @@ public final class RequestService {
     }
 
     /**
-     * Admin gửi hàng thẳng (không chờ CN ACCEPT): xuất kho tổng, YC → DA_GIAO ("đã gửi"), đẩy DELIVERED tới CN.
+     * Admin xuất hàng sau khi CN ACCEPT: xuất kho tổng, YC → DA_GIAO, đẩy DELIVERED tới CN.
      * CN offline thì DELIVERED nằm trong hàng đợi và được gửi lại sau LOGIN_OK như mọi tin trạng thái.
      */
     public void ship(int maYc, int soLuong) throws SQLException {
@@ -354,7 +347,7 @@ public final class RequestService {
         }
     }
 
-    private static final Set<String> SHIPPABLE = Set.of(CHO, DA_DE_XUAT, THIEU_HANG);
+    private static final Set<String> SHIPPABLE = Set.of(DA_CHAP_NHAN, THIEU_HANG);
 
     private void shipTx(int maYc, int soLuong) throws SQLException {
         if (soLuong <= 0) {
@@ -362,8 +355,15 @@ public final class RequestService {
         }
         String[] target = db.tx(c -> {
             String[] row = lockForAdmin(c, maYc);
-            if (!SHIPPABLE.contains(row[2])) {
+            Yc yc = lockYc(c, maYc, row[0]);
+            if ((DA_GIAO.equals(yc.trangThai) || HOAN_TAT.equals(yc.trangThai)) && Integer.valueOf(soLuong).equals(yc.giao)) {
+                return row; // retry after a lost HTTP response: never deduct stock twice
+            }
+            if (!SHIPPABLE.contains(row[2]) || yc.chot == null) {
                 throw new ServiceException(ErrorCode.E03, "Yeu cau dang o trang thai " + row[2] + ", khong the gui hang");
+            }
+            if (soLuong != yc.chot) {
+                throw new ServiceException(ErrorCode.E05, "Phai xuat dung so luong chi nhanh da chap nhan: " + yc.chot);
             }
             if (!shipLocked(c, maYc, row[0], row[1], soLuong)) {
                 throw new ServiceException(ErrorCode.E05, "Kho tong chi con " + centralStock(c, row[1]) + " "
@@ -400,11 +400,9 @@ public final class RequestService {
     }
 
     /**
-     * Admin bổ sung chủ động từ trang Kho chi nhánh: chưa có YC mở cho (CN, SP) thì tạo YC rồi gửi hàng luôn
-     * trong cùng transaction; có YC CHO/DA_DE_XUAT thì gửi hàng cho YC đó. Chi nhánh vẫn bấm Đã nhận như luồng
-     * Gửi thẳng, giao thức không đổi. LOW_STOCK đến cùng lúc cũng đi qua uq_yeu_cau_dang_mo và khóa dòng YC,
-     * nên chỉ một YC được gửi hàng.
-     * @return mã YC đã gửi hàng.
+     * Admin yêu cầu bổ sung từ Kho chi nhánh. Tạo/dùng lại YC mở rồi gửi OFFER, chưa xuất kho.
+     * Chi nhánh phải chấp nhận trước khi admin được phép xuất hàng.
+     * @return mã YC chờ chi nhánh chấp nhận.
      */
     public int replenish(String maCn, String maSp, int soLuong) throws SQLException {
         if (settings.acceptStrategy == AcceptStrategy.SYNCHRONIZED) {
@@ -445,14 +443,13 @@ public final class RequestService {
             if (!CHO.equals(st) && !DA_DE_XUAT.equals(st)) {
                 throw new ServiceException(ErrorCode.E03, "Da co YC" + id + " dang giao (" + st + ")");
             }
-            if (!shipLocked(c, id, maCn, maSp, soLuong)) {
-                // rollback: YC vừa tạo (nếu có) cũng không còn
-                throw new ServiceException(ErrorCode.E03, "Kho tong chi con " + centralStock(c, maSp) + " "
-                        + maSp + ", khong du bo sung " + soLuong);
-            }
+            Db.update(c, """
+                    UPDATE yeu_cau SET so_luong_de_xuat = ?, trang_thai = 'DA_DE_XUAT', cap_nhat_luc = CURRENT_TIMESTAMP
+                    WHERE ma_yc = ?""", soLuong, id);
             return id;
         });
-        afterShip(maCn, maYc, maSp, soLuong);
+        outbox.send(maCn, Message.of(Command.OFFER, maYc, maSp, soLuong));
+        publishRequest(maYc);
         return maYc;
     }
 
@@ -466,8 +463,12 @@ public final class RequestService {
         }
         Object[] target = db.tx(c -> {
             String[] row = lockForAdmin(c, maYc);
-            if (!CHO.equals(row[2]) && !DA_DE_XUAT.equals(row[2])) {
+            if (!CHO.equals(row[2]) && !DA_DE_XUAT.equals(row[2]) && !DA_CHAP_NHAN.equals(row[2])) {
                 throw new ServiceException(ErrorCode.E03, "Yeu cau dang o trang thai " + row[2] + ", khong the bao thieu");
+            }
+            Yc yc = lockYc(c, maYc, row[0]);
+            if (DA_CHAP_NHAN.equals(yc.trangThai) && !Integer.valueOf(soLuongCan).equals(yc.chot)) {
+                throw new ServiceException(ErrorCode.E05, "Phai giu so luong chi nhanh da chap nhan: " + yc.chot);
             }
             Db.update(c, """
                     UPDATE yeu_cau SET so_luong_de_xuat = ?, trang_thai = 'THIEU_HANG', cap_nhat_luc = CURRENT_TIMESTAMP
@@ -537,16 +538,18 @@ public final class RequestService {
         return db.read(c -> {
             List<Message> out = new ArrayList<>();
             List<Object[]> rows = Db.list(c, """
-                    SELECT y.ma_yc, y.ma_sp, y.so_luong_de_xuat, y.so_luong_giao, y.trang_thai, COALESCE(kt.so_luong, 0)
+                    SELECT y.ma_yc, y.ma_sp, y.so_luong_de_xuat, y.so_luong_giao, y.trang_thai, COALESCE(kt.so_luong, 0), y.so_luong_chot
                     FROM yeu_cau y LEFT JOIN kho_tong kt ON kt.ma_sp = y.ma_sp
-                    WHERE y.ma_cn = ? AND y.trang_thai IN ('DA_DE_XUAT', 'THIEU_HANG', 'DA_GIAO')
+                    WHERE y.ma_cn = ? AND y.trang_thai IN ('DA_DE_XUAT', 'DA_CHAP_NHAN', 'THIEU_HANG', 'DA_GIAO')
                     ORDER BY y.ma_yc""",
                     rs -> new Object[]{rs.getInt(1), rs.getString(2), rs.getObject(3), rs.getObject(4),
-                            rs.getString(5), rs.getInt(6)}, maCn);
+                            rs.getString(5), rs.getInt(6), rs.getObject(7)}, maCn);
             for (Object[] r : rows) {
                 String state = (String) r[4];
                 if (DA_GIAO.equals(state)) {
                     out.add(Message.of(Command.DELIVERED, r[0], r[1], r[3]));
+                } else if (DA_CHAP_NHAN.equals(state)) {
+                    out.add(Message.of(Command.ACCEPTED, r[0], r[1], r[6]));
                 } else {
                     out.add(Message.of(Command.OFFER, r[0], r[1], r[2]));
                     if (THIEU_HANG.equals(state)) {
